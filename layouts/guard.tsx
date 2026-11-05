@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { Button } from "@/components/ui/button";
+import { Button } from "@gorth-io/primitive/custom/button";
 interface AuthGuardProps {
   children: ReactNode;
   fallback?: ReactNode;
@@ -14,11 +14,7 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
     fallback ?? (
       <div className="space-y-3">
         <p>Đăng nhập Gorth để sử dụng tính năng này.</p>
-        {auth.error && (
-          <p role="alert" className="text-sm text-destructive">
-            {auth.error}
-          </p>
-        )}
+
         <div className="flex gap-2">
           {auth.locked && (
             <Button className="h-9" onClick={() => void auth.unlock()}>

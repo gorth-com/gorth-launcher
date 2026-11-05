@@ -1,12 +1,10 @@
 import { ipcRenderer } from "electron";
 import type { UserProfileCache } from "@/lib/server/interface";
 import type { AuthViewBounds, AuthViewState } from "@/lib/auth/view-types";
-import type {
-  AuthCommand,
-  AuthResult,
-  AuthSnapshot,
-} from "@/lib/utils/interface";
+import type { AuthCommand, AuthResult, AuthSnapshot } from "@/utils/interface";
 export const authApi = {
+  setLoginBrowser: (browser: "default" | "gorth"): Promise<AuthResult> =>
+    ipcRenderer.invoke("auth:login-browser", browser),
   profile: async (): Promise<UserProfileCache | null> => {
     return ipcRenderer.invoke("desktop:profile");
   },

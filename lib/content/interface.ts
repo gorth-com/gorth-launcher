@@ -1,7 +1,7 @@
-import type { Artifact } from "@/lib/utils/interface";
+import type { Artifact } from "@/utils/interface";
 export type ContentProvider = "modrinth" | "curseforge";
 export type ContentKind =
-  "mod" | "modpack" | "shader" | "resourcepack" | "datapack";
+  "mod" | "modpack" | "shader" | "resourcepack" | "datapack" | "world";
 export interface ContentQuery {
   provider: ContentProvider;
   kind: ContentKind;
@@ -9,6 +9,8 @@ export interface ContentQuery {
   version: string;
   loader: string;
   offset: number;
+  limit?: number;
+  sort?: "relevance" | "downloads" | "updated";
 }
 export interface ContentProject {
   id: string;
@@ -16,6 +18,11 @@ export interface ContentProject {
   name: string;
   description: string;
   downloads: number;
+  iconUrl?: string;
+  author?: string;
+  categories?: string[];
+  updatedAt?: string;
+  publishedAt?: string;
 }
 export interface ContentVersion {
   id: string;

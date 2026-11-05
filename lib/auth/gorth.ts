@@ -1,357 +1,323 @@
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
-import { registerAuthCallback } from "@/services/auth-callback";
-import { createRemoteJWKSet, jwtVerify } from "jose";
+import { createAuthClient } from "better-auth/client";
+import { electronClient } from "@better-auth/electron/client";
+import { createAuthPolicy } from "@gorth-io/structure/modules/auth/client";
+import { app, BrowserWindow, protocol } from "electron";
+import { authUrl, oauthClientId } from "@/utils/environment";
+import { prepareAuthProtocol } from "@/main/services/auth-protocol";
 import {
-  ssoIssuer,
-  ssoOAuthClientId,
-  ssoRedirectUri,
-} from "@/lib/utils/environment";
-import { parseHttpUrl } from "@/lib/utils/schema";
-import { trustedUrl, tokenSet } from "./model";
-import type { LauncherSession, Tokens } from "@/lib/utils/interface";
-import { requestJson, formRequest } from "./http";
-import { fetcher } from "@/lib/utils/fetcher";
+  getLoginBrowser,
+  getLoginSignInURL,
+  type LoginBrowser,
+} from "@/lib/auth/login-browser";
+import {
+  nativeStorage,
+  nativeVaultExists,
+  clearNativeSessionStorage,
+  requireSecureStorage,
+} from "@/lib/auth/storage";
+import type { NativeIdentity } from "@/lib/auth/native-types";
 
-export const gorthBinding = () => ssoIssuer + "|" + ssoOAuthClientId;
-async function metadata(signal?: AbortSignal) {
-  if (!ssoIssuer || !ssoOAuthClientId || !ssoRedirectUri)
-    throw new Error(
-      "Chưa cấu hình VITE_SSO_CLIENT_URL, VITE_SSO_OAUTH_CLIENT_ID hoặc VITE_APP_URL.",
-    );
-  const issuer = trustedUrl(parseHttpUrl(ssoIssuer).href, true);
-  const data = await requestJson(
-    new URL(
-      issuer.pathname.replace(/\/$/, "") + "/.well-known/openid-configuration",
-      issuer,
-    ),
-    {},
-    signal,
-  );
-  if (data.issuer !== ssoIssuer)
-    throw new Error("Issuer Gorth không khớp cấu hình.");
-  const endpoint = (key: string) => {
-    if (typeof data[key] !== "string")
-      throw new Error("Thiếu endpoint OIDC: " + key);
-    const url = trustedUrl(data[key], true);
-    if (url.origin !== issuer.origin)
-      throw new Error("Endpoint OIDC khác origin đã cấu hình.");
-    return url;
-  };
-  return {
-    authorize: endpoint("authorization_endpoint"),
-    token: endpoint("token_endpoint"),
-    jwks: endpoint("jwks_uri"),
-    userinfo: endpoint("userinfo_endpoint"),
-    revoke:
-      typeof data.revocation_endpoint === "string"
-        ? endpoint("revocation_endpoint")
-        : null,
-    requiresIssuer:
-      data.authorization_response_iss_parameter_supported === true,
-  };
-}
-async function verifyIdentity(
-  raw: unknown,
-  jwks: URL,
-  nonce?: string,
-  accessToken?: unknown,
-  code?: string,
-) {
-  if (typeof raw !== "string") throw new Error("Thiếu ID token Gorth.");
-  const { payload, protectedHeader } = await jwtVerify(
-    raw,
-    createRemoteJWKSet(jwks),
-    {
-      issuer: ssoIssuer,
-      audience: ssoOAuthClientId,
-      algorithms: ["RS256", "ES256", "EdDSA"],
-      requiredClaims: ["sub", "exp", "iat"],
-      clockTolerance: 5,
-    },
-  );
-  if (
-    !payload.sub ||
-    (nonce && payload.nonce !== nonce) ||
-    (payload.azp && payload.azp !== ssoOAuthClientId) ||
-    (Array.isArray(payload.aud) &&
-      payload.aud.length > 1 &&
-      payload.azp !== ssoOAuthClientId)
-  )
-    throw new Error("ID token Gorth không hợp lệ.");
-  if (payload.at_hash !== undefined) {
-    if (typeof accessToken !== "string")
-      throw new Error("Thiếu access token để kiểm tra ID token.");
-    const hash = createHash(
-      protectedHeader.alg === "EdDSA" ? "sha512" : "sha256",
-    )
-      .update(accessToken, "ascii")
-      .digest();
-    if (
-      payload.at_hash !==
-      hash.subarray(0, hash.length / 2).toString("base64url")
-    )
-      throw new Error("Access token không khớp ID token.");
-  }
-  if (payload.c_hash !== undefined && code !== undefined) {
-    const hash = createHash(
-      protectedHeader.alg === "EdDSA" ? "sha512" : "sha256",
-    )
-      .update(code, "ascii")
-      .digest();
-    if (
-      payload.c_hash !== hash.subarray(0, hash.length / 2).toString("base64url")
-    )
-      throw new Error("Authorization code does not match ID token.");
-  }
-  return {
-    id: payload.sub,
-    name: typeof payload.name === "string" ? payload.name : payload.sub,
-  };
-}
-export async function loginGorth(
-  open: (
-    url: string,
-    receiveCallback: (url: string) => boolean,
-  ) => Promise<void>,
-  signal: AbortSignal,
-  mode: "login" | "register" = "login",
-): Promise<LauncherSession> {
-  const config = await metadata(signal);
-  const redirect = parseHttpUrl(ssoRedirectUri);
-  if (
-    redirect.protocol !== "http:" ||
-    !["127.0.0.1", "localhost"].includes(redirect.hostname) ||
-    !redirect.port ||
-    redirect.search ||
-    redirect.hash ||
-    redirect.username ||
-    redirect.password
-  )
-    throw new Error(
-      "Callback phải là HTTP localhost hoặc 127.0.0.1 với port cố định.",
-    );
-  const state = randomBytes(32).toString("base64url");
-  const nonce = randomBytes(32).toString("base64url");
-  const verifier = randomBytes(32).toString("base64url");
-  const challenge = createHash("sha256").update(verifier).digest("base64url");
-  let resolveCode!: (code: string) => void;
-  let rejectCode!: (reason: Error) => void;
-  const codePromise = new Promise<string>((resolve, reject) => {
-    resolveCode = resolve;
-    rejectCode = reject;
-  });
-  // Consume early aborts before awaiting the browser opening.
-  void codePromise.catch(() => {});
-  let consumed = false;
-  const receiveCallback = (value: string): boolean => {
-    let url: URL;
-    try {
-      if (value.length > 8192) return false;
-      url = parseHttpUrl(value);
-    } catch {
-      return false;
-    }
-    if (
-      url.origin !== redirect.origin ||
-      url.pathname !== redirect.pathname ||
-      url.hash ||
-      url.username ||
-      url.password
-    ) {
-      return false;
-    }
-    const returned = url.searchParams.get("state") ?? "";
-    if (
-      consumed ||
-      url.searchParams.getAll("state").length !== 1 ||
-      Buffer.byteLength(returned) !== Buffer.byteLength(state) ||
-      !timingSafeEqual(Buffer.from(returned), Buffer.from(state))
-    ) {
-      return false;
-    }
-    consumed = true;
-    if (
-      (config.requiresIssuer || url.searchParams.has("iss")) &&
-      (url.searchParams.getAll("iss").length !== 1 ||
-        url.searchParams.get("iss") !== ssoIssuer)
-    ) {
-      rejectCode(new Error("Callback issuer mismatch."));
-      return false;
-    }
-    if (
-      url.searchParams.has("error") ||
-      url.searchParams.getAll("code").length !== 1 ||
-      !url.searchParams.get("code")
-    ) {
-      rejectCode(new Error("Đăng nhập Gorth bị từ chối."));
-      return false;
-    }
-    resolveCode(url.searchParams.get("code")!);
-    return true;
-  };
-  const unregisterCallback = registerAuthCallback(receiveCallback);
-  const abort = () => rejectCode(new Error("Đã hủy đăng nhập."));
-  signal.addEventListener("abort", abort, { once: true });
-  const timer = setTimeout(
-    () => rejectCode(new Error("Đăng nhập hết thời gian chờ.")),
-    mode === "register" ? 600_000 : 180_000,
-  );
+const authPolicy = createAuthPolicy();
+
+export const authScheme = "com.gorth.launcher";
+export function gorthConfigured() {
+  if (!authUrl || oauthClientId !== "gorth-launcher") return false;
   try {
-    signal.throwIfAborted();
-    for (const [key, value] of Object.entries({
-      client_id: ssoOAuthClientId,
-      redirect_uri: redirect.href,
-      response_type: "code",
-      scope: "openid profile email offline_access",
-      state,
-      nonce,
-      code_challenge: challenge,
-      code_challenge_method: "S256",
-    }))
-      config.authorize.searchParams.set(key, value);
-    // Match the web applications: prompt=create preserves OAuth through sign-up/OTP.
-    if (mode === "register")
-      config.authorize.searchParams.set("prompt", "create");
-    // Reuse a valid SSO session. Forcing login while the SSO form auto-resumes
-    // an existing account would bounce endlessly between login and authorize.
-    await open(config.authorize.href, receiveCallback);
-    const code = await codePromise;
-    signal.throwIfAborted();
-    const data = await formRequest(
-      config.token,
-      {
-        grant_type: "authorization_code",
-        code,
-        client_id: ssoOAuthClientId,
-        redirect_uri: redirect.href,
-        code_verifier: verifier,
-      },
-      signal,
+    const url = new URL(authUrl);
+    return (
+      url.pathname === "/" &&
+      !url.username &&
+      !url.password &&
+      !url.search &&
+      !url.hash &&
+      (url.protocol === "https:" ||
+        (url.protocol === "http:" &&
+          ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)))
     );
-    const identity = await verifyIdentity(
-      data.id_token,
-      config.jwks,
-      nonce,
-      data.access_token,
-      code,
-    );
-    const tokens = tokenSet(data, gorthBinding());
-    const profile = await userInfo(
-      config.userinfo,
-      tokens.accessToken,
-      identity.id,
-      signal,
-    );
-    return { ...identity, ...profile, tokens };
-  } finally {
-    clearTimeout(timer);
-    signal.removeEventListener("abort", abort);
-    unregisterCallback();
+  } catch {
+    return false;
   }
 }
-export async function refreshGorth(
-  session: LauncherSession,
-  signal: AbortSignal,
-): Promise<LauncherSession> {
-  const old: Tokens = session.tokens;
-  if (old.binding !== gorthBinding() || !old.refreshToken)
-    throw new Error("Cần đăng nhập lại Gorth.");
-  const config = await metadata(signal);
-  const data = await formRequest(
-    config.token,
-    {
-      grant_type: "refresh_token",
-      client_id: ssoOAuthClientId,
-      refresh_token: old.refreshToken,
-    },
-    signal,
-  );
-  let identity = { id: session.id, name: session.name };
-  if (data.id_token)
-    identity = await verifyIdentity(
-      data.id_token,
-      config.jwks,
-      undefined,
-      data.access_token,
-    );
-  if (identity.id !== session.id)
-    throw new Error("Danh tính Gorth thay đổi khi refresh.");
-  const tokens = tokenSet(data, gorthBinding(), old);
-  const profile = await userInfo(
-    config.userinfo,
-    tokens.accessToken,
-    identity.id,
-    signal,
-  );
-  return { ...identity, ...profile, tokens };
+let client: ReturnType<typeof createClient> | undefined;
+let identity: NativeIdentity | null = null;
+let verifiedAt = 0;
+let unlocked = false;
+let pending: {
+  signal: AbortSignal;
+  exchanging: boolean;
+  complete: () => void;
+  fail: () => void;
+} | null = null;
+let revision = 0;
+let opening: Promise<void> | undefined;
+// SDK 1.7.7 advertises kElectron in its declarations but omits the runtime
+// export. Its shared PKCE map is cleared only to fence cancelled requests.
+const sdkPkceKey = Symbol.for("better-auth:electron");
+let installed = false;
+const listeners = new Set<() => void>();
+function notify() {
+  for (const listener of listeners) listener();
 }
 
-async function userInfo(
-  url: URL,
-  accessToken: string,
-  subject: string,
-  signal: AbortSignal,
-) {
-  const info = await requestJson(
-    url,
-    { headers: { Authorization: "Bearer " + accessToken } },
-    signal,
-  );
-  if (info.sub !== subject)
-    throw new Error("Danh tính userinfo không khớp ID token.");
-  return {
-    name: typeof info.name === "string" && info.name ? info.name : subject,
-    email: typeof info.email === "string" ? info.email : undefined,
-    emailVerified:
-      typeof info.email_verified === "boolean"
-        ? info.email_verified
-        : undefined,
-    image:
-      typeof info.picture === "string" && /^https?:\/\//i.test(info.picture)
-        ? info.picture
-        : undefined,
-    username:
-      typeof info.preferred_username === "string"
-        ? info.preferred_username
-        : undefined,
+function createClient(browser: LoginBrowser = "default") {
+  if (!gorthConfigured())
+    throw new Error("Desktop auth configuration is incomplete.");
+  const origin = new URL(authUrl);
+  if (
+    origin.pathname !== "/" ||
+    origin.username ||
+    origin.password ||
+    origin.search ||
+    origin.hash ||
+    (origin.protocol !== "https:" &&
+      !(
+        origin.protocol === "http:" &&
+        ["localhost", "127.0.0.1", "[::1]"].includes(origin.hostname)
+      ))
+  )
+    throw new Error("Invalid desktop auth origin.");
+  return createAuthClient({
+    baseURL: origin.origin,
+    basePath: "/auth",
+    fetchOptions: { timeout: 10_000, retry: 0, customFetchImpl: desktopFetch },
+    plugins: [
+      electronClient({
+        clientID: oauthClientId,
+        signInURL: getLoginSignInURL(origin.origin, browser),
+        protocol: { scheme: authScheme },
+        callbackPath: "/auth/callback",
+        storage: nativeStorage,
+        storagePrefix: "gorth-native",
+        cookiePrefix: "gorth",
+        userImageProxy: { enabled: false },
+        disableCache: true,
+      }),
+    ],
+  });
+}
+export function getGorthClient() {
+  return (client ??= createClient());
+}
+export function onGorthChanged(listener: () => void) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
   };
 }
-
-export async function revokeGorth(tokens: Tokens, signal: AbortSignal) {
-  if (tokens.binding !== gorthBinding())
-    throw new Error("Không thu hồi token thuộc cấu hình SSO khác.");
-  const config = await metadata(signal);
-  if (!config.revoke)
-    throw new Error("SSO chưa cung cấp endpoint thu hồi token.");
-  const entries = [
-    ["refresh_token", tokens.refreshToken],
-    ["access_token", tokens.accessToken],
-  ] as const;
-  const results = await Promise.allSettled(
-    entries
-      .filter(([, token]) => !!token)
-      .map(async ([hint, token]) => {
-        const response = await fetcher<string>({
-          url: config.revoke!,
-          method: "POST",
-          redirect: "error",
-          signal,
-          timeout: 20_000,
-          responseType: "text",
-          validateStatus: () => true,
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            client_id: ssoOAuthClientId,
-            token: token!,
-            token_type_hint: hint,
-          }),
-        });
-        if (response.status < 200 || response.status >= 300)
-          throw new Error("SSO không thu hồi được token.");
-      }),
-  );
-  if (results.some((result) => result.status === "rejected"))
-    throw new Error(
-      "Đã đăng xuất trên thiết bị nhưng chưa thu hồi được token tại SSO.",
-    );
+export function gorthSnapshot() {
+  return {
+    user: identity
+      ? {
+          ...identity,
+          verifiedAt,
+          canRefresh: true,
+          needsLogin: identity.expiresAt <= Date.now(),
+        }
+      : null,
+    locked: !unlocked && nativeVaultExists(),
+    configured: gorthConfigured(),
+  };
 }
+export function getGorthUserId() {
+  return identity &&
+    identity.expiresAt > Date.now() &&
+    Date.now() - verifiedAt < authPolicy.identityMaxAgeMs
+    ? identity.id
+    : null;
+}
+export async function restoreGorthSession(signal?: AbortSignal) {
+  requireSecureStorage();
+  // Validate the file before the SDK's storage adapter (which catches errors).
+  nativeStorage.getItem("gorth-native.cookie");
+  unlocked = true;
+  const version = revision;
+  const result = await getGorthClient().getSession({
+    query: { disableCookieCache: true },
+    fetchOptions: { signal },
+  });
+  signal?.throwIfAborted();
+  if (version !== revision) return;
+  if (result.error)
+    throw new Error("Could not verify the app session. Please try again.");
+  if (!result.data) identity = null;
+  else {
+    const user = result.data.user as typeof result.data.user & {
+      externalUserId?: unknown;
+      username?: unknown;
+    };
+    if (typeof user.externalUserId !== "string" || !user.externalUserId)
+      throw new Error("The app session is not bound to a Gorth SSO identity.");
+    identity = {
+      id: user.externalUserId,
+      name: user.name,
+      email: user.email,
+      image: user.image ?? undefined,
+      username: typeof user.username === "string" ? user.username : undefined,
+      emailVerified: user.emailVerified,
+      expiresAt: new Date(result.data.session.expiresAt).getTime(),
+    };
+  }
+  verifiedAt = Date.now();
+  notify();
+}
+export async function signOutGorth() {
+  revision++;
+  identity = null;
+  verifiedAt = 0;
+  notify(); // Block local API access before the remote sign-out.
+  try {
+    requireSecureStorage();
+    const result = await getGorthClient().signOut();
+    if (result.error)
+      throw new Error(
+        "Signed out locally. Remote app-session deletion could not be confirmed.",
+      );
+  } finally {
+    clearNativeSessionStorage();
+    unlocked = true;
+  }
+}
+export async function receiveGorthDeepLink(url: string) {
+  const request = pending;
+  if (!request || request.signal.aborted || request.exchanging) return false;
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  if (
+    parsed.protocol !== authScheme + ":" ||
+    "/" + parsed.hostname + parsed.pathname !== "/auth/callback" ||
+    parsed.username ||
+    parsed.password ||
+    parsed.search ||
+    !parsed.hash.startsWith("#token=") ||
+    parsed.hash.length > 4096
+  )
+    return false;
+  request.exchanging = true;
+  try {
+    const result = await getGorthClient().authenticate({
+      token: parsed.hash.slice(7),
+      fetchOptions: { signal: request.signal },
+    });
+    if (result.error) throw new Error("Desktop sign-in was rejected.");
+    try {
+      await restoreGorthSession(request.signal);
+      if (!getGorthUserId())
+        throw new Error("App session verification failed.");
+    } catch (error) {
+      identity = null;
+      verifiedAt = 0;
+      notify();
+      throw error;
+    }
+    request.complete();
+    const owner = BrowserWindow.getAllWindows()[0];
+    if (owner && !owner.isDestroyed()) {
+      if (owner.isMinimized()) owner.restore();
+      owner.show();
+      owner.focus();
+    }
+  } catch {
+    request.fail();
+  }
+  return true;
+}
+export function installGorthAuth() {
+  if (installed) return;
+  installed = true;
+  protocol.registerSchemesAsPrivileged([
+    { scheme: authScheme, privileges: { secure: true } },
+  ]);
+  if (!gorthConfigured()) return;
+  // Preserve the app's existing CSP and single-instance ownership. SDK default
+  // IPC bridges have no sender checks, so use the app's narrower trusted bridge.
+  getGorthClient().setupMain({
+    scheme: false,
+    csp: false,
+    bridges: false,
+    getWindow: () => BrowserWindow.getAllWindows()[0],
+  });
+  app.on("open-url", (event, url) => {
+    event.preventDefault();
+    void receiveGorthDeepLink(url);
+  });
+  app.on("second-instance", (_event, argv) => {
+    const url = argv.find((value) => value.startsWith(authScheme + ":"));
+    if (url) void receiveGorthDeepLink(url);
+  });
+}
+export async function loginGorth(signal: AbortSignal) {
+  requireSecureStorage();
+  if (opening) await opening;
+  if (signal.aborted) throw new Error("Sign-in cancelled.");
+  if (pending) throw new Error("An account operation is already running.");
+  revision++;
+  await new Promise<void>((resolve, reject) => {
+    const controller = new AbortController();
+    const attemptSignal = AbortSignal.any([signal, controller.signal]);
+    let settled = false;
+    const abort = () => finish(new Error("Sign-in cancelled."));
+    const timer = setTimeout(
+      () => finish(new Error("Sign-in timed out.")),
+      authPolicy.transactionMaxAgeMs,
+    );
+    const finish = (error?: Error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      signal.removeEventListener("abort", abort);
+      pending = null;
+      // Clear the official SDK's outstanding PKCE requests after completion,
+      // timeout or cancellation; no custom OAuth state/verifier implementation.
+      const cache = (
+        globalThis as typeof globalThis & { [sdkPkceKey]?: Map<string, string> }
+      )[sdkPkceKey];
+      cache?.clear();
+      if (error) {
+        revision++;
+        controller.abort();
+        reject(error);
+      } else resolve();
+    };
+    pending = {
+      signal: attemptSignal,
+      exchanging: false,
+      complete: () => finish(),
+      fail: () => finish(new Error("Sign-in failed.")),
+    };
+    signal.addEventListener("abort", abort, { once: true });
+    async function start() {
+      try {
+        await prepareAuthProtocol(authScheme, receiveGorthDeepLink);
+        if (attemptSignal.aborted || settled) return;
+        // Both clients use the official SDK's shared pending PKCE state. Only
+        // signInURL changes; authenticate/session storage stay on the main client.
+        const requester =
+          getLoginBrowser() === "gorth"
+            ? createClient("gorth")
+            : getGorthClient();
+        await requester.requestAuth();
+        if (signal.aborted || settled) {
+          const cache = (
+            globalThis as typeof globalThis & {
+              [sdkPkceKey]?: Map<string, string>;
+            }
+          )[sdkPkceKey];
+          cache?.clear();
+        }
+      } catch {
+        finish(
+          new Error(
+            "Could not prepare the desktop callback or open the selected login browser.",
+          ),
+        );
+      }
+    }
+    opening = start();
+  });
+  signal.throwIfAborted();
+}
+import { desktopFetch } from "@/lib/http/transport";

@@ -9,8 +9,8 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-export const instances = sqliteTable(
-  "instances",
+export const instanceTable = sqliteTable(
+  "instance",
   {
     id: text("id").primaryKey(),
     name: text("name").notNull(),
@@ -21,16 +21,16 @@ export const instances = sqliteTable(
     group: text("group_name"),
     createdAt: integer("created_at").notNull(),
   },
-  (table) => [index("instances_created_at_idx").on(table.createdAt)],
+  (table) => [index("instance_created_at_idx").on(table.createdAt)],
 );
 
-export const settings = sqliteTable("settings", {
+export const settingTable = sqliteTable("setting", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
 });
 
-export const gameAccounts = sqliteTable(
-  "game_accounts",
+export const gameAccountTable = sqliteTable(
+  "game_account",
   {
     id: text("id").primaryKey(),
     provider: text("provider", {
@@ -43,19 +43,19 @@ export const gameAccounts = sqliteTable(
     expiresAt: integer("expires_at"),
   },
   (table) => [
-    uniqueIndex("game_accounts_provider_uuid_idx").on(
+    uniqueIndex("game_account_provider_uuid_idx").on(
       table.provider,
       table.uuid,
     ),
-    uniqueIndex("game_accounts_offline_username_idx")
+    uniqueIndex("game_account_offline_username_idx")
       .on(sql`lower(${table.username})`)
       .where(sql`${table.provider} = 'offline'`),
     check(
-      "game_accounts_provider_check",
+      "game_account_provider_check",
       sql`${table.provider} IN ('offline', 'ely', 'gorth')`,
     ),
     check(
-      "game_accounts_offline_credentials_check",
+      "game_account_offline_credentials_check",
       sql`${table.provider} != 'offline' OR (${table.credentials} IS NULL AND ${table.expiresAt} IS NULL)`,
     ),
   ],
@@ -75,7 +75,7 @@ export const launcherSession = sqliteTable(
 );
 
 /** Public SSO identity cache, separate from browser profiles/game accounts. */
-export const userProfiles = sqliteTable("user_profiles", {
+export const userProfileTable = sqliteTable("user_profile", {
   ssoUserId: text("sso_user_id").primaryKey().notNull(),
   name: text("name").notNull(),
   username: text("username"),

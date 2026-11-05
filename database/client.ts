@@ -1,7 +1,8 @@
 import { DatabaseSync } from "node:sqlite";
-import { userProfilesMigration } from "@/database/migrations/user-profiles";
+import { userProfileMigration } from "@/database/migrations/user-profile";
+import { migrateSingularTables } from "@/database/migrations/singular-table";
 import { drizzle } from "drizzle-orm/node-sqlite";
-import initialMigration from "./migrations/20260927204704_new_masque/migration.sql?raw";
+import { initialSchema } from "./initialize";
 
 // Electron's bundled Node supplies SQLite; no native addon rebuild is required.
 export function openDatabase(filename: string) {
@@ -12,21 +13,19 @@ export function openDatabase(filename: string) {
   const version = Number(
     client.prepare("PRAGMA user_version").get()?.user_version ?? 0,
   );
-  if (version > 4)
+  if (version > 5)
     throw new Error("Database được tạo bởi phiên bản launcher mới hơn.");
+  try {
+    migrateSingularTables(client);
+  } catch (error) {
+    client.close();
+    throw error;
+  }
   if (version < 1) {
     client.exec("BEGIN IMMEDIATE");
     try {
       // Also adopt databases created using Drizzle Studio before runtime storage existed.
-      client.exec(
-        initialMigration
-          .replace(/CREATE TABLE /g, "CREATE TABLE IF NOT EXISTS ")
-          .replace(
-            /CREATE UNIQUE INDEX /g,
-            "CREATE UNIQUE INDEX IF NOT EXISTS ",
-          )
-          .replace(/CREATE INDEX /g, "CREATE INDEX IF NOT EXISTS "),
-      );
+      client.exec(initialSchema);
       client.exec("PRAGMA user_version = 1; COMMIT");
     } catch (error) {
       client.exec("ROLLBACK");
@@ -37,9 +36,9 @@ export function openDatabase(filename: string) {
   if (version < 2) {
     client.exec("BEGIN IMMEDIATE");
     try {
-      const columns = client.prepare("PRAGMA table_info(instances)").all();
+      const columns = client.prepare("PRAGMA table_info(instance)").all();
       if (!columns.some((column) => column.name === "loader_version"))
-        client.exec("ALTER TABLE instances ADD COLUMN loader_version TEXT");
+        client.exec("ALTER TABLE instance ADD COLUMN loader_version TEXT");
       client.exec("PRAGMA user_version = 2; COMMIT");
     } catch (error) {
       client.exec("ROLLBACK");
@@ -50,11 +49,11 @@ export function openDatabase(filename: string) {
   if (version < 3) {
     client.exec("BEGIN IMMEDIATE");
     try {
-      const columns = client.prepare("PRAGMA table_info(instances)").all();
+      const columns = client.prepare("PRAGMA table_info(instance)").all();
       if (!columns.some((column) => column.name === "icon_data"))
-        client.exec("ALTER TABLE instances ADD COLUMN icon_data TEXT");
+        client.exec("ALTER TABLE instance ADD COLUMN icon_data TEXT");
       if (!columns.some((column) => column.name === "group_name"))
-        client.exec("ALTER TABLE instances ADD COLUMN group_name TEXT");
+        client.exec("ALTER TABLE instance ADD COLUMN group_name TEXT");
       client.exec("PRAGMA user_version = 3; COMMIT");
     } catch (error) {
       client.exec("ROLLBACK");
@@ -65,7 +64,7 @@ export function openDatabase(filename: string) {
   if (version < 4) {
     client.exec("BEGIN IMMEDIATE");
     try {
-      client.exec(userProfilesMigration);
+      client.exec(userProfileMigration);
       client.exec("PRAGMA user_version = 4; COMMIT");
     } catch (error) {
       client.exec("ROLLBACK");
@@ -73,5 +72,6 @@ export function openDatabase(filename: string) {
       throw error;
     }
   }
+  client.exec("PRAGMA user_version = 5");
   return { client, db: drizzle({ client }) };
 }

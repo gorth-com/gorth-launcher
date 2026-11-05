@@ -4,7 +4,7 @@
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { installGame, launchArguments } from "../lib/game/install";
-import { getJavaEnvironment } from "../lib/utils/environment";
+import { getJavaEnvironment } from "@/utils/environment";
 import { defaultInstanceSettings } from "../lib/library/instance-settings";
 
 async function main() {

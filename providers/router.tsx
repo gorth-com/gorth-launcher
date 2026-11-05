@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { RouterProvider } from "@tanstack/react-router";
+import { RouterProvider } from "@gorth-io/primitive/cores/tanstack/router";
 import Application from "@/app";
 import { createLauncherRouter } from "@/lib/navigation";
 

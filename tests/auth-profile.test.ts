@@ -11,7 +11,7 @@ test("Verified login/refresh synchronize SQLite profiles; logout clears identity
   const command = async (action: string) =>
     handlers.get("auth:command")!(event, {
       action: "launcher." + action,
-    }) as Promise<import("@/lib/utils/interface").AuthResult>;
+    }) as Promise<import("@/utils/interface").AuthResult>;
   const loggedIn = await command("login");
   assert(!loggedIn.error);
   assert.equal(getAuthenticatedUserId(), "verified-subject");

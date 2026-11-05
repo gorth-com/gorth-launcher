@@ -1,5 +1,5 @@
 import { ipcRenderer } from "electron";
-import type { AppMenuAction } from "@/lib/utils/interface";
+import type { AppMenuAction } from "@/utils/interface";
 export const contextMenuApi = {
   command: (
     action:

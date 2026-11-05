@@ -1,28 +1,50 @@
-import type { UserProfileIdentity } from "@/lib/server/interface";
-const tokens = {
-  accessToken: "PRIVATE-ACCESS",
-  refreshToken: "PRIVATE-REFRESH",
-  expiresAt: Date.now() + 3600_000,
-  binding: "test-binding",
-};
-export const gorthBinding = () => "test-binding";
+import { requireSecureStorage } from "@/lib/auth/storage";
+let user: {
+  id: string;
+  name: string;
+  email: string;
+  username?: string;
+  image?: string;
+  emailVerified?: boolean;
+  expiresAt: number;
+  verifiedAt: number;
+  canRefresh: boolean;
+  needsLogin: boolean;
+} | null = null;
+export function gorthSnapshot() {
+  return { user, configured: true, locked: !user };
+}
+export function getGorthUserId() {
+  return user?.id ?? null;
+}
+export function onGorthChanged() {
+  return () => {};
+}
 export async function loginGorth() {
-  return {
+  requireSecureStorage();
+  user = {
     id: "verified-subject",
     name: "Before",
     email: "before@example.test",
-    tokens,
+    expiresAt: Date.now() + 3600_000,
+    verifiedAt: Date.now(),
+    canRefresh: true,
+    needsLogin: false,
   };
 }
-export async function refreshGorth(session: UserProfileIdentity) {
-  return {
-    ...session,
-    name: "After",
-    email: "after@example.test",
-    username: "changed",
-    image: "https://example.test/avatar.png",
-    emailVerified: true,
-    tokens: { ...tokens, accessToken: "PRIVATE-ROTATED" },
-  };
+export async function restoreGorthSession() {
+  requireSecureStorage();
+  if (user)
+    user = {
+      ...user,
+      name: "After",
+      email: "after@example.test",
+      username: "changed",
+      image: "https://example.test/avatar.png",
+      emailVerified: true,
+      verifiedAt: Date.now(),
+    };
 }
-export async function revokeGorth() {}
+export async function signOutGorth() {
+  user = null;
+}

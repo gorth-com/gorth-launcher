@@ -1,6 +1,6 @@
 import { defineConfig } from "drizzle-kit";
 import path from "node:path";
-import { getDataDirectory } from "./lib/utils/data-directory";
+import { getDataDirectory } from "@/utils/data-directory";
 
 export default defineConfig({
   dialect: "sqlite",

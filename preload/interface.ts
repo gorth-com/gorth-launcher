@@ -5,6 +5,11 @@ export interface LauncherInfo {
   dataPath: string;
 }
 export interface ElectronApi {
+  folders: typeof import("@/preload/api/folders").foldersApi;
+  settings: typeof import("@/preload/api/settings").settingsApi;
+  networkProxy: typeof import("@/preload/api/proxy").networkProxyApi;
+  updates: typeof import("@/preload/api/updates").updateApi;
+  confirmation: typeof import("@/preload/api/confirmation").confirmationApi;
   rpc: typeof import("@/preload/api/rpc").rpcApi;
   shortcuts: typeof import("@/preload/api/shortcuts").shortcutsApi;
   content: typeof import("@/preload/api/content").contentApi;

@@ -6,7 +6,9 @@ import {
   type ReactNode,
 } from "react";
 import { PortalPanel } from "@/providers/portal";
-import { Button } from "@/components/ui/button";
+// Menu items render in another native window. The default button has no
+// main-document ResizeObserver/press-scale lifecycle crossing that boundary.
+import { Button } from "@gorth-io/primitive/default/button";
 interface DashboardMenuProps {
   label: string;
   trigger: ReactElement<{

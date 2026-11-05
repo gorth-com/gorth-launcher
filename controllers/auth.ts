@@ -1,12 +1,15 @@
-import type { Context } from "hono";
-import { receiveAuthCallback as receiveAuthCallbackServices } from "@/services/auth-callback";
+import type { H3Event } from "nitro/h3";
+import { desktopContext } from "@/lib/server/context";
 
-export function receiveAuthCallback(c: Context) {
-  const accepted = receiveAuthCallbackServices(c.req.url);
-  return c.text(
+export function receiveAuthCallback(event: H3Event) {
+  const accepted = desktopContext(event).receiveAuthCallback(event.req.url);
+  return new Response(
     accepted
       ? "Đã nhận phản hồi xác thực. Bạn có thể trở lại ứng dụng."
       : "Phản hồi xác thực không hợp lệ hoặc đã hết hạn.",
-    accepted ? 200 : 400,
+    {
+      status: accepted ? 200 : 400,
+      headers: { "Content-Type": "text/plain; charset=UTF-8" },
+    },
   );
 }

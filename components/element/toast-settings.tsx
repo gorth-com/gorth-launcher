@@ -1,51 +1,73 @@
-import { Button } from "@/components/ui/button";
+import { CardTitle, CardDescription } from "@gorth-io/primitive/default/card";
+import { Button } from "@gorth-io/primitive/custom/button";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@gorth-io/primitive/custom/select";
 import {
   toast,
   useToasterSettings,
   type ToastPosition,
 } from "@/providers/toaster";
 
+const options: { value: ToastPosition; label: string }[] = [
+  { value: "top-left", label: "Top left" },
+  { value: "top-right", label: "Top right" },
+  { value: "bottom-left", label: "Bottom left" },
+  { value: "bottom-right", label: "Bottom right" },
+];
 export function ToastSettings() {
   const { position, setPosition } = useToasterSettings();
-  const options: { value: ToastPosition; label: string }[] = [
-    { value: "top-left", label: "Top left" },
-    { value: "top-right", label: "Top right" },
-    { value: "bottom-left", label: "Bottom left" },
-    { value: "bottom-right", label: "Bottom right" },
-  ];
   return (
-    <div className="space-y-3">
-      <p className="text-sm font-medium">Toast position</p>
-      <div
-        className="flex flex-wrap gap-2"
-        role="group"
-        aria-label="Toast position"
-      >
-        {options.map((option) => (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <CardTitle id="toast-position-label">Toast position</CardTitle>
+          <CardDescription>Choose where notifications appear.</CardDescription>
+        </div>
+        <div className="flex items-center gap-2">
           <Button
-            key={option.value}
-            className="h-9"
-            variant={position === option.value ? "default" : "outline"}
-            aria-pressed={position === option.value}
-            onClick={() => setPosition(option.value)}
+            variant="outline"
+            onClick={() =>
+              toast.add({
+                title: "Preview notification",
+                description: "Notifications appear in your selected corner.",
+                type: "success",
+              })
+            }
           >
-            {option.label}
+            Show toast
           </Button>
-        ))}
+          <Select
+            items={options}
+            value={position}
+            onValueChange={(value) => {
+              if (options.some((option) => option.value === value))
+                setPosition(value as ToastPosition);
+            }}
+          >
+            <SelectTrigger
+              aria-labelledby="toast-position-label"
+              className="w-60"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {options.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
-      <Button
-        className="h-9"
-        variant="outline"
-        onClick={() =>
-          toast.add({
-            title: "Preview notification",
-            description: "Notifications appear in your selected corner.",
-            type: "success",
-          })
-        }
-      >
-        Show toast
-      </Button>
     </div>
   );
 }

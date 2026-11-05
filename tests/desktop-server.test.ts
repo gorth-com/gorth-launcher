@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test, vi, beforeAll } from "vitest";
+vi.mock("electron", () => import("./electron-auth-mock"));
+import { buildDesktopBackend } from "@/lib/server/build";
+beforeAll(() => buildDesktopBackend(process.cwd()), 60000);
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { createDesktopRoutes } from "@/routes";
+import { createDesktopHandler } from "@/lib/server/handler";
 import { registerAuthCallback } from "@/services/auth-callback";
 import { upsertUserProfile, getUserProfile } from "@/services/user-profile";
 
@@ -53,7 +56,7 @@ test("SQLite profiles use SSO identity, refresh mutable fields, retain creation 
   assert.equal(getUserProfile("subject-2", filename)?.ssoUserId, "subject-2");
   const check = new DatabaseSync(filename);
   assert.equal(
-    check.prepare("SELECT COUNT(*) AS total FROM user_profiles").get()?.total,
+    check.prepare("SELECT COUNT(*) AS total FROM user_profile").get()?.total,
     2,
   );
   assert.equal(
@@ -62,24 +65,27 @@ test("SQLite profiles use SSO identity, refresh mutable fields, retain creation 
   );
   assert(
     !check
-      .prepare("PRAGMA table_info(user_profiles)")
+      .prepare("PRAGMA table_info(user_profile)")
       .all()
       .some((row) => /token|password|credential/i.test(String(row.name))),
   );
   check.close();
 });
 
-test("Hono rejects foreign hosts, cross-origin/profile access and expired callbacks; callback is single-use", async () => {
+test("Nitro rejects foreign hosts, cross-origin/profile access and expired callbacks; callback is single-use", async () => {
   const origin = "http://localhost:5500";
-  const routes = createDesktopRoutes({
+  const routes = createDesktopHandler({
+    applicationDirectory: process.cwd(),
     origin,
     capability: "test-capability",
     getIdentityId: () => null,
   });
   const request = (url: string, headers: Record<string, string> = {}) =>
-    routes.request(origin + url, {
-      headers: { host: "localhost:5500", ...headers },
-    });
+    routes.fetch(
+      new Request(origin + url, {
+        headers: { host: "localhost:5500", ...headers },
+      }),
+    );
   const health = await request("/health");
   assert.equal(health.status, 200);
   assert.equal(health.headers.get("cache-control"), "no-store");

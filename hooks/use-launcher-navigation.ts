@@ -1,6 +1,9 @@
-import { useRouter, useRouterState } from "@tanstack/react-router";
+import {
+  useRouter,
+  useRouterState,
+} from "@gorth-io/primitive/cores/tanstack/router";
 import { useCallback } from "react";
-import type { Page } from "@/lib/utils/interface";
+import type { Page } from "@/utils/interface";
 
 export function useLauncherNavigation() {
   const router = useRouter();
@@ -8,14 +11,24 @@ export function useLauncherNavigation() {
   const page = location.pathname.slice(1) as Page;
   const index = location.state.__TSR_index ?? 0;
   const navigate = useCallback(
-    (next: Page) => {
-      if (router.state.location.pathname !== "/" + next)
-        void router.navigate({ to: "/" + next });
+    (next: Page, options?: { section?: string; replace?: boolean }) => {
+      if (next === "library") next = "instances";
+      if (next === "instance-data") next = "instances/data";
+      if (router.state.location.pathname !== "/" + next || options?.section)
+        void router.navigate({
+          to: "/" + next,
+          search: options?.section ? { section: options.section } : {},
+          replace: options?.replace,
+        });
     },
     [router],
   );
   return {
     page,
+    editSection:
+      typeof location.search.section === "string"
+        ? location.search.section
+        : undefined,
     navigate,
     back: () => router.history.back(),
     forward: () => router.history.forward(),

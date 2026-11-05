@@ -1,10 +1,13 @@
-import type { Context } from "hono";
-import { getUserProfile as getUserProfileServices } from "@/services/user-profile";
+import type { H3Event } from "nitro/h3";
+import { desktopContext } from "@/lib/server/context";
 
-export function getUserProfile(c: Context, identityId: string | null) {
-  if (!identityId) return c.json({ error: "unauthenticated" }, 401);
-  const profile = getUserProfileServices(identityId);
+export function getUserProfile(event: H3Event) {
+  const desktop = desktopContext(event);
+  const identityId = desktop.getIdentityId();
+  if (!identityId)
+    return Response.json({ error: "unauthenticated" }, { status: 401 });
+  const profile = desktop.getUserProfile(identityId);
   return profile
-    ? c.json({ profile })
-    : c.json({ error: "profile_not_found" }, 404);
+    ? Response.json({ profile })
+    : Response.json({ error: "profile_not_found" }, { status: 404 });
 }

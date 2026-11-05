@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import type { GameStatus } from "@/lib/utils/interface";
+import type { GameStatus } from "@/utils/interface";
+import { toast } from "@/providers/toaster";
 
 export interface LauncherNotification {
   id: string;
@@ -13,6 +14,7 @@ export function useNotifications(message: string, jobs: GameStatus[]) {
   const [items, setItems] = useState<LauncherNotification[]>([]);
   const lastMessage = useRef("");
   const phases = useRef(new Map<string, string>());
+  const failures = useRef(new Map<string, string>());
   useEffect(() => {
     if (message && message !== lastMessage.current)
       setItems((current) =>
@@ -31,10 +33,23 @@ export function useNotifications(message: string, jobs: GameStatus[]) {
   }, [message]);
   useEffect(() => {
     const additions: LauncherNotification[] = [];
+    const nextFailures = new Map<string, string>();
     for (const job of jobs) {
+      if (["error", "crashed"].includes(job.phase)) {
+        const message =
+          job.crashHint || job.message || "Không chạy được Minecraft.";
+        nextFailures.set(job.instanceId, message);
+        if (failures.current.get(job.instanceId) !== message)
+          toast.add({
+            id: "game-error:" + job.instanceId,
+            title: `Minecraft ${job.version}`,
+            description: message,
+            type: "error",
+          });
+      }
       if (
         phases.current.get(job.instanceId) !== job.phase &&
-        ["ready", "running", "error", "crashed"].includes(job.phase)
+        ["ready", "running"].includes(job.phase)
       )
         additions.push({
           id: crypto.randomUUID(),
@@ -45,6 +60,7 @@ export function useNotifications(message: string, jobs: GameStatus[]) {
         });
       phases.current.set(job.instanceId, job.phase);
     }
+    failures.current = nextFailures;
     if (additions.length)
       setItems((current) => [...additions, ...current].slice(0, 100));
   }, [jobs]);

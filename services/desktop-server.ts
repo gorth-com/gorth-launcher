@@ -1,15 +1,15 @@
-import { createAdaptorServer } from "@hono/node-server";
-import { serveStatic } from "@hono/node-server/serve-static";
+import { createServer } from "node:http";
+import { H3, toNodeHandler } from "nitro/h3";
 import { app, BrowserWindow, ipcMain } from "electron";
 import { randomBytes } from "node:crypto";
 import { chmod, lstat, mkdir, unlink } from "node:fs/promises";
 import { connect } from "node:net";
-import { appUrl } from "@/lib/utils/environment";
+import { appUrl } from "@/utils/environment";
 import { getDesktopPipe } from "@/lib/server/pipe";
-import { createDesktopRoutes } from "@/routes";
+import { createDesktopHandler } from "@/lib/server/handler";
 import { getAccountProfile } from "@/services/account";
 
-let server: ReturnType<typeof createAdaptorServer> | null = null;
+let server: ReturnType<typeof createServer> | null = null;
 async function removeStalePipe(filename: string) {
   const info = await lstat(filename).catch((error: NodeJS.ErrnoException) => {
     if (error.code === "ENOENT") return null;
@@ -46,7 +46,14 @@ export async function startDesktopServer(
   getIdentityId: () => string | null,
 ) {
   if (server) return;
-  const origin = new URL(appUrl);
+  let origin: URL;
+  try {
+    origin = new URL(appUrl);
+  } catch {
+    throw new Error(
+      "Thiếu hoặc sai VITE_PUBLIC_APP_URL. Đối chiếu .env.example và khởi động lại app.",
+    );
+  }
   if (
     origin.protocol !== "http:" ||
     !["localhost", "127.0.0.1"].includes(origin.hostname) ||
@@ -57,18 +64,20 @@ export async function startDesktopServer(
     origin.hash ||
     origin.pathname !== "/"
   )
-    throw new Error("VITE_APP_URL phải là HTTP loopback với port cố định.");
+    throw new Error(
+      "VITE_PUBLIC_APP_URL phải là HTTP loopback với port cố định.",
+    );
   const capability = randomBytes(32).toString("base64url");
-  const routes = createDesktopRoutes({
+  const routes = createDesktopHandler({
+    applicationDirectory: app.getAppPath(),
+    rendererDirectory,
+    development,
     origin: origin.origin,
     capability,
     getIdentityId,
   });
-  if (!development) {
-    routes.get("/", (c) => c.redirect("/assets/index.html"));
-    routes.get("/assets/*", serveStatic({ root: rendererDirectory }));
-  }
-  const listener = createAdaptorServer({ fetch: routes.fetch });
+  const transport = new H3().all("/**", (event) => routes.fetch(event.req));
+  const listener = createServer(toNodeHandler(transport));
   const pipe = getDesktopPipe(app.getAppPath());
   if (development && pipe.directory) {
     await mkdir(pipe.directory, { recursive: true, mode: 0o700 });

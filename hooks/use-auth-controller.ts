@@ -1,36 +1,55 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AuthCommand, AuthSnapshot } from "@/lib/utils/interface";
+import { resetCallerAuthentication } from "@/lib/auth/client";
+import type { AuthCommand, AuthSnapshot } from "@/utils/interface";
+
 export function useAuthController() {
   const [auth, setAuth] = useState<AuthSnapshot | null>(null);
   const [busy, setBusy] = useState(false);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState("");
   const operation = useRef(false);
+  const startup = useRef<ReturnType<
+    typeof window.electronAPI.auth.snapshot
+  > | null>(null);
   useEffect(() => {
     let active = true;
     const accept = (value: AuthSnapshot) => {
       if (active) setAuth(value);
     };
     const unsubscribe = window.electronAPI.auth.onChanged(accept);
-    window.electronAPI.auth
-      .snapshot()
-      .then((result) => {
+    const update = async (initial = false) => {
+      try {
+        // Restore once per mounted application, including StrictMode effect replay.
+        // Polling stays read-only; failed unlocks require an explicit retry.
+        if (initial && !startup.current) {
+          operation.current = true;
+          startup.current = window.electronAPI.auth
+            .snapshot()
+            .then((result) =>
+              result.ok && result.snapshot.locked && !result.snapshot.pending
+                ? window.electronAPI.auth.command({ action: "launcher.unlock" })
+                : result,
+            )
+            .finally(() => {
+              operation.current = false;
+            });
+        }
+        const result = await (initial
+          ? startup.current!
+          : window.electronAPI.auth.snapshot());
         accept(result.snapshot);
         if (active && !result.ok)
           setError(result.error ?? "Không đọc được tài khoản.");
-      })
-      .catch(() => {
+      } catch {
         if (active) setError("Không kết nối được dịch vụ tài khoản.");
-      })
-      .finally(() => {
-        if (active) setReady(true);
-      });
+      } finally {
+        if (active && initial) setReady(true);
+      }
+    };
+    void update(true);
     // Recompute expiry display without exposing or refreshing tokens in the renderer.
     const timer = setInterval(() => {
-      window.electronAPI.auth
-        .snapshot()
-        .then((result) => accept(result.snapshot))
-        .catch(() => {});
+      void update();
     }, 30_000);
     return () => {
       active = false;
@@ -46,6 +65,8 @@ export function useAuthController() {
       setBusy(true);
     }
     setError("");
+    if (command.action !== "launcher.refresh" && command.action !== "cancel")
+      resetCallerAuthentication();
     try {
       const result = await window.electronAPI.auth.command(command);
       setAuth(result.snapshot);
@@ -69,20 +90,26 @@ export function useAuthController() {
     const refreshIfNeeded = () => {
       const snapshot = current.current;
       if (
-        snapshot?.launcher &&
-        snapshot.launcher.canRefresh &&
-        !snapshot.locked &&
-        !snapshot.pending &&
-        !operation.current &&
-        snapshot.launcher.expiresAt <= Date.now() + 60_000
+        !snapshot?.launcher ||
+        !snapshot.launcher.canRefresh ||
+        snapshot.locked ||
+        snapshot.pending ||
+        operation.current
+      )
+        return;
+      if (
+        Date.now() - (snapshot.launcher.verifiedAt ?? 0) >= 90_000 ||
+        snapshot.launcher.expiresAt - Date.now() <= 30_000
       )
         void run({ action: "launcher.refresh" });
     };
+    // Revalidate the native app session before the 120-second freshness cutoff.
     const timer = setInterval(refreshIfNeeded, 30_000);
-    window.addEventListener("focus", refreshIfNeeded);
+    const onFocus = refreshIfNeeded;
+    window.addEventListener("focus", onFocus);
     return () => {
       clearInterval(timer);
-      window.removeEventListener("focus", refreshIfNeeded);
+      window.removeEventListener("focus", onFocus);
     };
   }, [run]);
   const account = auth?.launcher ?? null;
@@ -106,7 +133,7 @@ export function useAuthController() {
     account,
     username: account?.username ?? null,
     authenticated: !!account && !account.needsLogin,
-    loading: !ready || busy || !!auth?.pending,
+    loading: !ready,
     locked: !!auth?.locked,
     login: () => run({ action: "launcher.login" }),
     register: () => run({ action: "launcher.register" }),

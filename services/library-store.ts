@@ -1,4 +1,6 @@
+import { createInstanceSchema } from "@/lib/library/create-schema";
 import path from "node:path";
+import { getLauncherFolders } from "@/utils/launcher-folders";
 import { randomUUID } from "node:crypto";
 import {
   mkdir,
@@ -10,14 +12,10 @@ import {
   readFile,
 } from "node:fs/promises";
 import { eq, asc, like } from "drizzle-orm";
-import { z } from "zod";
+import { z } from "@gorth-io/structure/cores/zod";
 import { openDatabase } from "@/database/client";
-import { instances, settings } from "@/database/schema";
-import type {
-  Instance,
-  LibrarySnapshot,
-  PlaySession,
-} from "@/lib/utils/interface";
+import { instanceTable, settingTable } from "@/database/schema";
+import type { Instance, LibrarySnapshot, PlaySession } from "@/utils/interface";
 import { supportedLoader } from "@/lib/game/catalog";
 import { settingsSchema as configuration } from "@/lib/library/settings-schema";
 import {
@@ -43,18 +41,7 @@ const trashEntry = instance.extend({
   deletedAt: z.number().int().nonnegative(),
 });
 const commandSchema = z.discriminatedUnion("action", [
-  z
-    .object({
-      action: z.literal("create"),
-      name,
-      version,
-      loader: z.enum(["Vanilla", "Fabric", "Forge", "NeoForge"]),
-      loaderVersion: z.string().max(60).nullish(),
-    })
-    .refine(
-      supportedLoader,
-      "Phiên bản mod loader không nằm trong danh sách được hỗ trợ.",
-    ),
+  createInstanceSchema,
   z.object({ action: z.literal("rename"), id, name }),
   z.object({ action: z.literal("copy"), id, name }),
   z.object({ action: z.literal("delete"), id }),
@@ -123,8 +110,12 @@ export async function createLibraryStore(
 ) {
   await mkdir(dataPath, { recursive: true });
   const { client, db } = openDatabase(path.join(dataPath, "gorth-launcher.db"));
-  const root = path.join(dataPath, "minecraft", "instances");
-  const trashRoot = path.join(dataPath, "minecraft", ".trash");
+  const folders = getLauncherFolders(dataPath);
+  const root = folders.instances;
+  // Keep rename-to-trash on the same volume when instances live on another disk.
+  const trashRoot = root === path.join(folders.root, "instances")
+    ? path.join(folders.root, ".trash")
+    : path.join(root, ".trash");
   await mkdir(root, { recursive: true });
   await mkdir(trashRoot, { recursive: true });
   for (const directory of [path.dirname(root), root, trashRoot]) {
@@ -132,13 +123,14 @@ export async function createLibraryStore(
       throw new Error("Thư mục dữ liệu instance không được là liên kết.");
   }
   const getValue = (key: string) =>
-    db.select().from(settings).where(eq(settings.key, key)).get()?.value;
+    db.select().from(settingTable).where(eq(settingTable.key, key)).get()
+      ?.value;
   const putValue = (key: string, value: unknown) =>
     db
-      .insert(settings)
+      .insert(settingTable)
       .values({ key, value: JSON.stringify(value) })
       .onConflictDoUpdate({
-        target: settings.key,
+        target: settingTable.key,
         set: { value: JSON.stringify(value) },
       })
       .run();
@@ -155,8 +147,8 @@ export async function createLibraryStore(
   const getInstance = (value: string) => {
     const item = db
       .select()
-      .from(instances)
-      .where(eq(instances.id, id.parse(value)))
+      .from(instanceTable)
+      .where(eq(instanceTable.id, id.parse(value)))
       .get();
     if (!item) throw new Error("Không tìm thấy instance.");
     return item;
@@ -170,8 +162,8 @@ export async function createLibraryStore(
     );
     const currentInstances = db
       .select()
-      .from(instances)
-      .orderBy(asc(instances.createdAt))
+      .from(instanceTable)
+      .orderBy(asc(instanceTable.createdAt))
       .all();
     return {
       instances: currentInstances,
@@ -189,8 +181,8 @@ export async function createLibraryStore(
       ),
       trash: db
         .select()
-        .from(settings)
-        .where(like(settings.key, "trash:%"))
+        .from(settingTable)
+        .where(like(settingTable.key, "trash:%"))
         .all()
         .map((row) => {
           const value = JSON.parse(row.value);
@@ -211,8 +203,8 @@ export async function createLibraryStore(
     const trash = path.join(trashRoot, op.id);
     const inLibrary = !!db
       .select()
-      .from(instances)
-      .where(eq(instances.id, op.id))
+      .from(instanceTable)
+      .where(eq(instanceTable.id, op.id))
       .get();
     if (op.action === "copy" && !inLibrary) {
       for (const target of [live, path.join(root, ".copy-" + op.id)])
@@ -221,7 +213,9 @@ export async function createLibraryStore(
       await rename(trash, live);
     else if (!inLibrary && (await exists(live)) && !(await exists(trash)))
       await rename(live, trash);
-    db.delete(settings).where(eq(settings.key, "instance-operation")).run();
+    db.delete(settingTable)
+      .where(eq(settingTable.key, "instance-operation"))
+      .run();
   }
   async function purgeTrash(value: string, keepSaves: boolean) {
     const raw = JSON.parse(getValue("trash:" + id.parse(value)) ?? "null");
@@ -235,9 +229,8 @@ export async function createLibraryStore(
       if (await exists(saves)) {
         await regularTree(saves);
         const recovered = path.join(
-          dataPath,
-          "minecraft",
-          "recovered-saves",
+          path.dirname(trashRoot),
+          root === path.join(folders.root, "instances") ? "recovered-saves" : ".recovered-saves",
           parsed.id + "-" + parsed.deletedAt,
         );
         await mkdir(path.dirname(recovered), { recursive: true });
@@ -246,11 +239,11 @@ export async function createLibraryStore(
     }
     if (await exists(directory)) await rm(directory, { recursive: true });
     transaction(() => {
-      db.delete(settings)
-        .where(eq(settings.key, "trash:" + parsed.id))
+      db.delete(settingTable)
+        .where(eq(settingTable.key, "trash:" + parsed.id))
         .run();
-      db.delete(settings)
-        .where(eq(settings.key, "instance-settings:" + parsed.id))
+      db.delete(settingTable)
+        .where(eq(settingTable.key, "instance-settings:" + parsed.id))
         .run();
     });
   }
@@ -265,8 +258,8 @@ export async function createLibraryStore(
       Date.now() - automaticSettings.trashRetentionDays * 86_400_000;
     for (const row of db
       .select()
-      .from(settings)
-      .where(like(settings.key, "trash:%"))
+      .from(settingTable)
+      .where(like(settingTable.key, "trash:%"))
       .all()) {
       const value = JSON.parse(row.value);
       if ((value.deletedAt ?? value.createdAt) < cutoff)
@@ -315,7 +308,7 @@ export async function createLibraryStore(
         if (!getValue("legacy-imported"))
           transaction(() => {
             for (const item of c.instances)
-              db.insert(instances).values(item).onConflictDoNothing().run();
+              db.insert(instanceTable).values(item).onConflictDoNothing().run();
             if (!getValue("launcher")) putValue("launcher", c.settings);
             putValue("legacy-imported", true);
           });
@@ -324,37 +317,39 @@ export async function createLibraryStore(
         getInstance(c.id);
         putValue("instance-settings:" + c.id, c.settings);
       } else if (c.action === "create")
-        db.insert(instances)
+        db.insert(instanceTable)
           .values({
             id: randomUUID(),
             name: c.name,
             version: c.version,
             loader: c.loader,
             loaderVersion: c.loaderVersion ?? null,
+            group: c.group || null,
+            iconData: c.iconData ?? null,
             createdAt: Date.now(),
           })
           .run();
       else if (c.action === "metadata") {
         getInstance(c.id);
-        db.update(instances)
+        db.update(instanceTable)
           .set({ group: c.group || null })
-          .where(eq(instances.id, c.id))
+          .where(eq(instanceTable.id, c.id))
           .run();
       } else if (c.action === "icon") {
         getInstance(c.id);
-        db.update(instances)
+        db.update(instanceTable)
           .set({ iconData: c.iconData })
-          .where(eq(instances.id, c.id))
+          .where(eq(instanceTable.id, c.id))
           .run();
       } else if (c.action === "runtime") {
         getInstance(c.id);
-        db.update(instances)
+        db.update(instanceTable)
           .set({
             version: c.version,
             loader: c.loader,
             loaderVersion: c.loaderVersion ?? null,
           })
-          .where(eq(instances.id, c.id))
+          .where(eq(instanceTable.id, c.id))
           .run();
         await rm(path.join(root, c.id, "installed.json"), { force: true });
       } else if (c.action === "trash.purge") {
@@ -396,16 +391,16 @@ export async function createLibraryStore(
               ),
             });
             if (!supportedLoader(item)) continue;
-            db.insert(instances).values(item).onConflictDoNothing().run();
+            db.insert(instanceTable).values(item).onConflictDoNothing().run();
           } catch {
             /* Ignore folders without valid Gorth installation metadata. */
           }
         }
       } else if (c.action === "rename") {
         getInstance(c.id);
-        db.update(instances)
+        db.update(instanceTable)
           .set({ name: c.name })
-          .where(eq(instances.id, c.id))
+          .where(eq(instanceTable.id, c.id))
           .run();
       } else if (c.action === "copy") {
         const original = getInstance(c.id);
@@ -432,23 +427,23 @@ export async function createLibraryStore(
             await rename(staging, target);
           }
           transaction(() => {
-            db.insert(instances).values(copy).run();
+            db.insert(instanceTable).values(copy).run();
             const storedSettings = getValue("instance-settings:" + original.id);
             if (storedSettings)
               putValue(
                 "instance-settings:" + copy.id,
                 instanceSettingsSchema.parse(JSON.parse(storedSettings)),
               );
-            db.delete(settings)
-              .where(eq(settings.key, "instance-operation"))
+            db.delete(settingTable)
+              .where(eq(settingTable.key, "instance-operation"))
               .run();
           });
         } catch (error) {
           for (const directory of [staging, target])
             if (await exists(directory))
               await rm(directory, { recursive: true });
-          db.delete(settings)
-            .where(eq(settings.key, "instance-operation"))
+          db.delete(settingTable)
+            .where(eq(settingTable.key, "instance-operation"))
             .run();
           throw error;
         }
@@ -472,22 +467,24 @@ export async function createLibraryStore(
           }
           transaction(() => {
             if (restoring) {
-              db.insert(instances).values(item).run();
-              db.delete(settings)
-                .where(eq(settings.key, "trash:" + item.id))
+              db.insert(instanceTable).values(item).run();
+              db.delete(settingTable)
+                .where(eq(settingTable.key, "trash:" + item.id))
                 .run();
             } else {
               putValue("trash:" + item.id, { ...item, deletedAt: Date.now() });
-              db.delete(instances).where(eq(instances.id, item.id)).run();
+              db.delete(instanceTable)
+                .where(eq(instanceTable.id, item.id))
+                .run();
             }
-            db.delete(settings)
-              .where(eq(settings.key, "instance-operation"))
+            db.delete(settingTable)
+              .where(eq(settingTable.key, "instance-operation"))
               .run();
           });
         } catch (error) {
           if (moved) await rename(target, source);
-          db.delete(settings)
-            .where(eq(settings.key, "instance-operation"))
+          db.delete(settingTable)
+            .where(eq(settingTable.key, "instance-operation"))
             .run();
           throw error;
         }
@@ -519,13 +516,17 @@ export async function createLibraryStore(
       await rename(preparedDirectory, destination);
       moved = true;
       transaction(() => {
-        db.insert(instances).values(item).run();
-        db.delete(settings).where(eq(settings.key, "instance-operation")).run();
+        db.insert(instanceTable).values(item).run();
+        db.delete(settingTable)
+          .where(eq(settingTable.key, "instance-operation"))
+          .run();
       });
       return item;
     } catch (error) {
       if (moved) await rename(destination, preparedDirectory);
-      db.delete(settings).where(eq(settings.key, "instance-operation")).run();
+      db.delete(settingTable)
+        .where(eq(settingTable.key, "instance-operation"))
+        .run();
       throw error;
     } finally {
       working = false;

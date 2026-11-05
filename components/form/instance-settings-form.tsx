@@ -1,8 +1,11 @@
+import { useFeedbackToast } from "@/hooks/use-feedback-toast";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import type { AccountView, InstanceSettings } from "@/lib/utils/interface";
+import { InstanceSelect } from "@/components/element/instance-select";
+import { Switch } from "@gorth-io/primitive/default/switch";
+import { Button } from "@gorth-io/primitive/custom/button";
+import { Input } from "@gorth-io/primitive/default/input";
+import { Textarea } from "@gorth-io/primitive/default/textarea";
+import type { AccountView, InstanceSettings } from "@/utils/interface";
 
 interface InstanceSettingsFormProps {
   expanded?: boolean;
@@ -48,6 +51,7 @@ export function InstanceSettingsForm({
     environmentText(initialSettings.environment),
   );
   const [error, setError] = useState("");
+  useFeedbackToast(error);
   const field = (
     key: keyof InstanceSettings,
     next: string | number | boolean | null,
@@ -89,7 +93,8 @@ export function InstanceSettingsForm({
             RAM tối thiểu (GB)
             <Input
               type="number"
-              min={1}
+              min={0.125}
+              step={1 / 1024}
               max={64}
               value={value.memoryMin}
               onChange={(event) =>
@@ -101,7 +106,8 @@ export function InstanceSettingsForm({
             RAM tối đa (GB)
             <Input
               type="number"
-              min={1}
+              min={0.125}
+              step={1 / 1024}
               max={64}
               value={value.memoryMax}
               onChange={(event) =>
@@ -154,26 +160,26 @@ export function InstanceSettingsForm({
           </label>
         </div>
         <label className="!flex-row items-center gap-2">
-          <input
-            type="checkbox"
+          <Switch
             checked={value.fullscreen}
-            onChange={(event) => field("fullscreen", event.target.checked)}
+            onCheckedChange={(checked) => field("fullscreen", checked)}
           />
           Toàn màn hình
         </label>
         <label>
           Tài khoản mặc định
-          <select
+          <InstanceSelect
+            label="Tài khoản mặc định"
             value={value.accountId ?? ""}
-            onChange={(event) => field("accountId", event.target.value || null)}
-          >
-            <option value="">Dùng tài khoản đang chọn</option>
-            {accounts.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.username} · {account.provider}
-              </option>
-            ))}
-          </select>
+            onChange={(value) => field("accountId", value || null)}
+            items={[
+              { value: "", label: "Dùng tài khoản đang chọn" },
+              ...accounts.map((account) => ({
+                value: account.id,
+                label: account.username + " · " + account.provider,
+              })),
+            ]}
+          />
         </label>
         <div className="grid grid-cols-2 gap-3">
           <label>
@@ -227,19 +233,18 @@ export function InstanceSettingsForm({
         </p>
         <label>
           GPU ưu tiên
-          <select
+          <InstanceSelect
+            label="GPU ưu tiên"
             value={value.gpuPreference}
-            onChange={(event) =>
-              field(
-                "gpuPreference",
-                event.target.value as InstanceSettings["gpuPreference"],
-              )
+            onChange={(value) =>
+              field("gpuPreference", value as InstanceSettings["gpuPreference"])
             }
-          >
-            <option value="default">Mặc định hệ thống</option>
-            <option value="high-performance">Hiệu năng cao</option>
-            <option value="integrated">GPU tích hợp</option>
-          </select>
+            items={[
+              { value: "default", label: "Mặc định hệ thống" },
+              { value: "high-performance", label: "Hiệu năng cao" },
+              { value: "integrated", label: "GPU tích hợp" },
+            ]}
+          />
         </label>
         {(["openGlPath", "openAlPath", "glfwPath"] as const).map((key) => (
           <label key={key}>
@@ -256,11 +261,7 @@ export function InstanceSettingsForm({
             />
           </label>
         ))}
-        {error && (
-          <p role="alert" className="text-sm text-destructive">
-            {error}
-          </p>
-        )}
+
         <Button
           type="button"
           className="h-9 self-end"

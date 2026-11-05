@@ -1,8 +1,8 @@
-import { Bookmark, PanelLeftClose } from "lucide-react";
+import { Bookmark, PanelLeftClose } from "@gorth-io/primitive/cores/lucide";
 
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
+import { Button } from "@gorth-io/primitive/custom/button";
+import { ScrollArea } from "@gorth-io/primitive/default/scroll-area";
+import { Separator } from "@gorth-io/primitive/default/separator";
 
 interface BrowserBookmark {
   id: string;

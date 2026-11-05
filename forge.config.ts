@@ -1,4 +1,10 @@
 import type { ForgeConfig } from "@electron-forge/shared-types";
+import { fileURLToPath } from "node:url";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { loadDevelopmentEnvironment } from "./utils/development-environment";
+import { getMacReleaseSigning } from "./utils/release-environment";
+import { trackDevelopmentProcess } from "./main/services/forge-lifecycle";
 import { MakerSquirrel } from "@electron-forge/maker-squirrel";
 import { MakerZIP } from "@electron-forge/maker-zip";
 import { MakerDeb } from "@electron-forge/maker-deb";
@@ -9,14 +15,18 @@ import { FuseV1Options, FuseVersion } from "@electron/fuses";
 
 const appIcon =
   process.platform === "darwin"
-    ? "assets/favicon.icns"
+    ? "public/favicon.icns"
     : process.platform === "win32"
-      ? "assets/favicon.ico"
-      : "assets/favicon.png";
+      ? "public/favicon.ico"
+      : "public/favicon.png";
 
 const config: ForgeConfig = {
   hooks: {
+    postStart: async (_config, appProcess) => {
+      trackDevelopmentProcess(appProcess);
+    },
     preStart: async () => {
+      loadDevelopmentEnvironment(fileURLToPath(new URL(".", import.meta.url)));
       // Set before Electron is spawned; AppKit logging initializes before main.ts.
       if (process.platform === "darwin") {
         process.env.OS_ACTIVITY_MODE ??= "disable";
@@ -24,18 +34,49 @@ const config: ForgeConfig = {
     },
   },
   packagerConfig: {
+    ...getMacReleaseSigning(),
+    // Packager clears its temp root; never share it with another Forge process.
+    tmpdir: join(tmpdir(), `gorth-launcher-forge-${process.pid}`),
     appBundleId: "com.gorth.launcher",
     appCategoryType: "public.app-category.games",
-    asar: true,
+    asar: { unpack: "**/*.node" },
+    protocols: [
+      { name: "Gorth authentication", schemes: ["com.gorth.launcher"] },
+    ],
     executableName: "Gorth Launcher",
     icon: appIcon,
+    // Vite bundles JS, but better-sqlite3 remains external and icons load at runtime.
+    ignore: (filePath) => {
+      if (!filePath) return false;
+      return !(
+        filePath.startsWith("/.vite") ||
+        filePath === "/public" ||
+        filePath.startsWith("/public/") ||
+        filePath === "/node_modules" ||
+        filePath.startsWith("/node_modules/")
+      );
+    },
   },
   rebuildConfig: {},
   makers: [
-    new MakerSquirrel({}),
+    new MakerSquirrel((arch) => ({
+      name: "gorth_launcher",
+      setupExe: `gorth-launcher-win32-${arch}-setup.exe`,
+      setupMsi: `gorth-launcher-win32-${arch}-setup.msi`,
+      noMsi: false,
+    })),
+    {
+      name: "@electron-forge/maker-dmg",
+      platforms: ["darwin"],
+      config: { format: "ULFO" },
+    },
     new MakerZIP({}, ["darwin"]),
-    new MakerRpm({}),
-    new MakerDeb({}),
+    new MakerRpm({
+      options: { name: "gorth-launcher", productName: "Gorth Launcher" },
+    }),
+    new MakerDeb({
+      options: { name: "gorth-launcher", productName: "Gorth Launcher" },
+    }),
   ],
   plugins: [
     new VitePlugin({

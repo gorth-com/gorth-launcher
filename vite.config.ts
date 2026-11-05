@@ -10,12 +10,17 @@ const root = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   root,
+  // index.html is a renderer entry and must be transformed, not copied verbatim.
   publicDir: false,
+  cacheDir: ".vite/cache",
   build: {
-    rolldownOptions: { input: path.resolve(root, "assets/index.html") },
+    rolldownOptions: { input: path.resolve(root, "public/index.html") },
   },
   server: createDesktopDevServer(root, 5502),
   resolve: {
+    // Forge enables this by default; Deno's isolated dependencies need real paths.
+    preserveSymlinks: false,
+    dedupe: ["react", "react-dom"],
     alias: {
       "@": root,
     },

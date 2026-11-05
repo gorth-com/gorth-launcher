@@ -4,7 +4,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import ts from "typescript";
 
-const formatterPath = "lib/utils/formatter.ts";
+const formatterPath = "utils/formatter.ts";
 const roots = [
   "app",
   "components",
@@ -44,7 +44,7 @@ function parse(filename: string) {
     true,
   );
 }
-test("app-owned display formatting stays in lib/utils/formatter.ts", () => {
+test("app-owned display formatting stays in utils/formatter.ts", () => {
   const violations: string[] = [];
   const methods = new Set([
     "toLocaleString",

@@ -1,16 +1,16 @@
+import { defaultSettings } from "@/utils/constant";
 import { useEffect, useRef, useState } from "react";
 import { useTRPC } from "@/lib/rpc/client";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+} from "@gorth-io/primitive/cores/tanstack/query";
 import type {
   LibraryCommand,
   LibrarySnapshot,
   Settings,
-} from "@/lib/utils/interface";
-import {
-  defaultSettings,
-  readInstances,
-  readSettings,
-} from "@/lib/utils/launcher";
+} from "@/utils/interface";
+import { readInstances, readSettings } from "@/utils/launcher";
 
 export function useLibrary() {
   const trpc = useTRPC();

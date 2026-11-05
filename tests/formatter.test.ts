@@ -6,7 +6,7 @@ import {
   formatFileSize,
   formatInitials,
   formatNumber,
-} from "@/lib/utils/formatter";
+} from "@/utils/formatter";
 
 test("file sizes retain adaptive units, precision and invalid-value handling", () => {
   for (const value of [NaN, Infinity, -Infinity, -1, 0])
@@ -56,7 +56,7 @@ import {
   formatMinutes,
   formatRemainingTime,
   formatTransferRate,
-} from "@/lib/utils/formatter";
+} from "@/utils/formatter";
 
 test("instance sizes preserve fixed KB/MB precision and do not switch to GB", () => {
   assert.equal(formatInstanceFileSize(0), "0 B");

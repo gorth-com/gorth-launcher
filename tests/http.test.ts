@@ -1,24 +1,19 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test, vi, type TestContext } from "vitest";
 import axios, {
   AxiosError,
   AxiosHeaders,
   type AxiosAdapter,
   type InternalAxiosRequestConfig,
-} from "axios";
-import { z } from "zod";
+} from "@gorth-io/structure/cores/axios";
+import { z } from "@gorth-io/structure/cores/zod";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
-import {
-  caller,
-  callerClient,
-  useCallerQuery,
-  useCallerMutation,
-} from "@/lib/utils/caller";
-import { fetcher, toWebResponse } from "@/lib/utils/fetcher";
+import { caller, useCallerQuery, useCallerMutation } from "@/utils/caller";
+import { fetcher, toWebResponse } from "@/utils/fetcher";
 import { getAccountProfile } from "@/services/account";
 import { QueryProvider } from "@/providers/query";
-import { toast } from "@/components/custom/toast";
+import { toast } from "@gorth-io/primitive/custom/toast";
 
 function result(
   config: InternalAxiosRequestConfig,
@@ -33,20 +28,17 @@ function result(
     config,
   };
 }
-function adapter(
-  t: Parameters<Parameters<typeof test>[1]>[0],
-  fn: AxiosAdapter,
-) {
+function adapter(t: TestContext, fn: AxiosAdapter) {
   const old = axios.defaults.adapter;
   axios.defaults.adapter = fn;
-  t.after(() => {
+  t.onTestFinished(() => {
     axios.defaults.adapter = old;
   });
 }
 
-test("caller uses Axios, validates Zod, unwraps payloads and exposes toast callbacks", async (t) => {
+test("caller uses Axios, validates Zod, unwraps payloads and exposes toast callbacks", async () => {
   const notices: unknown[] = [];
-  t.mock.method(toast, "add", (notice: unknown) => {
+  vi.spyOn(toast, "add").mockImplementation((notice: unknown) => {
     notices.push(notice);
     return "fixture";
   });
@@ -66,8 +58,8 @@ test("caller uses Axios, validates Zod, unwraps payloads and exposes toast callb
   assert.deepEqual(notices, [{ type: "success", description: "Saved" }]);
 });
 
-test("fetcher preserves form bodies and blocks redirects without using fetch", async (t) => {
-  t.mock.method(globalThis, "fetch", () => {
+test("fetcher preserves form bodies and blocks redirects without using fetch", async () => {
+  vi.spyOn(globalThis, "fetch").mockImplementation(() => {
     throw new Error("Fetch must not be used");
   });
   const response = await fetcher({
@@ -84,10 +76,10 @@ test("fetcher preserves form bodies and blocks redirects without using fetch", a
   assert.deepEqual(response.data, { ok: true });
 });
 
-test("caller normalizes Axios errors, reports toast and does not retry when auth is disabled", async (t) => {
+test("caller normalizes Axios errors, reports toast and does not retry when auth is disabled", async () => {
   let calls = 0;
   const notices: unknown[] = [];
-  t.mock.method(toast, "add", (notice: unknown) => {
+  vi.spyOn(toast, "add").mockImplementation((notice: unknown) => {
     notices.push(notice);
     return "fixture";
   });

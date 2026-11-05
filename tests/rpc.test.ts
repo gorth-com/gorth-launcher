@@ -1,5 +1,6 @@
+import { launcherPages } from "@/utils/constant";
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test } from "vitest";
 import { createTRPCClient, httpLink } from "@trpc/client";
 import {
   desktopRouter,
@@ -8,7 +9,7 @@ import {
 } from "@/main/rpc/router";
 import { handleRpcRequest } from "@/main/rpc/transport";
 import { isRpcRendererUrl } from "@/main/rpc/sender";
-import { createLauncherRouter, launcherPages } from "@/lib/navigation";
+import { createLauncherRouter } from "@/lib/navigation";
 import { createDesktopClient } from "@/lib/rpc/client";
 import { isAbortedNavigation } from "@/lib/webview/errors";
 
@@ -189,33 +190,33 @@ test("RPC only accepts bounded requests to the local adapter endpoint", async ()
   }
 });
 test("RPC renderer URL cannot be a remote site, auth page, portal, or wrong file", () => {
-  const expected = "http://127.0.0.1:5501/assets/index.html";
+  const expected = "http://127.0.0.1:5501/public/index.html";
   assert(isRpcRendererUrl(expected, expected));
   assert(isRpcRendererUrl(expected + "?theme=dark", expected));
   for (const value of [
     "about:blank",
     "https://google.com",
     "http://127.0.0.1:5501/auth/callback",
-    "http://127.0.0.1:5502/assets/index.html",
-    "http://user:pass@127.0.0.1:5501/assets/index.html",
+    "http://127.0.0.1:5502/public/index.html",
+    "http://user:pass@127.0.0.1:5501/public/index.html",
   ])
     assert(!isRpcRendererUrl(value, expected));
   assert(
     isRpcRendererUrl(
-      "file:///app/assets/index.html",
-      "file:///app/assets/index.html",
+      "file:///app/public/index.html",
+      "file:///app/public/index.html",
     ),
   );
   assert(
     !isRpcRendererUrl(
       "file:///other/index.html",
-      "file:///app/assets/index.html",
+      "file:///app/public/index.html",
     ),
   );
   assert(
     !isRpcRendererUrl(
-      "file://attacker/app/assets/index.html",
-      "file:///app/assets/index.html",
+      "file://attacker/app/public/index.html",
+      "file:///app/public/index.html",
     ),
   );
 });

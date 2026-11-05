@@ -1,4 +1,4 @@
-import { fetcher } from "@/lib/utils/fetcher";
+import { fetcher } from "@/utils/fetcher";
 import type { UserProfileCache } from "@/lib/server/interface";
 
 // Main-process API request: the capability never crosses into the renderer.

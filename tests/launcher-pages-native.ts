@@ -63,7 +63,7 @@ void app
         "library",
         "accounts",
         "console",
-        "gallery",
+        "screenshots",
         "settings",
         "instance",
         "notifications",
@@ -89,7 +89,7 @@ void app
             heights.every((item: { height: number }) => item.height === 36),
             `${page}: ${JSON.stringify(heights)}`,
           );
-          if (page === "gallery" && !empty)
+          if (page === "screenshots" && !empty)
             await wait(
               "document.querySelector('img[alt=" +
                 JSON.stringify("test.png") +
@@ -151,7 +151,7 @@ void app
       );
       assert((await run("window.pagesTest.calls")).includes("read"));
       console.log(
-        "Launcher pages: 12 routes, populated/empty states, h-9 buttons, gallery preview, Stop, console export, settings and notification actions passed.",
+        "Launcher views: populated/empty states, h-9 buttons, editor screenshot preview, Stop, console export, settings and notification actions passed.",
       );
     } finally {
       window.destroy();

@@ -4,10 +4,16 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { emptyAuthData } from "./model";
-import type { AuthData } from "@/lib/utils/interface";
-import { z } from "zod";
+import type { AuthData } from "@/utils/interface";
+import { z } from "@gorth-io/structure/cores/zod";
 
 const tokensSchema = z.object({
+  nonce: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{43}$/)
+    .optional(),
+  sid: z.string().optional(),
+  refreshExpiresAt: z.number().finite().optional(),
   accessToken: z.string().min(1),
   refreshToken: z.string().min(1).optional(),
   expiresAt: z.number().finite(),
@@ -23,6 +29,7 @@ const authSchema = z.object({
       username: z.string().optional(),
       image: z.string().optional(),
       emailVerified: z.boolean().optional(),
+      verifiedAt: z.number().finite().optional(),
       tokens: tokensSchema,
     })
     .nullable(),
@@ -30,6 +37,7 @@ const authSchema = z.object({
     z.object({
       id: z.string().min(1),
       provider: z.enum(["offline", "ely", "gorth"]),
+      ownerId: z.string().optional(),
       username: z.string(),
       uuid: z.string(),
       tokens: tokensSchema.optional(),

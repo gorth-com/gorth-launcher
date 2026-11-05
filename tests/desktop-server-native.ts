@@ -10,7 +10,7 @@ import {
 import { registerAuthCallback } from "@/services/auth-callback";
 import { upsertUserProfile, getUserProfile } from "@/services/user-profile";
 import { createDesktopDevServer } from "@/lib/server/vite";
-import { appUrl } from "@/lib/utils/environment";
+import { appUrl } from "@/utils/environment";
 
 app.setPath(
   "userData",
@@ -19,10 +19,12 @@ app.setPath(
 awaitTest();
 async function awaitTest() {
   await app.whenReady();
+  app.setAppPath(process.cwd());
   let window: BrowserWindow | undefined;
   let vite:
     Awaited<ReturnType<(typeof import("vite"))["createServer"]>> | undefined;
   let identityId: string | null = "native-user";
+  let stage = "startup";
   try {
     upsertUserProfile({
       id: "native-user",
@@ -40,7 +42,9 @@ async function awaitTest() {
         preload: path.resolve(".vite/server-native-preload.cjs"),
       },
     });
-    await window.loadURL(appUrl + "/assets/index.html");
+    stage = "load production renderer";
+    await window.loadURL(appUrl + "/public/index.html");
+    stage = "renderer assertion";
     assert.equal(
       await window.webContents.executeJavaScript(
         "document.querySelector('h1').textContent",
@@ -49,6 +53,7 @@ async function awaitTest() {
     );
     assert.equal((await fetch(appUrl + "/health")).status, 200);
     assert.equal((await fetch(appUrl + "/user/profile")).status, 403);
+    stage = "renderer profile fetch";
     let profile = await window.webContents.executeJavaScript(
       "window.testDesktop.profile()",
     );
@@ -74,11 +79,13 @@ async function awaitTest() {
       null,
     );
     assert.equal(getUserProfile("native-user")?.name, "Native Test");
+    stage = "development server";
     stopDesktopServer();
-    // Forge uses Vite on the public port; Hono uses only an OS IPC endpoint in main.
+    // Forge uses Vite on the public port; Nitro uses only an OS IPC endpoint in main.
     const { createServer } = await import("vite");
     vite = await createServer({
       configFile: false,
+      cacheDir: path.resolve(".vite/native-server-cache"),
       root: fixture,
       server: {
         ...createDesktopDevServer(
@@ -90,7 +97,7 @@ async function awaitTest() {
     });
     await startDesktopServer(true, fixture, () => identityId);
     await vite.listen();
-    await window.loadURL(appUrl + "/assets/index.html");
+    await window.loadURL(appUrl + "/public/index.html");
     assert.equal((await fetch(appUrl + "/health")).status, 200);
     identityId = "native-user";
     profile = await window.webContents.executeJavaScript(
@@ -129,9 +136,28 @@ async function awaitTest() {
     }
     assert.equal(BrowserWindow.getAllWindows().length, 1);
     console.log(
-      "Native desktop: packaged assets/API, sandboxed profile bridge, logout cache, same-port Vite/Hono and callback replay protection passed.",
+      "Native desktop: packaged assets/API, sandboxed profile bridge, logout cache, same-port Vite/Nitro and callback replay protection passed.",
     );
-  } catch {
+  } catch (error) {
+    const failure = error as Error & {
+      code?: string;
+      actual?: unknown;
+      expected?: unknown;
+    };
+    console.error(
+      "Native failure",
+      stage,
+      failure.message.replace(/https?:\/\/[^\s)]+/g, "[URL]"),
+      failure.name,
+      failure.code ?? "",
+      typeof failure.actual === "number" ? failure.actual : "",
+      typeof failure.expected === "number" ? failure.expected : "",
+      failure.stack
+        ?.split("\n")
+        .filter((line) => line.includes("server-native.cjs"))
+        .slice(0, 2)
+        .join("\n"),
+    );
     process.exitCode = 1;
     console.error(
       "Native desktop server test failed; no credentials or callback URLs were logged.",

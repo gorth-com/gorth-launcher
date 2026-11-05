@@ -3,15 +3,17 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { drizzle } from "drizzle-orm/node-sqlite";
 import { eq } from "drizzle-orm";
-import { userProfiles } from "@/database/schema";
-import { userProfilesMigration } from "@/database/migrations/user-profiles";
+import { userProfileTable } from "@/database/schema";
+import { userProfileMigration } from "@/database/migrations/user-profile";
+import { migrateSingularTables } from "@/database/migrations/singular-table";
 import type { UserProfileIdentity } from "@/lib/server/interface";
 
 function profileDatabase(filename: string) {
   const client = new DatabaseSync(filename);
   try {
     client.exec("PRAGMA busy_timeout = 5000;");
-    client.exec(userProfilesMigration);
+    migrateSingularTables(client);
+    client.exec(userProfileMigration);
     return { client, db: drizzle({ client }) };
   } catch (error) {
     client.close();
@@ -38,9 +40,9 @@ export function upsertUserProfile(
       emailVerified: identity.emailVerified ?? null,
       syncedAt: now,
     };
-    db.insert(userProfiles)
+    db.insert(userProfileTable)
       .values({ ...profile, createdAt: now })
-      .onConflictDoUpdate({ target: userProfiles.ssoUserId, set: profile })
+      .onConflictDoUpdate({ target: userProfileTable.ssoUserId, set: profile })
       .run();
   } finally {
     client.close();
@@ -55,8 +57,8 @@ export function getUserProfile(
     return (
       db
         .select()
-        .from(userProfiles)
-        .where(eq(userProfiles.ssoUserId, ssoUserId))
+        .from(userProfileTable)
+        .where(eq(userProfileTable.ssoUserId, ssoUserId))
         .get() ?? null
     );
   } finally {

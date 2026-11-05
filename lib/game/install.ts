@@ -8,10 +8,11 @@ import type {
   Instance,
   InstalledGame,
   InstanceSettings,
-} from "@/lib/utils/interface";
+} from "@/utils/interface";
 import { download, json, readJson, safePath } from "./files";
 import { argumentsFor, libraryFiles, versionMetadata } from "./metadata";
 import { ensureJava, memoryLimit } from "./java";
+import { presetArguments } from "@/lib/library/game-preferences";
 import { supportedLoader } from "./catalog";
 import { installLoader } from "./loaders";
 export function validateInstance(value: Instance) {
@@ -50,6 +51,8 @@ export async function installGame(
     signal,
     (message) => progress(message, 0, 0),
     runtime,
+    settings.javaOptions,
+    major === runtime ? version.javaVersion?.component : undefined,
   );
   const instanceRoot = safePath(root, "instances/" + instance.id);
   const gameDir = path.join(instanceRoot, "game");
@@ -232,6 +235,10 @@ export async function injector(root: string, signal: AbortSignal) {
   );
   return file;
 }
+function heapSize(value: number) {
+  memoryLimit(value);
+  return Number.isInteger(value) ? value + "G" : Math.round(value * 1024) + "M";
+}
 export function launchArguments(
   game: InstalledGame,
   session: GameIdentity,
@@ -278,8 +285,9 @@ export function launchArguments(
     variables,
   );
   const args = [
-    "-Xms" + memoryLimit(settings.memoryMin) + "G",
-    "-Xmx" + memoryLimit(settings.memoryMax) + "G",
+    "-Xms" + heapSize(settings.memoryMin),
+    "-Xmx" + heapSize(settings.memoryMax),
+    ...(settings.javaOptions ? presetArguments(settings.javaOptions) : []),
     ...settings.jvmArguments,
     ...(settings.openGlPath
       ? ["-Dorg.lwjgl.opengl.libname=" + settings.openGlPath]

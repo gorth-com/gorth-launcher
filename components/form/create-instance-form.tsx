@@ -1,8 +1,9 @@
-import { useForm } from "@tanstack/react-form";
-import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { loaderCatalog, supportedLoader } from "@/lib/game/catalog";
+import { loaderCatalog } from "@/utils/constant";
+import { useForm } from "@gorth-io/primitive/cores/tanstack/form";
+import { Plus } from "@gorth-io/primitive/cores/lucide";
+import { Button } from "@gorth-io/primitive/custom/button";
+import { Input } from "@gorth-io/primitive/default/input";
+import { supportedLoader } from "@/lib/game/catalog";
 
 interface CreateInstanceFormProps {
   versions: { id: string }[];
@@ -31,7 +32,8 @@ export function CreateInstanceForm({
     onSubmit: async ({ value }) => {
       const name = value.name.trim();
       const version = value.version.trim();
-      const listedVersion = value.loader !== "Vanilla" ||
+      const listedVersion =
+        value.loader !== "Vanilla" ||
         vanillaVersions.some((entry) => entry.id === version);
       if (name && version && listedVersion && supportedLoader(value))
         onSubmit({
@@ -182,9 +184,9 @@ export function CreateInstanceForm({
         )}
       </form.Subscribe>
       <p className="mt-3 text-xs leading-6 text-muted-foreground">
-        Vanilla: tất cả bản release từ 1.7.10 đến mới nhất, không gồm snapshot. Mod
-        loader: danh sách ghim ổn định, không dùng Quilt. Temurin được tự chọn
-        theo phiên bản game; 1.20.1 dùng Java 17, 1.21.1 dùng Java 21.
+        Vanilla: tất cả bản release từ 1.7.10 đến mới nhất, không gồm snapshot.
+        Mod loader: danh sách ghim ổn định, không dùng Quilt. Temurin được tự
+        chọn theo phiên bản game; 1.20.1 dùng Java 17, 1.21.1 dùng Java 21.
       </p>
       <div className="mt-6 flex justify-end gap-2">
         <Button

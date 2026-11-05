@@ -1,10 +1,10 @@
 import { initTRPC } from "@trpc/server";
-import { z } from "zod";
+import { z } from "@gorth-io/structure/cores/zod";
 import type {
   LibraryResult,
   LibrarySnapshot,
   Settings,
-} from "@/lib/utils/interface";
+} from "@/utils/interface";
 import { settingsSchema } from "@/lib/library/settings-schema";
 export interface DesktopContext {
   snapshot: () => LibrarySnapshot;

@@ -1,17 +1,50 @@
-import { useState, type Dispatch, type SetStateAction } from "react";
+import { Fragment } from "react";
+import { FoldersCard } from "@/components/element/folders-card";
+import { JavaSettings } from "./java";
+import { MinecraftSettings } from "./minecraft";
+import { minecraftPreferences } from "@/lib/library/game-preferences";
+import { formatPlayTime } from "@/utils/formatter";
+import { ProxySettingsCard } from "@/components/element/proxy-settings";
+import {
+  GeneralSettings,
+  LanguageSettings,
+  ServicesSettings,
+  ToolsSettings,
+} from "./additional";
+import { Separator } from "@gorth-io/primitive/default/separator";
+import { launcherSettingsSections } from "@/utils/constant";
+import { type LauncherSettingsSection } from "@/utils/constant";
+import { AppUpdateCard } from "@/components/element/app-update-card";
+import type { Page } from "@/utils/interface";
+import { PageHeading } from "@/components/heading";
+import {
+  Card,
+  CardTitle,
+  CardDescription,
+} from "@gorth-io/primitive/default/card";
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from "@gorth-io/primitive/default/radio-group";
+import { LauncherFooter } from "@/components/element/launcher-footer";
+import { type Dispatch, type SetStateAction } from "react";
 import { ToastSettings } from "@/components/element/toast-settings";
-import { Box, Check, Folder, Monitor, Moon, Sun } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Ranger } from "@/components/custom/ranger";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { type Settings, type PlaySession } from "@/lib/utils/interface";
+import { SidebarSettings } from "@/components/element/sidebar-settings";
+import { LoginBrowserSettings } from "@/components/element/login-browser-settings";
+import { AccountCard } from "@/components/element/account-card";
+import { ProfilePreferences } from "@/components/element/profile-preferences";
+import { Box, Monitor, Moon, Sun } from "@gorth-io/primitive/cores/lucide";
+import { Button } from "@gorth-io/primitive/custom/button";
+import { Input } from "@gorth-io/primitive/default/input";
+import { Switch } from "@gorth-io/primitive/default/switch";
+import { type Settings, type PlaySession } from "@/utils/interface";
 import { LaunchHistory } from "./history";
-import { defaultSettings } from "@/lib/utils/launcher";
-import { formatMinutes } from "@/lib/utils/formatter";
+
 import { saveTheme, type Theme } from "@/lib/theme";
 import type { LauncherInfo } from "@/preload/interface";
 interface SettingsPageProps {
+  onNavigate?: (page: Page) => void;
+  section?: LauncherSettingsSection;
   history?: PlaySession[];
   settings: Settings;
   setSettings: Dispatch<SetStateAction<Settings>>;
@@ -21,6 +54,8 @@ interface SettingsPageProps {
   setNotice: (message: string) => void;
 }
 export function SettingsPage({
+  onNavigate,
+  section = "appearance",
   settings,
   setSettings,
   theme,
@@ -29,282 +64,325 @@ export function SettingsPage({
   setNotice,
   history = [],
 }: SettingsPageProps) {
-  const maxMemory = Math.max(1, Math.min(64, (info?.memoryGB ?? 16) - 2));
-  const [section, setSection] = useState("appearance");
   return (
-    <div className="grid items-start gap-5 lg:grid-cols-4">
-      <nav aria-label="Launcher settings sections" className="space-y-2">
-        {[
-          ["appearance", "Appearance"],
-          ["runtime", "Minecraft Runtime"],
-          ["trash", "Trash"],
-          ["history", "Launch History"],
-          ["about", "About"],
-        ].map(([id, label]) => (
-          <Button
-            key={id}
-            className="h-9 w-full justify-start"
-            variant={section === id ? "secondary" : "ghost"}
-            aria-pressed={section === id}
-            onClick={() => setSection(id)}
-          >
-            {label}
-          </Button>
-        ))}
-        <p className="text-xs text-muted-foreground">
-          Cấu hình được tự động lưu.
-        </p>
-      </nav>
-      <div className="min-w-0 lg:col-span-3">
-        <p className="mb-6 text-sm text-muted-foreground">
-          Tùy chỉnh không gian và cấu hình mặc định cho instance mới.
-        </p>
-        <section
-          hidden={section !== "appearance"}
-          className="mb-4 overflow-hidden rounded-xl border bg-card"
-        >
-          <div className="flex items-center justify-between gap-4 border-b px-6 py-4 [&>h2]:text-sm [&>h2]:font-semibold">
-            <h2>Giao diện</h2>
-            <span className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs text-muted-foreground">
-              <Check size={12} />
-              Tự động lưu
-            </span>
-          </div>
-          <div className="flex items-center justify-between gap-6 border-b p-6 last:border-0 [&_strong]:text-sm [&_strong]:font-medium [&_p]:mt-1 [&_p]:text-xs [&_p]:text-muted-foreground">
-            <div>
-              <strong>Chủ đề</strong>
-              <p>Chọn giao diện phù hợp với bạn.</p>
-            </div>
-            <div className="flex items-center gap-2">
-              {(
-                [
-                  { value: "light", label: "Sáng", icon: Sun },
-                  { value: "dark", label: "Tối", icon: Moon },
-                  {
-                    value: "system",
-                    label: "Hệ thống",
-                    icon: Monitor,
-                  },
-                ] as const
-              ).map(({ value, label, icon: Icon }) => (
-                <Button
-                  key={value}
-                  variant={theme === value ? "default" : "outline"}
-                  className="h-9"
-                  aria-pressed={theme === value}
-                  onClick={() => {
-                    try {
-                      saveTheme(value);
-                      setTheme(value);
-                    } catch {
-                      setNotice("Không thể lưu chủ đề.");
+    <div className="flex min-w-0 flex-col gap-6">
+      <PageHeading
+        icon={
+          launcherSettingsSections.find((item) => item.id === section)?.icon
+        }
+        title={
+          {
+            general: "General",
+            folders: "Folders",
+            language: "Language",
+            services: "Services",
+            tools: "Tools",
+            proxy: "Proxy",
+            content: "Content",
+            shortcuts: "Shortcuts",
+            instance: "Minecraft",
+            appearance: "Appearance",
+            profile: "Gorth profile",
+            runtime: "Java",
+            trash: "Trash",
+            history: "Launch History",
+            about: "About",
+          }[section]
+        }
+      />
+      {section === "proxy" && <ProxySettingsCard />}
+      {section === "folders" && <FoldersCard />}
+      {section === "general" && (
+        <GeneralSettings settings={settings} setSettings={setSettings} />
+      )}
+      {section === "language" && (
+        <LanguageSettings settings={settings} setSettings={setSettings} />
+      )}
+      {section === "services" && <ServicesSettings onNavigate={onNavigate} />}
+      {section === "tools" && (
+        <ToolsSettings settings={settings} setSettings={setSettings} />
+      )}
+      {section === "profile" && (
+        <>
+          <AccountCard profileName={settings.profileName}>
+            <ProfilePreferences settings={settings} setSettings={setSettings} />
+          </AccountCard>
+          <LoginBrowserSettings />
+        </>
+      )}
+      {section === "content" && (
+        <Card className="gap-0 overflow-hidden py-0">
+          {(["mods", "modpacks", "resourcepacks", "shaders"] as const).map(
+            (page) => (
+              <Fragment key={page}>
+                <Separator className="first:hidden" />
+                <div className="flex items-center justify-between gap-4 p-4">
+                  <CardTitle>
+                    {
+                      {
+                        mods: "Mods",
+                        modpacks: "Modpacks",
+                        resourcepacks: "Resource Packs",
+                        shaders: "Shaders",
+                      }[page]
                     }
-                  }}
-                >
-                  <Icon size={17} />
-                  {label}
-                </Button>
-              ))}
-            </div>
-          </div>
-          <div className="flex items-center justify-between gap-6 border-b p-6">
-            <div>
-              <label htmlFor="titlebar-logo" className="text-sm font-medium">
-                Logo trên titlebar
-              </label>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Hiển thị icon launcher trên thanh tiêu đề.
-              </p>
-            </div>
-            <Switch
-              id="titlebar-logo"
-              checked={settings.showTitlebarLogo ?? true}
-              onCheckedChange={(showTitlebarLogo) =>
-                setSettings({ ...settings, showTitlebarLogo })
-              }
-            />
-          </div>
-          <div className="p-6">
-            <ToastSettings />
-          </div>
-        </section>
-        <section
-          hidden={section !== "trash"}
-          className="mb-4 overflow-hidden rounded-xl border bg-card"
-        >
-          <div className="border-b px-6 py-4">
-            <h2 className="text-sm font-semibold">Tự động dọn Trash</h2>
-          </div>
-          <div className="flex items-center justify-between gap-6 border-b p-6">
-            <div>
-              <strong className="text-sm font-medium">Thời gian lưu</strong>
-              <p className="mt-1 text-xs text-muted-foreground">
-                0 ngày để tắt tự động dọn, tối đa 365 ngày.
-              </p>
-            </div>
-            <Input
-              className="h-9 w-28"
-              type="number"
-              min={0}
-              max={365}
-              value={settings.trashRetentionDays ?? 30}
-              onChange={(event) =>
-                setSettings({
-                  ...settings,
-                  trashRetentionDays: Math.max(
-                    0,
-                    Math.min(365, Number(event.target.value) || 0),
-                  ),
-                })
-              }
-            />
-          </div>
-          <label className="flex items-center justify-between gap-6 p-6 text-sm">
-            <span>Giữ saves vào thư mục recovered-saves khi tự dọn</span>
-            <input
-              type="checkbox"
-              checked={settings.keepSavesOnTrashCleanup ?? true}
-              onChange={(event) =>
-                setSettings({
-                  ...settings,
-                  keepSavesOnTrashCleanup: event.target.checked,
-                })
-              }
-            />
-          </label>
-        </section>
-        <section
-          hidden={section !== "runtime"}
-          className="mb-4 overflow-hidden rounded-xl border bg-card"
-        >
-          <div className="flex items-center justify-between gap-4 border-b px-6 py-4 [&>h2]:text-sm [&>h2]:font-semibold">
-            <h2>Eclipse Temurin phù hợp phiên bản game & bộ nhớ</h2>
-            <span className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs text-muted-foreground">
-              Runtime theo Minecraft
-            </span>
-          </div>
-          <div className="flex items-center justify-between gap-6 border-b p-6 last:border-0 [&_strong]:text-sm [&_strong]:font-medium [&_p]:mt-1 [&_p]:text-xs [&_p]:text-muted-foreground">
-            <div>
-              <label htmlFor="memory">
-                <strong>Bộ nhớ tối đa</strong>
-              </label>
-              <p>Chừa bộ nhớ cho hệ điều hành và launcher.</p>
-            </div>
-            <div className="flex items-center gap-4 [&_input]:w-40 [&_input]:accent-primary [&_output]:w-12 [&_output]:text-sm">
-              <Ranger
-                id="memory"
-                label="Bộ nhớ tối đa"
-                min={1}
-                max={maxMemory}
-                value={Math.min(settings.memory, maxMemory)}
-                onValueChange={(value) =>
-                  setSettings({
-                    ...settings,
-                    memory: value,
-                  })
+                  </CardTitle>
+                  <Button variant="outline" onClick={() => onNavigate?.(page)}>
+                    Mở thư viện
+                  </Button>
+                </div>
+              </Fragment>
+            ),
+          )}
+        </Card>
+      )}
+      {section === "about" && <AppUpdateCard />}
+      {section === "appearance" && (
+        <Card className="gap-0 overflow-hidden py-0">
+          <>
+            <Separator className="first:hidden" />
+            <div className="flex flex-wrap items-center justify-between gap-4 p-4">
+              <div className="flex flex-col gap-1">
+                <CardTitle id="titlebar-logo-label">
+                  Logo trên titlebar
+                </CardTitle>
+                <CardDescription>
+                  Hiển thị icon launcher trên thanh tiêu đề.
+                </CardDescription>
+              </div>
+              <Switch
+                id="titlebar-logo"
+                aria-labelledby="titlebar-logo-label"
+                checked={settings.showTitlebarLogo ?? true}
+                onCheckedChange={(showTitlebarLogo) =>
+                  setSettings({ ...settings, showTitlebarLogo })
                 }
               />
-              <output htmlFor="memory">
-                {Math.min(settings.memory, maxMemory)} GB
-              </output>
             </div>
-          </div>
-          <div className="flex flex-col gap-3 border-b p-6 last:border-0 [&_strong]:text-sm [&_strong]:font-medium [&_p]:mt-1 [&_p]:text-xs [&_p]:text-muted-foreground [&_code]:break-all [&_code]:text-xs [&_code]:text-muted-foreground">
-            <div>
-              <label htmlFor="java-path">
-                <strong>Đường dẫn Java</strong>
-              </label>
-              <p>
-                Để trống để tự tìm hoặc tải Eclipse Temurin phù hợp phiên bản
-                game.
-              </p>
+          </>
+          <>
+            <Separator className="first:hidden" />
+            <div className="flex flex-wrap items-center justify-between gap-4 p-4">
+              <div className="flex flex-col gap-1">
+                <CardTitle>Chủ đề</CardTitle>
+                <CardDescription>
+                  Chọn giao diện phù hợp với bạn.
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                {(
+                  [
+                    { value: "light", label: "Sáng", icon: Sun },
+                    { value: "dark", label: "Tối", icon: Moon },
+                    {
+                      value: "system",
+                      label: "Hệ thống",
+                      icon: Monitor,
+                    },
+                  ] as const
+                ).map(({ value, label, icon: Icon }) => (
+                  <Button
+                    key={value}
+                    variant={theme === value ? "default" : "outline"}
+                    className="h-9"
+                    aria-pressed={theme === value}
+                    onClick={() => {
+                      try {
+                        saveTheme(value);
+                        setTheme(value);
+                      } catch {
+                        setNotice("Không thể lưu chủ đề.");
+                      }
+                    }}
+                  >
+                    <Icon size={17} />
+                    {label}
+                  </Button>
+                ))}
+              </div>
             </div>
-            <div className="flex items-center gap-2 [&>input]:h-9 [&>input]:flex-1">
+          </>
+          <>
+            <Separator />
+            <section className="flex flex-col gap-4 p-4">
+              <ToastSettings />
+            </section>
+          </>
+          <>
+            <Separator />
+            <section className="flex flex-col gap-4 p-4">
+              <SidebarSettings
+                enabled={settings.sidebarCollapsible ?? true}
+                mode={settings.sidebarCollapseMode ?? "none"}
+                onEnabledChange={(sidebarCollapsible) =>
+                  setSettings({ ...settings, sidebarCollapsible })
+                }
+                onModeChange={(sidebarCollapseMode) =>
+                  setSettings({ ...settings, sidebarCollapseMode })
+                }
+              />
+            </section>
+          </>
+          <>
+            <Separator />
+            <section className="flex flex-col gap-6 p-4">
+              <div className="flex flex-col gap-1">
+                <CardTitle>Tab layout</CardTitle>
+                <CardDescription>
+                  Compact combines navigation with the title bar.
+                </CardDescription>
+              </div>
+              <RadioGroup
+                aria-label="Tab layout"
+                value={settings.tabLayout ?? "separate"}
+                className="flex flex-col gap-4"
+                onValueChange={(tabLayout) => {
+                  if (tabLayout === "separate" || tabLayout === "compact")
+                    setSettings({ ...settings, tabLayout });
+                }}
+              >
+                {(["separate", "compact"] as const).map((value) => (
+                  <label
+                    key={value}
+                    className="flex items-center gap-3 text-sm"
+                  >
+                    <RadioGroupItem value={value} />
+                    {value === "separate" ? "Separate" : "Compact"}
+                  </label>
+                ))}
+              </RadioGroup>
+            </section>
+          </>
+        </Card>
+      )}
+      {section === "trash" && (
+        <Card className="gap-0 overflow-hidden py-0">
+          <>
+            <Separator className="first:hidden" />
+            <div className="flex flex-wrap items-center justify-between gap-4 p-4">
+              <div className="flex flex-col gap-1">
+                <CardTitle>Thời gian lưu</CardTitle>
+                <CardDescription>
+                  0 ngày để tắt tự động dọn, tối đa 365 ngày.
+                </CardDescription>
+              </div>
               <Input
-                id="java-path"
-                placeholder="Tự động tìm / tải Eclipse Temurin phù hợp phiên bản game"
-                value={settings.javaPath}
+                className="h-9 w-28"
+                type="number"
+                min={0}
+                max={365}
+                value={settings.trashRetentionDays ?? 30}
                 onChange={(event) =>
                   setSettings({
                     ...settings,
-                    javaPath: event.target.value,
+                    trashRetentionDays: Math.max(
+                      0,
+                      Math.min(365, Number(event.target.value) || 0),
+                    ),
                   })
                 }
               />
-              <Button
-                variant="outline"
-                className="h-9"
-                onClick={() => {
-                  window.electronAPI.launcher
-                    .chooseJava()
-                    .then((javaPath) => {
-                      if (javaPath)
-                        setSettings((current) => ({
-                          ...current,
-                          javaPath,
-                        }));
-                    })
-                    .catch(() =>
-                      setNotice("Không thể mở hộp thoại chọn Java."),
-                    );
-                }}
-              >
-                <Folder size={16} />
-                Duyệt…
-              </Button>
             </div>
-          </div>
-        </section>
-        <section
-          hidden={section !== "about"}
-          className="mb-4 overflow-hidden rounded-xl border bg-card"
-        >
-          <div className="flex items-center justify-between gap-4 border-b px-6 py-4 [&>h2]:text-sm [&>h2]:font-semibold">
-            <h2>Về launcher</h2>
+          </>
+          <>
+            <Separator />
+            <div className="flex items-center justify-between gap-4 p-4">
+              <CardTitle id="keep-saves-label">
+                Giữ saves vào thư mục recovered-saves khi tự dọn
+              </CardTitle>
+              <Switch
+                aria-labelledby="keep-saves-label"
+                checked={settings.keepSavesOnTrashCleanup ?? true}
+                onCheckedChange={(keepSavesOnTrashCleanup) =>
+                  setSettings({ ...settings, keepSavesOnTrashCleanup })
+                }
+              />
+            </div>
+          </>
+        </Card>
+      )}
+      {section === "runtime" && (
+        <JavaSettings settings={settings} setSettings={setSettings} />
+      )}
+      {section === "instance" && (
+        <MinecraftSettings settings={settings} setSettings={setSettings} />
+      )}
+      {section === "about" && (
+        <Card className="gap-0 overflow-hidden py-0">
+          <div className="flex flex-wrap items-center justify-between gap-4 p-4">
+            <CardTitle>Về launcher</CardTitle>
             <Box size={18} />
           </div>
-          <div className="flex items-center justify-between gap-6 border-b p-6 last:border-0 [&_strong]:text-sm [&_strong]:font-medium [&_p]:mt-1 [&_p]:text-xs [&_p]:text-muted-foreground">
-            <div>
-              <strong>Gorth Launcher</strong>
-              <p>
-                Minecraft Java Edition · Phiên bản {info?.version ?? "0.0.0"}
-              </p>
+          <>
+            <Separator className="first:hidden" />
+            <div className="flex flex-wrap items-center justify-between gap-4 p-4">
+              <div className="flex flex-col gap-1">
+                <CardTitle>Gorth Launcher</CardTitle>
+                <CardDescription>
+                  Minecraft Java Edition · Phiên bản {info?.version ?? "0.0.0"}
+                </CardDescription>
+              </div>
+              <span className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs text-muted-foreground">
+                {info?.platform ?? "Desktop"}
+              </span>
             </div>
-            <span className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs text-muted-foreground">
-              {info?.platform ?? "Desktop"}
-            </span>
+          </>
+          <>
+            <Separator />
+            <div className="flex flex-col gap-4 p-4 [&_code]:break-all">
+              <CardTitle>Thư mục dữ liệu ứng dụng</CardTitle>
+              <code>{info?.dataPath ?? "Đang đọc…"}</code>
+            </div>
+          </>
+        </Card>
+      )}
+      {section === "about" && <LauncherFooter />}
+      {section === "about" && (
+        <Card className="gap-4 p-4">
+          <CardTitle>Content pages</CardTitle>
+          <div className="flex flex-wrap gap-2">
+            {(
+              [
+                ["content", "Mod & modpack"],
+                ["mods", "Mods"],
+                ["resourcepacks", "Resource Packs"],
+                ["shaders", "Shader Packs"],
+              ] as const
+            ).map(([page, title]) => (
+              <Button
+                key={page}
+                variant="outline"
+                onClick={() => onNavigate?.(page)}
+              >
+                {title}
+              </Button>
+            ))}
           </div>
-          <div className="flex flex-col gap-3 border-b p-6 last:border-0 [&_strong]:text-sm [&_strong]:font-medium [&_p]:mt-1 [&_p]:text-xs [&_p]:text-muted-foreground [&_code]:break-all [&_code]:text-xs [&_code]:text-muted-foreground">
-            <strong>Thư mục dữ liệu ứng dụng</strong>
-            <code>{info?.dataPath ?? "Đang đọc…"}</code>
+        </Card>
+      )}
+      {section === "history" && (
+        <Card className="gap-0 overflow-hidden py-0">
+          <div className="flex flex-col gap-4 p-4">
+            <CardDescription>
+              {history.length} phiên
+              {minecraftPreferences(settings).showTotalTime &&
+                " · " +
+                  formatPlayTime(
+                    history.reduce((sum, item) => sum + item.duration, 0),
+                    minecraftPreferences(settings).durationsInHours,
+                  )}
+            </CardDescription>
+            <LaunchHistory
+              history={history}
+              locale={
+                settings.locale === "system" ? undefined : settings.locale
+              }
+              hours={minecraftPreferences(settings).durationsInHours}
+              showTime={minecraftPreferences(settings).showGameTime}
+            />
           </div>
-        </section>
-        {section === "runtime" && (
-          <Button
-            variant="ghost"
-            className="h-9"
-            onClick={() => {
-              setSettings(defaultSettings);
-              setNotice("Đã khôi phục cấu hình Java và bộ nhớ mặc định.");
-            }}
-          >
-            Khôi phục cấu hình Java mặc định
-          </Button>
-        )}
-        {section === "history" && (
-          <section className="space-y-3 rounded-lg border p-4">
-            <h2 className="font-semibold">Launch History</h2>
-            <p className="text-sm text-muted-foreground">
-              {history.length} phiên ·{" "}
-              {formatMinutes(
-                history.reduce((sum, item) => sum + item.duration, 0),
-              )}{" "}
-              chơi
-            </p>
-            <LaunchHistory history={history} />
-          </section>
-        )}
-      </div>
+        </Card>
+      )}
     </div>
   );
 }

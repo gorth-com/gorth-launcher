@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import type { AuthData, Tokens } from "@/lib/utils/interface";
-import { parseHttpUrl } from "@/lib/utils/schema";
+import type { AuthData, Tokens } from "@/utils/interface";
+import { parseHttpUrl } from "@/utils/schema";
 export function emptyAuthData(): AuthData {
   return { version: 1, launcher: null, accounts: [], selectedAccountId: null };
 }

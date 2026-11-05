@@ -8,7 +8,8 @@ import {
   renameSync,
 } from "node:fs";
 import path from "node:path";
-import { getDataDirectory } from "@/lib/utils/data-directory";
+import { getDataDirectory } from "@/utils/data-directory";
+import { getLauncherFolders } from "@/utils/launcher-folders";
 
 export function configureDataDirectory() {
   const previous = app.getPath("userData");
@@ -48,5 +49,5 @@ export function configureDataDirectory() {
   // Configure before ready: Chromium, cookies, caches and application files use this root.
   app.setPath("userData", target);
   app.setPath("sessionData", target);
-  app.setAppLogsPath(path.join(target, "logs"));
+  app.setAppLogsPath(getLauncherFolders(target).logs);
 }

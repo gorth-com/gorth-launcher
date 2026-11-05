@@ -4,7 +4,7 @@ import type {
   GameResult,
   GameSnapshot,
   GameVersion,
-} from "@/lib/utils/interface";
+} from "@/utils/interface";
 export const gameApi = {
   openDirectory: (id?: string): Promise<{ ok: boolean; error?: string }> =>
     ipcRenderer.invoke("game:open-directory", id),

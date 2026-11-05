@@ -2,8 +2,8 @@ import path from "node:path";
 import { mkdir, writeFile, readFile, rm, stat, rename } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import extract from "extract-zip";
-import type { Instance, Library, Version } from "@/lib/utils/interface";
-import { getJavaEnvironment } from "@/lib/utils/environment";
+import type { Instance, Library, Version } from "@/utils/interface";
+import { getJavaEnvironment } from "@/utils/environment";
 import { download, digest, json, readJson, response, safePath } from "./files";
 
 export function mavenPath(name: string) {
@@ -191,6 +191,7 @@ export async function installLoader(
   );
   const checksums: Record<string, string> = {
     "Forge-1.20.1-47.4.10": "66bfea9963bfa60d88bab6b2750e74a958392715",
+    "Forge-1.20.1-47.4.0": "b73203963ea70aee0c38dc58de1f6d16a766605b",
     "Forge-1.19.2-43.5.0": "0a45a1d96388403c5f16556df81165ba4d96987a",
     "NeoForge-1.20.1-47.1.106": "0c6074dd66487388258e1bb5d2a962d52080a22c",
     "NeoForge-21.1.217": "717df32b79f3e83e2c695ac8e9b0aa0a6fe530b1",

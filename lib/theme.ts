@@ -2,7 +2,14 @@ type Theme = "dark" | "light" | "system";
 
 const THEME_STORAGE_KEY = "launcher-theme";
 function readThemeCookie() {
-  return document.cookie.split("; ").find((item) => item.startsWith(`${THEME_STORAGE_KEY}=`))?.split("=").slice(1).join("=") ?? null;
+  return (
+    document.cookie
+      .split("; ")
+      .find((item) => item.startsWith(`${THEME_STORAGE_KEY}=`))
+      ?.split("=")
+      .slice(1)
+      .join("=") ?? null
+  );
 }
 
 function readTheme(): Theme {
@@ -27,6 +34,11 @@ function applyTheme(theme: Theme) {
   document.documentElement.classList.toggle("dark", resolvedTheme === "dark");
   document.documentElement.dataset.theme = theme;
   document.documentElement.style.colorScheme = resolvedTheme;
+  void window.electronAPI?.settings
+    ?.setTheme?.(theme)
+    .catch((error: unknown) => {
+      console.error("Không đồng bộ được theme của cửa sổ ứng dụng.", error);
+    });
 }
 
 function saveTheme(theme: Theme) {

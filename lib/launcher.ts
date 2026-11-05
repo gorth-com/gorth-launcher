@@ -1,7 +1,3 @@
-export {
-  defaultSettings,
-  readInstances,
-  readSettings,
-} from "@/lib/utils/launcher";
+export { readInstances, readSettings } from "@/utils/launcher";
 
-export type { Instance, Settings } from "@/lib/utils/interface";
+export type { Instance, Settings } from "@/utils/interface";

@@ -1,7 +1,7 @@
 import { useRef } from "react";
-import { useRanger } from "@tanstack/react-ranger";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { useRanger } from "@gorth-io/primitive/cores/tanstack/ranger";
+import { Button } from "@gorth-io/primitive/custom/button";
+import { cn } from "@gorth-io/primitive/cores/cn";
 interface RangerProps {
   id: string;
   label: string;

@@ -1,4 +1,11 @@
 import path from "node:path";
+import { registerFolderIpc } from "@/main/services/folders";
+import { registerSettingsIpc } from "@/main/ipc/settings";
+import { initializeNetworkProxy } from "@/main/services/proxy";
+import { initializeSecureStorage } from "@/lib/auth/storage";
+import { registerUpdateIpc } from "@/main/services/updates";
+import { installGorthAuth } from "@/lib/auth/gorth";
+import { installDevelopmentLifecycle } from "@/main/services/development-lifecycle";
 import {
   startDesktopServer,
   stopDesktopServer,
@@ -17,18 +24,21 @@ import { registerGameIpc, cancelGame } from "@/lib/game/service";
 import { registerLibraryIpc } from "@/lib/library/service";
 import { registerRpcIpc } from "@/main/ipc/rpc";
 import { registerContentIpc } from "@/lib/content/service";
-import { createWindow } from "@/main/windows/capital";
+import { createWindow, getRuntimeAppIconPath } from "@/main/windows/capital";
 import { installApplicationMenu } from "@/main/ipc/application-menu";
 import { registerShortcutsIpc } from "@/main/ipc/shortcuts";
 import { sendMenuAction } from "@/main/ipc/native-menu";
-import type { AppMenuAction } from "@/lib/utils/interface";
+import type { AppMenuAction } from "@/utils/interface";
 import { registerInstanceDataIpc } from "@/lib/instance/service";
+
+installDevelopmentLifecycle(MAIN_WINDOW_VITE_DEV_SERVER_URL);
 
 if (started) app.quit();
 
 app.setName("Gorth Launcher");
 
 configureDataDirectory();
+installGorthAuth();
 
 app.setAppUserModelId("com.gorth.launcher");
 
@@ -53,11 +63,29 @@ app.on("second-instance", (_event, argv) => {
 
 registerContextMenuIpc();
 registerWindowIpc();
+registerSettingsIpc();
+registerFolderIpc();
 
 app
   .whenReady()
   .then(async () => {
     if (!ownsDataDirectory) return;
+    try {
+      initializeSecureStorage();
+    } catch {
+      dialog.showErrorBox(
+        "Không thể truy cập kho khóa",
+        "Ứng dụng vẫn mở, nhưng phiên đã lưu chưa được mở khóa. Hãy cấp quyền Keychain rồi thử đăng nhập hoặc mở khóa phiên lại. Dữ liệu tài khoản được giữ nguyên.",
+      );
+    }
+    await initializeNetworkProxy(["content-websites"]);
+    if (process.platform === "darwin") {
+      try {
+        await app.dock?.setIcon(getRuntimeAppIconPath());
+      } catch (error) {
+        console.warn("Unable to set the macOS Dock icon.", error);
+      }
+    }
     const library = await registerLibraryIpc();
     registerRpcIpc({
       snapshot: library.snapshot,
@@ -70,6 +98,7 @@ app
       getAuthenticatedUserId,
     );
     registerAuthIpc();
+    registerUpdateIpc();
     await registerGameIpc(library);
     registerContentIpc(library);
     registerInstanceDataIpc(library);

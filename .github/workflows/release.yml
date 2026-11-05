@@ -1,0 +1,123 @@
+name: Desktop release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag matching package.json (for example v0.0.0)
+        required: true
+        type: string
+      publish:
+        description: Publish publicly after all four builds pass (otherwise keep draft)
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15-intel
+            platform: darwin
+            arch: x64
+          - os: macos-15
+            platform: darwin
+            arch: arm64
+          - os: windows-2025
+            platform: win32
+            arch: x64
+          - os: ubuntu-24.04
+            platform: linux
+            arch: x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+      TARGET_PLATFORM: ${{ matrix.platform }}
+      TARGET_ARCH: ${{ matrix.arch }}
+      VITE_PUBLIC_APP_URL: http://localhost:5502
+      VITE_PUBLIC_AUTH_URL: https://gorth-launcher.vercel.app
+      VITE_PUBLIC_OAUTH_CLIENT_ID: gorth-launcher
+      GORTH_SIGN_RELEASE: ${{ vars.GORTH_SIGN_RELEASE || '0' }}
+      APPLE_NOTARY_PROFILE: gorth-release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: "2.9.8"
+      - name: Validate tag and native architecture
+        run: deno run -A .github/scripts/build.js check
+      - name: Install locked dependencies
+        env:
+          DEPENDENCIES_TOKEN: ${{ secrets.DESKTOP_DEPENDENCIES_TOKEN }}
+        run: deno run -A .github/scripts/build.js install
+      - name: Check types and release tests
+        run: deno run -A .github/scripts/build.js verify
+      - name: Linux packaging tools
+        if: runner.os == 'Linux'
+        run: deno run -A .github/scripts/build.js linux-tools
+      - name: Import macOS signing identity and notarization profile
+        if: runner.os == 'macOS' && env.GORTH_SIGN_RELEASE == '1'
+        env:
+          CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: deno run -A .github/scripts/build.js sign
+      - name: Package installers and update artifacts
+        run: deno run -A .github/scripts/build.js make
+      - name: Remove temporary signing credentials
+        if: always() && runner.os == 'macOS' && env.GORTH_SIGN_RELEASE == '1'
+        run: deno run -A .github/scripts/build.js cleanup
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.platform }}-${{ matrix.arch }}
+          path: out/release/${{ matrix.platform }}-${{ matrix.arch }}/*
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+      PUBLISH: ${{ inputs.publish == true }}
+      SLUG: gorth-launcher
+      MAC_SIGNED: ${{ vars.GORTH_SIGN_RELEASE == '1' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+          persist-credentials: false
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: "2.9.8"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: desktop-*
+          path: release-assets
+          merge-multiple: true
+      - name: Verify complete release and upload to a draft
+        run: deno run -A --no-config --no-lock .github/scripts/publish.js

@@ -1,10 +1,10 @@
 import { app, BrowserWindow, dialog, ipcMain, session } from "electron";
 import path from "node:path";
 import { chmod, readFile, writeFile } from "node:fs/promises";
-import { z } from "zod";
+import { z } from "@gorth-io/structure/cores/zod";
 import { createLibraryStore } from "@/services/library-store";
 import { gameIsBusy, synchronizeGameLibrary } from "@/lib/game/service";
-import type { LibraryResult } from "@/lib/utils/interface";
+import type { LibraryResult } from "@/utils/interface";
 import { contentIsBusy } from "@/lib/content/state";
 
 export async function registerLibraryIpc() {

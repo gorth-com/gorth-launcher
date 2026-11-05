@@ -1,0 +1,4 @@
+{
+  "minimumDependencyAge": 0,
+  "allowScripts": ["npm:electron-winstaller@5.4.4", "npm:esbuild@0.25.12", "npm:esbuild@0.28.2", "npm:fs-xattr@0.3.1", "npm:fsevents@2.3.3", "npm:macos-alias@0.2.12"]
+}

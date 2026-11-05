@@ -154,9 +154,19 @@ export function PortalPanel({
       window.electronAPI.portal.update(entry.id, { x, y, width, height });
     };
     measure();
-    const observer = new ResizeObserver(measure);
+    // Observe in the portal document's realm and resize outside RO delivery.
+    // Synchronous native-window/layout updates can otherwise start an RO loop.
+    let frame = 0;
+    const portalWindow = entry.window as Window & typeof globalThis;
+    const observer = new portalWindow.ResizeObserver(() => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(measure);
+    });
     observer.observe(panel.current);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      window.cancelAnimationFrame(frame);
+    };
   }, [entry, anchor.x, anchor.y, anchor.width, anchor.height, align]);
 
   useEffect(() => {
@@ -222,7 +232,7 @@ export function PortalPanel({
       <div
         ref={panel}
         role="menu"
-        className={`app-no-drag w-45 max-h-[calc(100vh-16px)] overflow-x-hidden overflow-y-auto rounded-md bg-popover p-1 text-popover-foreground shadow-lg ring-1 ring-foreground/10 ${className}`}
+        className={`[-webkit-app-region:no-drag] w-45 max-h-[calc(100vh-16px)] overflow-x-hidden overflow-y-auto rounded-md bg-popover p-1 text-popover-foreground shadow-lg ring-1 ring-foreground/10 ${className}`}
       >
         {children}
       </div>

@@ -1,35 +1,15 @@
+import { artifactHosts } from "@/utils/constant";
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
 import { mkdir, readFile, rename, rm, stat } from "node:fs/promises";
 import path from "node:path";
+import { gameFolder } from "@/utils/launcher-folders";
 import { pipeline } from "node:stream/promises";
 import { Readable, Transform } from "node:stream";
-import { parseHttpsUrl } from "@/lib/utils/schema";
-import type { Artifact } from "@/lib/utils/interface";
+import { parseHttpsUrl } from "@/utils/schema";
+import type { Artifact } from "@/utils/interface";
 import { transferProgress } from "./transfer";
-const hosts = new Set([
-  "piston-meta.mojang.com",
-  "launchermeta.mojang.com",
-  "piston-data.mojang.com",
-  "launcher.mojang.com",
-  "libraries.minecraft.net",
-  "resources.download.minecraft.net",
-  "api.adoptium.net",
-  "github.com",
-  "release-assets.githubusercontent.com",
-  "objects.githubusercontent.com",
-  "authlib-injector.yushi.moe",
-  "meta.fabricmc.net",
-  "maven.fabricmc.net",
-  "maven.minecraftforge.net",
-  "maven.neoforged.net",
-  "cdn.modrinth.com",
-  "edge.forgecdn.net",
-  "mediafilez.forgecdn.net",
-  "media.forgecdn.net",
-  "raw.githubusercontent.com",
-  "gitlab.com",
-]);
+
 export function safePath(root: string, relative: string) {
   if (
     !relative ||
@@ -39,8 +19,10 @@ export function safePath(root: string, relative: string) {
     relative.split("/").some((p) => p === ".." || p === "." || !p)
   )
     throw new Error("Đường dẫn tải không hợp lệ.");
-  const result = path.resolve(root, relative);
-  if (!result.startsWith(path.resolve(root) + path.sep))
+  const [directory, ...segments] = relative.split("/");
+  const base = path.resolve(gameFolder(root, directory));
+  const result = segments.length ? path.resolve(base, ...segments) : base;
+  if (segments.length && !result.startsWith(path.resolve(base) + path.sep))
     throw new Error("Đường dẫn nằm ngoài thư mục game.");
   return result;
 }
@@ -52,13 +34,13 @@ export async function response(
     const target = parseHttpsUrl(url);
     if (
       target.protocol !== "https:" ||
-      !hosts.has(target.hostname) ||
+      !artifactHosts.has(target.hostname) ||
       target.username ||
       target.password ||
       (target.port && target.port !== "443")
     )
       throw new Error("Nguồn tải không được phép.");
-    const result = await fetch(target, {
+    const result = await desktopFetch(target, {
       redirect: "manual",
       signal: AbortSignal.any([signal, AbortSignal.timeout(120_000)]),
       headers: { "User-Agent": "GorthLauncher/0.0.0" },
@@ -162,3 +144,4 @@ export async function download(
 export async function readJson<T>(file: string): Promise<T> {
   return JSON.parse(await readFile(file, "utf8")) as T;
 }
+import { desktopFetch } from "@/lib/http/transport";

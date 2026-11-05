@@ -1,6 +1,6 @@
-import { useForm } from "@tanstack/react-form";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useForm } from "@gorth-io/primitive/cores/tanstack/form";
+import { Button } from "@gorth-io/primitive/custom/button";
+import { Input } from "@gorth-io/primitive/default/input";
 
 export function InstanceNameForm({
   initialName,
@@ -25,11 +25,11 @@ export function InstanceNameForm({
         event.preventDefault();
         void form.handleSubmit();
       }}
-      className="mt-4 space-y-3"
+      className="flex flex-col gap-4"
     >
       <form.Field name="name">
         {(field) => (
-          <label>
+          <label className="flex flex-col gap-2">
             Tên instance
             <Input
               required

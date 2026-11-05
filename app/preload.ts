@@ -1,4 +1,9 @@
 import { contextBridge } from "electron";
+import { foldersApi } from "@/preload/api/folders";
+import { settingsApi } from "@/preload/api/settings";
+import { networkProxyApi } from "@/preload/api/proxy";
+import { confirmationApi } from "@/preload/api/confirmation";
+import { updateApi } from "@/preload/api/updates";
 import { rpcApi } from "@/preload/api/rpc";
 import { shortcutsApi } from "@/preload/api/shortcuts";
 import { contentApi } from "@/preload/api/content";
@@ -11,6 +16,11 @@ import { windowStateApi, launcherApi } from "@/preload/api/window";
 import { instanceDataApi } from "@/preload/api/instance-data";
 
 const electronAPI = {
+  folders: foldersApi,
+  settings: settingsApi,
+  networkProxy: networkProxyApi,
+  confirmation: confirmationApi,
+  updates: updateApi,
   rpc: rpcApi,
   shortcuts: shortcutsApi,
   content: contentApi,

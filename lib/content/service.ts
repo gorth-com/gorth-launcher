@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import path from "node:path";
+import { getLauncherFolders, gameFolder } from "@/utils/launcher-folders";
 import { mkdtemp, rm } from "node:fs/promises";
 import type { createLibraryStore } from "@/services/library-store";
 import { gameIsBusy, synchronizeGameLibrary } from "@/lib/game/service";
@@ -34,6 +35,7 @@ import {
   regularDirectory,
 } from "./install";
 import { mergeModpackUpdate, setModpackSource, unpackPack } from "./packs";
+import { installWorld } from "./world";
 import type { ContentResult } from "./interface";
 
 export function registerContentIpc(
@@ -49,7 +51,7 @@ export function registerContentIpc(
       throw new Error("Untrusted content sender");
     return window;
   };
-  const root = () => path.join(app.getPath("userData"), "minecraft");
+  const root = () => getLauncherFolders(app.getPath("userData")).root;
   const run = async <T>(
     action: () => Promise<T>,
   ): Promise<ContentResult<T>> => {
@@ -187,7 +189,30 @@ export function registerContentIpc(
     return run(async () => {
       const input = installSchema.parse(raw);
       await operation(async (staging, signal) => {
-        if (input.query.kind !== "modpack") {
+        if (input.query.kind === "world") {
+          if (!input.instanceId)
+            throw new Error("Hãy chọn instance để cài world.");
+          const instance = library.getInstance(input.instanceId);
+          const query = querySchema.parse({
+            ...input.query,
+            version: instance.version,
+            loader: instance.loader,
+          });
+          const file = await resolveContentFile(
+            query,
+            input.projectId,
+            input.versionId,
+            signal,
+          );
+          const archive = path.join(staging, "world.zip");
+          updateContent("Đang tải world…");
+          await download(file.artifact, archive, signal);
+          const game = await regularDirectory(
+            gameFolder(root(), "instances"),
+            `${instance.id}/game`,
+          );
+          await installWorld(archive, staging, game, signal);
+        } else if (input.query.kind !== "modpack") {
           if (!input.instanceId)
             throw new Error("Hãy chọn instance để cài nội dung.");
           const instance = library.getInstance(input.instanceId);
@@ -342,7 +367,7 @@ export function registerContentIpc(
             versionId: latest.id,
           });
           await mergeModpackUpdate(
-            path.join(root(), "instances", instance.id),
+            path.join(gameFolder(root(), "instances"), instance.id),
             payload,
           );
           return;

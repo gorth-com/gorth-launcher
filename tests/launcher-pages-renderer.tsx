@@ -1,16 +1,17 @@
+import { defaultSettings } from "@/utils/constant";
 import { createRoot } from "react-dom/client";
 import { ToasterProvider } from "@/providers/toaster";
 import { HomePage } from "@/pages/home";
-import { LibraryPage } from "@/pages/library";
+import { LibraryPage } from "@/pages/instances";
 import { AccountsPage } from "@/pages/accounts";
 import { ContentPage } from "@/pages/content";
 import { ConsolePage } from "@/pages/console";
-import { GalleryPage } from "@/pages/gallery";
+import { InstanceScreenshots } from "@/components/element/instance-screenshots";
 import { SettingsPage } from "@/pages/settings";
 import { InstancePreferencesPage } from "@/pages/settings/instance";
 import { NotificationsPage } from "@/pages/notifications";
 import { defaultInstanceSettings } from "@/lib/library/instance-settings";
-import { defaultSettings } from "@/lib/utils/launcher";
+
 import type { ContentKind } from "@/lib/content/interface";
 
 const instance = {
@@ -128,12 +129,11 @@ Object.assign(window, {
         home: (
           <HomePage
             {...props}
+            selectedInstanceId={instances[0]?.id ?? ""}
+            onInstanceChange={noop}
             game={gameProps.game}
-            versions={empty ? [] : [{ id: "1.20.1", type: "release" }]}
-            onVersionCreate={() => calls.push("create-version")}
             accounts={empty ? [] : [account]}
             accountId={empty ? null : account.id}
-            info={null}
             onOpenLibrary={noop}
             onPlay={() => calls.push("play")}
             onStop={() => calls.push("stop")}
@@ -170,10 +170,14 @@ Object.assign(window, {
           />
         ),
         console: <ConsolePage {...gameProps} />,
-        gallery: (
-          <GalleryPage
-            instances={instances}
-            onOpenDirectory={gameProps.openDirectory}
+        screenshots: (
+          <InstanceScreenshots
+            instanceId="demo"
+            shots={empty ? [] : snapshot.screenshots}
+            disabled={false}
+            onOpen={noop}
+            onReveal={noop}
+            onDelete={noop}
           />
         ),
         settings: (

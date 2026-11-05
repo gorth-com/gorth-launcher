@@ -1,26 +1,6 @@
+import { curseforgePaths } from "@/utils/constant";
 import type { ContentKind, ContentProvider } from "./interface";
 
-export const contentLabels: Record<ContentKind, string> = {
-  mod: "Mod",
-  modpack: "Modpack",
-  shader: "Shader",
-  resourcepack: "Texture pack",
-  datapack: "Data pack",
-};
-export const curseforgeClasses: Record<ContentKind, number> = {
-  mod: 6,
-  modpack: 4471,
-  shader: 6552,
-  resourcepack: 12,
-  datapack: 6945,
-};
-export const curseforgePaths: Record<ContentKind, string> = {
-  mod: "mc-mods",
-  modpack: "modpacks",
-  shader: "shaders",
-  resourcepack: "texture-packs",
-  datapack: "data-packs",
-};
 export function projectWebsite(
   provider: ContentProvider,
   kind: ContentKind,

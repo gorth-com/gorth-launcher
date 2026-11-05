@@ -1,14 +1,20 @@
-import { Bell, CheckCheck, Info, Trash2, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import {
+  Bell,
+  CheckCheck,
+  Info,
+  Trash2,
+  X,
+} from "@gorth-io/primitive/cores/lucide";
+import { Button } from "@gorth-io/primitive/custom/button";
 import {
   Card,
   CardHeader,
   CardTitle,
   CardDescription,
   CardContent,
-} from "@/components/ui/card";
+} from "@gorth-io/primitive/default/card";
 import type { useNotifications } from "@/hooks/use-notifications";
-import { formatDateTime } from "@/lib/utils/formatter";
+import { formatDateTime } from "@/utils/formatter";
 
 export function NotificationsPage({
   items,

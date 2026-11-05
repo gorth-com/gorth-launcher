@@ -34,7 +34,7 @@ import {
 import { allowedContentWebsite, projectWebsite } from "../lib/content/website";
 import { querySchema } from "../lib/content/schema";
 import type { ContentQuery } from "../lib/content/interface";
-import { getJavaEnvironment } from "../lib/utils/environment";
+import { getJavaEnvironment } from "@/utils/environment";
 const signal = () => new AbortController().signal;
 const query: ContentQuery = {
   provider: "modrinth",

@@ -1,6 +1,8 @@
 # Launcher authentication
 
-The launcher identity and selected Minecraft account are separate. Only Gorth OIDC can create a launcher session. At this stage only Offline game profiles are enabled. Ely.by and Gorth game login/refresh/play are disabled; existing saved records are preserved. No Microsoft flow exists.
+The launcher identity and selected Minecraft account are separate. The maintained Better Auth Electron flow and current environment contract are documented in [auth-structure.md](auth-structure.md). Offline profiles remain available. Native Gorth Minecraft profiles are now supported through the Launcher Website after its dashboard migration and signing-key setup; Ely.by login stays disabled. No Microsoft login or licence flow is implemented.
+
+The historical OAuth configuration below predates the Better Auth Electron migration. Do not copy its old variable names or callback setup; use `.env.example` and the maintained document above.
 
 ## Configuration
 
@@ -11,7 +13,7 @@ Set the VITE_SSO_* and VITE_APP_URL public client variables from `.env.example` 
 - `VITE_SSO_SERVER_URL`: SSO backend origin, e.g. `http://localhost:8080`; OAuth uses the frontend's existing `/auth` proxy.
 - `VITE_APP_URL`: `http://localhost:5502`; registered redirect is `<origin>/auth/callback`.
 
-Production UI uses an embedded, sandboxed WebContentsView in the existing launcher window. Main intercepts the exact registered callback before navigation and validates it directly; no external browser, popup or new window is used. A persistent Hono /auth/callback route also delivers HTTP redirects to the same PKCE transaction. Vite forwards domain routes to main over a private OS socket/named pipe in dev, without a second TCP port. Packaged Hono serves the renderer and domain routes on the configured app port. VITE_SSO_ACCESS_TOKEN/REFRESH_TOKEN/SESSION_APP and VITE_SSO_OAUTH_* transaction names are exported names, not credentials; desktop OAuth tokens remain in the encrypted vault and transaction state stays in main memory. SSO's own HttpOnly cookies live in a dedicated Electron session partition.
+Production UI uses an embedded, sandboxed WebContentsView in the existing launcher window. Main intercepts the exact registered callback before navigation and validates it directly; no external browser, popup or new window is used. The legacy /auth/callback HTTP contract remains available through Nitro and the main-owned callback registry; the current Better Auth Electron flow continues to use native deep links. Vite forwards domain routes to main over a private OS socket/named pipe in dev, without a second TCP port. Packaged Nitro serves the renderer and domain routes on the configured app port. VITE_SSO_ACCESS_TOKEN/REFRESH_TOKEN/SESSION_APP and VITE_SSO_OAUTH_* transaction names are exported names, not credentials; desktop OAuth tokens remain in the encrypted vault and transaction state stays in main memory. SSO's own HttpOnly cookies live in a dedicated Electron session partition.
 
 Gorth SSO needs a client registration with:
 
@@ -30,23 +32,19 @@ Login opens the existing SSO sign-in page inside the launcher; registration uses
 
 `AuthProvider` mounts once at renderer root. `useAuth()` exposes `account`, `username`, `authenticated`, `loading`, `locked`, `error`, `login`, `register`, `logout`, `refresh`, `unlock`, `cancel`, plus existing launcher `auth/run/busy/ready` APIs. `useUser()` exposes the verified public profile and loading/error/refresh helpers; `useAccount()` returns the public account. No hook returns an OAuth token. A single controller refreshes near-expiry unlocked sessions and on window focus. `AuthGuard` is opt-in so Offline play remains available without SSO.
 
-The legacy Ely and Gorth game adapters remain in source for future work, but are not enabled in the UI or auth command service.
+The Gorth game bridge uses the same website origin as native Better Auth. Main reads its SDK-owned cookie with `getCookie()` and calls `GET /minecraft/me` and `POST /minecraft/session`. No password is accepted or forwarded. The website authenticates a fresh, centrally bound native session and issues a separate opaque Minecraft credential. It never returns an OAuth token to the game.
 
-The optional Gorth game adapter currently expects the standard Yggdrasil contract:
+Create a unique Minecraft name at the website's `/user` page, upload and activate a skin at `/user/skin`, and explicitly enable skin publication in `/user/settings` → Privacy if desired. Refresh the native session to synchronize the game profile. Before each Gorth game launch, main obtains a new short-lived game credential and uses the existing verified authlib-injector installer. The root is `<website-origin>/minecraft`; no separate game URL environment variable is needed. Profile renames preserve the game UUID but revoke previous game sessions. Native logout also invalidates the parent-bound game credentials.
 
-- POST `<root>/authserver/authenticate` with agent, username, password, clientToken, requestUser.
-- POST `<root>/authserver/refresh` with accessToken, clientToken, selectedProfile.
-- response: accessToken, matching clientToken, selectedProfile { id, name }.
-
-No such Gorth game backend was found in the inspected SSO repository. The adapter stays disabled without its root URL. Do not point it at SSO or treat SSO access tokens as Minecraft sessions. If Gorth game will use an SSO-to-game token exchange instead, that backend contract must replace this adapter.
+The participating game server must use the same authlib-injector root with `online-mode=true`. Trusted client-IP attestation and Mojang chat-signing certificates are not implemented; see the website's `/user/server` page for the explicit server-policy limitations. Microsoft/Mojang-only servers do not accept Gorth identities. Ely.by integration remains disabled.
 
 ## Storage and lifecycle
 
 Main process stores `auth.v1.enc` under Electron userData using OS-backed Electron safeStorage and atomic writes with mode 0600. It fails closed if encryption is unavailable, including Linux basic_text. No passwords are persisted. IPC only returns allowlisted public profile fields; access, refresh, client and device tokens never reach the renderer.
 
-Startup snapshots do not decrypt the vault. Use Unlock saved session or Sign in deliberately; macOS can ask for Keychain permission at that point. Denied access preserves the vault and allows retry. Unlock refreshes an expired Gorth session when its refresh token and configuration match. UserInfo subject must match the verified ID token. Signing out clears local credentials and this app's isolated SSO browser storage, then attempts token revocation; other desktop/web app sessions remain untouched. Network failure does not restore the local session.
+Startup accesses the OS encryption key through safeStorage, so macOS can ask for Keychain permission as the app opens. This does not decrypt the account vault or verify a session; use Unlock saved session or Sign in for that. Denied access preserves the vault and allows retry. Native session verification and sign-out use the official Better Auth SDK. Signing out clears this app's local credential without ending other desktop/web app sessions. Network failure does not restore the local session.
 
-The Vanilla launch engine calls `resolveGameSession()` before spawning Temurin 17. Only Offline profiles are accepted in this stage. Gorth SSO tokens are never used as Minecraft credentials.
+The launch engine calls `resolveGameSession()` before spawning Java. Offline and native Gorth game profiles are supported; only main receives the resulting credential. Gorth SSO tokens are never used as Minecraft credentials. Java log collection redacts the exact game credential before renderer publication.
 
 The initial window is shown independently of renderer readiness. Failed initial Vite loads are caught and retried up to three times, rather than leaving a hidden window that requires CLI rs.
 
@@ -56,7 +54,7 @@ The initial window is shown independently of renderer readiness. Failed initial 
 
 `pnpm test:auth:embedded` runs hidden Electron windows using temporary app data against local SSO 3000/8080. It verifies that both live login/signup forms render, checks sandbox/no bridge, denies popup creation, and tests cancellation/cleanup without credentials or creating accounts. Live form tests and mocked code exchange passed on 2026-10-05. A real user's password/OTP submission is not automated by these tests.
 
-## Hono routes and local profile cache
+## Nitro routes and local profile cache
 
 HTTP boundaries are organized as `routes -> controllers -> services`.
 `GET /auth/callback` validates the exact origin/path and the active transaction's
@@ -70,7 +68,7 @@ The narrow preload API `window.electronAPI.auth.profile()` returns this public
 cache (or null without a valid session); its per-run capability remains inside
 the isolated preload world.
 
-`database/schema.ts` defines `user_profiles` with `sso_user_id` as its primary
+`database/schema.ts` defines `user_profile` with `sso_user_id` as its primary
 key, plus name, username, email, image, email verification, creation/sync times.
 Verified login and refresh upsert only these public identity fields, preserving
 creation time across email/username changes. Logout retains the profile cache
@@ -78,19 +76,19 @@ but removes authentication; no password, OTP, access/refresh/ID token is saved
 in this table. Tokens remain in the existing safeStorage-encrypted vault.
 The additive SQLite migration preserves existing data and runs on startup.
 
-`services/desktop-server.ts` starts/stops Hono with Electron. Vite and Hono share
+`services/desktop-server.ts` starts/stops Nitro with Electron. Vite and Nitro share
 one public HTTP origin per app (Browser 5501, Launcher 5502). In dev there is an
 internal OS IPC endpoint, not another HTTP port; main alone owns database/vault
-access. Packaged Hono binds loopback and serves only built renderer assets.
+access. Packaged Nitro binds loopback and serves only built renderer assets.
 An occupied public port fails startup rather than silently changing the callback.
-Filesystem, process and SQLite APIs still use Electron's Node runtime; Hono
+Filesystem, process and SQLite APIs still use Electron's Node runtime; Nitro
 replaces HTTP request handling, not those privileged platform capabilities.
 
 Verification:
 
 - `pnpm test:auth`: signed mock OIDC/PKCE/HTTP callback, vault/IPC and native view guards.
 - `pnpm test:server`: additive cache writes, identity-key updates, existing-data preservation, route access guards and callback replay.
-- `pnpm test:server:native`: temporary-profile Electron smoke test of packaged assets/API, sandboxed profile access, logged-out cache behavior and same-port Vite/Hono routing.
+- `pnpm test:server:native`: temporary-profile Electron smoke test of packaged assets/API, sandboxed profile access, logged-out cache behavior and same-port Vite/Nitro routing.
 - `pnpm test:auth:embedded`: live local SSO forms, sandbox, no popups and cancellation.
 
 Actual account credentials, OTP mail delivery and a completed real-user SSO login
@@ -100,9 +98,10 @@ remain manual verification; these tests do not create a central SSO user.
 
 Launcher opens the sandboxed SSO webview within the existing window, with a read-only address bar and return/reload controls. No popup or external browser is created.
 
-Normal login does not send `prompt=login`: a valid SSO session can resume
-authorization instead of looping between the auto-resuming login form and
-forced authorization. Registration still sends `prompt=create`.
+Normal login and account switching send `prompt=select_account`, so an existing
+SSO session cannot silently choose the previously active account. App logout
+leaves SSO signed in; logging in again still requires explicit account selection.
+Registration continues to send `prompt=create`.
 
 `gorth://auth` is an internal completion page, not the registered OAuth callback.
 The exact HTTP callback on the app port stays unchanged. A successful screen is

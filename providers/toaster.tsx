@@ -8,6 +8,9 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+// Native toast content lives in another document; avoid the custom button's
+// same-document ResizeObserver/press animation in this one close control.
+import { Button as ToastCloseButton } from "@gorth-io/primitive/default/button";
 import { PoolContext } from "@/providers/portal";
 import {
   Toast,
@@ -19,7 +22,7 @@ import {
   ToastViewport,
   toast,
   useToastManager,
-} from "@/components/custom/toast";
+} from "@gorth-io/primitive/custom/toast";
 
 export type ToastPosition =
   "top-left" | "top-right" | "bottom-left" | "bottom-right";
@@ -136,14 +139,15 @@ function ToastSurface({ position }: { position: ToastPosition }) {
               right: "auto",
               height: "auto",
               transform: "none",
+              transition: "transform 200ms cubic-bezier(0.22,1,0.36,1), opacity 200ms, height 200ms",
             }}
           >
-            <ToastContent style={{ opacity: 1 }}>
+            <ToastContent className="duration-200" style={{ opacity: 1, height: "auto" }}>
               <div className="min-w-0 flex-1">
                 <ToastTitle />
                 <ToastDescription />
               </div>
-              <ToastClose />
+              <ToastClose render={<ToastCloseButton variant="ghost" size="icon-sm" />} />
             </ToastContent>
           </Toast>
         ))}

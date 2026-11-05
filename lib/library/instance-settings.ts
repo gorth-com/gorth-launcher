@@ -1,5 +1,6 @@
-import { z } from "zod";
-import type { InstanceSettings, Settings } from "@/lib/utils/interface";
+import { z } from "@gorth-io/structure/cores/zod";
+import type { InstanceSettings, Settings } from "@/utils/interface";
+import { javaPreferences, minecraftPreferences } from "./game-preferences";
 
 const safeText = (maximum: number) =>
   z
@@ -12,8 +13,16 @@ const safeText = (maximum: number) =>
 
 export const instanceSettingsSchema = z
   .object({
-    memoryMin: z.number().int().min(1).max(64),
-    memoryMax: z.number().int().min(1).max(64),
+    memoryMin: z
+      .number()
+      .min(0.125)
+      .max(64)
+      .multipleOf(1 / 1024),
+    memoryMax: z
+      .number()
+      .min(0.125)
+      .max(64)
+      .multipleOf(1 / 1024),
     javaPath: safeText(4096),
     jvmArguments: z.array(safeText(1024)).max(128),
     resolutionWidth: z.number().int().min(320).max(16384),
@@ -43,23 +52,25 @@ export const instanceSettingsSchema = z
   });
 
 export function defaultInstanceSettings(settings: Settings): InstanceSettings {
+  const java = javaPreferences(settings);
+  const minecraft = minecraftPreferences(settings);
   return {
-    memoryMin: 1,
-    memoryMax: settings.memory,
+    memoryMin: java.memoryMinMiB / 1024,
+    memoryMax: java.memoryMaxMiB / 1024,
     javaPath: settings.javaPath,
     jvmArguments: [],
-    resolutionWidth: 1280,
-    resolutionHeight: 720,
+    resolutionWidth: minecraft.windowWidth,
+    resolutionHeight: minecraft.windowHeight,
     fullscreen: false,
     environment: {},
     accountId: null,
     joinServer: "",
     joinWorld: "",
-    preLaunchCommand: "",
-    postExitCommand: "",
-    gpuPreference: "default",
-    openGlPath: "",
-    openAlPath: "",
-    glfwPath: "",
+    preLaunchCommand: minecraft.preLaunchCommand,
+    postExitCommand: minecraft.postExitCommand,
+    gpuPreference: minecraft.gpuPreference,
+    openGlPath: minecraft.openGlPath,
+    openAlPath: minecraft.openAlPath,
+    glfwPath: minecraft.glfwPath,
   };
 }

@@ -172,7 +172,7 @@ Launcher hiện tại đã là một Vanilla launcher MVP hoạt động đượ
 So với PrismLauncher/FreesmLauncher/PineconeMC, phần còn thiếu lớn nhất không nằm ở giao diện mà ở quản lý instance, mod loader/modpack, lưu trữ dữ liệu và phát hành production.
 Ưu tiên P0 — cần trước khi phát hành beta
 1. SQLite/Drizzle chưa được sử dụng thật
-   Schema đã có tại [database/schema.ts (line 12)](/Users/macbook/Projects/JetBrains/WebstormProjects/gorth-launcher/database/schema.ts:12), nhưng không có runtime database service nào import schema. Instance và settings vẫn được lưu vào cookie phía renderer tại [lib/utils/launcher.ts (line 6)](/Users/macbook/Projects/JetBrains/WebstormProjects/gorth-launcher/lib/utils/launcher.ts:6).
+   Schema đã có tại [database/schema.ts (line 12)](/Users/macbook/Projects/JetBrains/WebstormProjects/gorth-launcher/database/schema.ts:12), nhưng không có runtime database service nào import schema. Instance và settings vẫn được lưu vào cookie phía renderer tại [utils/launcher.ts (line 6)](/Users/macbook/Projects/JetBrains/WebstormProjects/gorth-launcher/utils/launcher.ts:6).
    Hệ quả:
    - Cookie có giới hạn dung lượng nhỏ.
    - Dữ liệu instance và file game có thể lệch nhau.
@@ -232,7 +232,7 @@ So với PrismLauncher/FreesmLauncher/PineconeMC, phần còn thiếu lớn nh�
    - Khôi phục từ Trash.
    Prism có copy/import/export tại [launcher/CMakeLists.txt (line 29)](/Users/macbook/Projects/JetBrains/WebstormProjects/gorth-launcher/packages/PrismLauncher/launcher/CMakeLists.txt:29).
 5. Cấu hình riêng cho từng instance
-   Launcher hiện chỉ có memory và javaPath toàn cục tại [lib/utils/interface.ts (line 12)](/Users/macbook/Projects/JetBrains/WebstormProjects/gorth-launcher/lib/utils/interface.ts:12).
+   Launcher hiện chỉ có memory và javaPath toàn cục tại [utils/interface.ts (line 12)](/Users/macbook/Projects/JetBrains/WebstormProjects/gorth-launcher/utils/interface.ts:12).
    Còn thiếu:
    - RAM tối thiểu/tối đa riêng.
    - JVM arguments.

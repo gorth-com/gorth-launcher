@@ -40,9 +40,9 @@ export function installApplicationMenu() {
           click: () => sendMenuAction("new-instance"),
         },
         {
-          label: "Library",
+          label: "Instances",
           accelerator: "CmdOrCtrl+L",
-          click: () => sendMenuAction("library"),
+          click: () => sendMenuAction("instances"),
         },
         {
           label: "Downloads",

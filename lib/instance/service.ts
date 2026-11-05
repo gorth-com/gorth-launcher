@@ -1,4 +1,5 @@
 import path from "node:path";
+import { getLauncherFolders } from "@/utils/launcher-folders";
 import {
   app,
   BrowserWindow,
@@ -21,13 +22,13 @@ import {
 } from "node:fs/promises";
 import { gunzip } from "node:zlib";
 import { promisify } from "node:util";
-import { z } from "zod";
+import { z } from "@gorth-io/structure/cores/zod";
 import type { createLibraryStore } from "@/services/library-store";
 import { gameIsBusy, synchronizeGameLibrary } from "@/lib/game/service";
 import { contentIsBusy } from "@/lib/content/state";
 import { supportedLoader } from "@/lib/game/catalog";
-import type { Instance } from "@/lib/utils/interface";
-import { formatFilenameTimestamp } from "@/lib/utils/formatter";
+import type { Instance } from "@/utils/interface";
+import { formatFilenameTimestamp } from "@/utils/formatter";
 import type {
   InstanceDataCommand,
   InstanceDataResult,
@@ -140,8 +141,7 @@ async function folderSize(root: string): Promise<number> {
 export function registerInstanceDataIpc(
   library: Awaited<ReturnType<typeof createLibraryStore>>,
 ) {
-  const root = () =>
-    path.join(app.getPath("userData"), "minecraft", "instances");
+  const root = () => getLauncherFolders(app.getPath("userData")).instances;
   const trusted = (event: Electron.IpcMainInvokeEvent) => {
     const window = BrowserWindow.fromWebContents(event.sender);
     if (
@@ -412,7 +412,7 @@ export function registerInstanceDataIpc(
       const instance = library.getInstance(id.parse(raw?.instanceId));
       const selected = await dialog.showSaveDialog(window, {
         title: "Xuất instance",
-        defaultPath: instance.name.replace(/[^a-zA-Z0-9._ -]/g, "_") + ".zip",
+        defaultPath: path.join(getLauncherFolders(app.getPath("userData"), app.getPath("downloads")).downloads, instance.name.replace(/[^a-zA-Z0-9._ -]/g, "_") + ".zip"),
         filters: [{ name: "Instance ZIP", extensions: ["zip"] }],
       });
       if (selected.canceled || !selected.filePath) return null;

@@ -114,3 +114,4 @@ forge.env.d.ts
 # env
 .env.local
 .env.production
+.nitro/

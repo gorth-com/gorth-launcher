@@ -6,11 +6,11 @@ import {
   sortFns,
   tableFeatures,
   useTable,
-} from "@tanstack/react-table";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+} from "@gorth-io/primitive/cores/tanstack/table";
+import { useVirtualizer } from "@gorth-io/primitive/cores/tanstack/virtual";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "@gorth-io/primitive/cores/lucide";
+import { Button } from "@gorth-io/primitive/custom/button";
+import { Input } from "@gorth-io/primitive/default/input";
 import {
   Table,
   TableBody,
@@ -18,7 +18,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@gorth-io/primitive/default/table";
 
 const dataTableFeatures = tableFeatures({
   rowSortingFeature,

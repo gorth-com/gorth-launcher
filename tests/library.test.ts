@@ -279,7 +279,7 @@ test("startup rolls back interrupted trash move without losing a world", async (
     await mkdir(live, { recursive: true });
     await writeFile(path.join(live, "world.dat"), "recover-me");
     const db = new DatabaseSync(path.join(root, "gorth-launcher.db"));
-    db.prepare("INSERT INTO settings(key,value) VALUES (?,?)").run(
+    db.prepare("INSERT INTO setting(key,value) VALUES (?,?)").run(
       "instance-operation",
       JSON.stringify({ action: "delete", id: item.id }),
     );

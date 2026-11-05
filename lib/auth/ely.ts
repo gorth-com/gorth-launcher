@@ -1,8 +1,8 @@
 import { setTimeout as delay } from "node:timers/promises";
-import { elyClientId } from "@/lib/utils/environment";
-import { parseHttpsUrl } from "@/lib/utils/schema";
+import { elyClientId } from "@/utils/environment";
+import { parseHttpsUrl } from "@/utils/schema";
 import { profile, tokenSet } from "./model";
-import type { GameAccount } from "@/lib/utils/interface";
+import type { GameAccount } from "@/utils/interface";
 import { AuthHttpError, formRequest, requestJson } from "./http";
 const root = "https://account.ely.by";
 const scopes = "account_info offline_access minecraft_server_session";

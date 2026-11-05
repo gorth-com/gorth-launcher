@@ -1,49 +1,45 @@
-import {
-  loaderCatalog as supportedLoaderCatalog,
-  supportedLoader,
-} from "@/lib/game/catalog";
+import { CreateInstancePage } from "@/pages/instances/create";
+import { EditInstancePage } from "@/pages/instances/edit/[uuid]";
+import { useInstanceSelection } from "@/hooks/use-instance-selection";
+import { instanceToolDestination } from "@/lib/navigation";
+import { confirmAction } from "@/lib/confirmation";
+import { useFeedbackToast } from "@/hooks/use-feedback-toast";
 import { ContentPage } from "@/pages/content";
+import { PackPage } from "@/pages/pack";
 import { ConsolePage } from "@/pages/console";
-import { GalleryPage } from "@/pages/gallery";
 import { NotificationsPage } from "@/pages/notifications";
-import { InstancePreferencesPage } from "@/pages/settings/instance";
 import { useNotifications } from "@/hooks/use-notifications";
-import { ShortcutsPage } from "@/pages/shortcuts";
-import { HelpPage } from "@/pages/settings/help";
+import { ShortcutsPage } from "@/pages/settings/shortcuts";
 import { useEffect, useRef, useState } from "react";
 import { Dashboard } from "@/layouts/dashboard";
-import { navigation } from "@/components/dashboard/navigation-data";
-import { Gamepad2, Info, Image, Link, Plus, Trash2, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
-import { CreateInstanceForm } from "@/components/form/create-instance-form";
-import { InstanceNameForm } from "@/components/form/instance-name-form";
-import { InstanceSettingsForm } from "@/components/form/instance-settings-form";
+import { SettingsLayout } from "@/layouts/settings";
+
+import { Button } from "@gorth-io/primitive/custom/button";
 import { useLibrary } from "@/hooks/use-library";
 import { LoadingScreen } from "@/components/element/loading-screen";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@gorth-io/primitive/custom/sidebar";
 import {
   AccountsPage,
   DownloadsPage,
   HomePage,
   LibraryPage,
-  InstanceDataPage,
   SettingsPage,
 } from "@/pages";
 import { useGame } from "@/hooks/use-game";
 import { useAuth } from "@/hooks/use-auth";
 import { AuthScreen } from "@/components/element/auth-screen";
-import { Titlebar } from "@/layouts/titlebar";
-import { NavigationBar } from "@/layouts/navigation-bar";
+import { Titlebar } from "@/layouts/title-bar";
+import {
+  NavigationBar,
+  type NavigationBarProps,
+} from "@/layouts/navigation-bar";
 import { useLauncherNavigation } from "@/hooks/use-launcher-navigation";
+import { useJavaSetup } from "@/hooks/use-java-setup";
+import { minecraftPreferences } from "@/lib/library/game-preferences";
+import { formatPlayTime } from "@/utils/formatter";
 import { Wrapper } from "@/layouts/wrapper";
-import { type Instance, type Page } from "@/lib/utils/interface";
-import { gamePhaseLabels } from "@/lib/utils/constant";
-import { formatDate } from "@/lib/utils/formatter";
+import { type Instance, type Page } from "@/utils/interface";
+import { gamePhaseLabels } from "@/utils/constant";
 import {
   applyTheme,
   readTheme,
@@ -57,29 +53,64 @@ export default function Application() {
   const gaming = useGame();
   const pageNavigation = useLauncherNavigation();
   const { page, navigate: setPage } = pageNavigation;
+  const lastMainPage = useRef<Page>("home");
+  useEffect(() => {
+    if (
+      !page.startsWith("instances/") &&
+      page !== "settings" &&
+      !page.startsWith("settings/") &&
+      page !== "shortcuts" &&
+      page !== "gallery" &&
+      page !== "library" &&
+      page !== "instance-data" &&
+      !["content", "mods", "resourcepacks", "shaders"].includes(page)
+    )
+      lastMainPage.current = page;
+  }, [page]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [packKind, setPackKind] = useState<"mod" | "resourcepack" | "shader">(
+    "mod",
+  );
   const library = useLibrary();
-  const { instances, settings, instanceSettings, setSettings } = library;
+  const { instances, settings, setSettings } = library;
+  const selection = useInstanceSelection(instances, page);
+  useEffect(() => {
+    if (!library.ready) return;
+    const target = instanceToolDestination(page, selection.selectedInstanceId);
+    if (target)
+      setPage(target.page, { section: target.section, replace: true });
+  }, [library.ready, page, selection.selectedInstanceId, setPage]);
+  const consoleInstanceId = new URLSearchParams(window.location.search).get(
+    "game-console",
+  );
+  useJavaSetup(library.ready && !consoleInstanceId, settings, () =>
+    setPage("settings/runtime"),
+  );
   const [theme, setTheme] = useState<Theme>(readTheme);
   const [info, setInfo] = useState<LauncherInfo | null>(null);
   const [infoReady, setInfoReady] = useState(false);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
-  const [creating, setCreating] = useState(false);
-  const [selected, setSelected] = useState<Instance | null>(null);
+  const openInstance = (instance: Instance) => {
+    selection.onInstanceChange(instance.id);
+    setPage(`instances/edit/${instance.id}`);
+  };
+  const openConsole = (id: string) => {
+    selection.onInstanceChange(id);
+    setPage("console");
+  };
   const [notice, setNotice] = useState("");
+  useFeedbackToast(notice);
+  useFeedbackToast(gaming.error);
+  useFeedbackToast(library.error);
+  useFeedbackToast(authentication.error);
+  useFeedbackToast(authentication.auth?.gameWarning, "warning");
   const notifications = useNotifications(
-    notice || gaming.error || library.error || authentication.error,
+    notice.startsWith("Đã ") ? notice : "",
     gaming.game.jobs,
   );
   const [contentDetail, setContentDetail] = useState(false);
-  const [instanceGroup, setInstanceGroup] = useState("");
-  const [runtimeVersion, setRuntimeVersion] = useState("1.20.1");
-  const [runtimeLoader, setRuntimeLoader] = useState("Vanilla");
-  const [runtimeLoaderVersion, setRuntimeLoaderVersion] = useState("");
   const [shortcutTarget, setShortcutTarget] = useState<string | null>(null);
-  const dialog = useRef<HTMLDialogElement>(null);
-  const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     applyTheme(theme);
     return subscribeToSystemTheme(() => applyTheme(theme));
@@ -87,11 +118,9 @@ export default function Application() {
   useEffect(
     () =>
       window.electronAPI.appMenu.onAction((action) => {
-        setSelected(null);
         if (action === "new-instance") {
-          setCreating(true);
+          setPage("instances/create");
         } else {
-          setCreating(false);
           setPage(action);
         }
       }),
@@ -100,11 +129,10 @@ export default function Application() {
   useEffect(() => {
     const onMenuAction = (event: Event) => {
       const action = (event as CustomEvent<Page | "new-instance">).detail;
-      setSelected(null);
+
       if (action === "new-instance") {
-        setCreating(true);
+        setPage("instances/create");
       } else {
-        setCreating(false);
         setPage(action);
       }
     };
@@ -121,7 +149,10 @@ export default function Application() {
     const instance = instances.find((item) => item.id === shortcutTarget);
     setShortcutTarget(null);
     if (!instance) setNotice("Shortcut trỏ tới instance không còn tồn tại.");
-    else void gaming.run({ action: "play", instance });
+    else {
+      selection.onInstanceChange(instance.id);
+      void gaming.run({ action: "play", instance });
+    }
   }, [shortcutTarget, library.ready, gaming.ready, instances]);
   useEffect(() => {
     let active = true;
@@ -140,108 +171,194 @@ export default function Application() {
       active = false;
     };
   }, []);
-  useEffect(() => {
-    if (creating || selected) dialog.current?.showModal();
-    else dialog.current?.close();
-  }, [creating, selected]);
-  useEffect(() => {
-    if (!selected) return;
-    setInstanceGroup(selected.group ?? "");
-    setRuntimeVersion(selected.version);
-    setRuntimeLoader(selected.loader);
-    setRuntimeLoaderVersion(selected.loaderVersion ?? "");
-  }, [selected]);
-  useEffect(() => {
-    heading.current?.focus();
-  }, [page]);
-  const closeDialog = () => {
-    setCreating(false);
-    setSelected(null);
-  };
-  const selectedJob = gaming.game.jobs.find(
-    (job: { instanceId: string | undefined }) =>
-      job.instanceId === selected?.id,
-  );
-  const selectedBusy =
-    !!selectedJob &&
-    [
-      "queued",
-      "checking",
-      "downloading",
-      "paused",
-      "starting",
-      "running",
-      "stopping",
-    ].includes(selectedJob.phase);
   const statusLabel = (id: string) =>
     gamePhaseLabels[
       gaming.game.jobs.find(
         (job: { instanceId: string | undefined }) => job.instanceId === id,
       )?.phase ?? "idle"
     ];
-  const title =
-    page === "settings/help"
-      ? "Về Gorth Launcher"
-      : (navigation.find((item) => item.id === page)?.label ?? "");
-  const createInstance = async ({
-    name,
-    version,
-    loader,
-    loaderVersion,
-  }: {
-    name: string;
-    version: string;
-    loader: string;
-    loaderVersion?: string | null;
-  }) => {
-    if (
-      !(await library.run({
-        action: "create",
-        name,
-        version,
-        loader,
-        loaderVersion,
-      }))
-    )
-      return;
-    closeDialog();
-    setPage("library");
-    setQuery("");
-    setFilter("all");
-    setNotice("Đã tạo instance. Mở Chi tiết để tải game hoặc chơi.");
-  };
   if (!library.ready || !authentication.ready || !gaming.ready || !infoReady) {
     return <LoadingScreen error={!library.ready ? library.error : undefined} />;
   }
 
+  const compact = library.settings.tabLayout === "compact";
+  if (consoleInstanceId)
+    return (
+      <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
+        <main className="min-h-0 flex-1 overflow-auto p-6">
+          <ConsolePage
+            {...gaming}
+            instances={instances}
+            initialInstanceId={consoleInstanceId}
+            fixedInstance
+          />
+        </main>
+      </div>
+    );
+  const navigationProps: NavigationBarProps = {
+    sidebarOpen,
+    onToggleSidebar:
+      library.settings.sidebarCollapsible === false
+        ? undefined
+        : () => setSidebarOpen((open) => !open),
+    canGoBack: pageNavigation.canGoBack,
+    canGoForward: pageNavigation.canGoForward,
+    onBack: () => {
+      setContentDetail(false);
+      pageNavigation.back();
+    },
+    onForward: () => {
+      setContentDetail(false);
+      pageNavigation.forward();
+    },
+  };
+  const workspaceProps = {
+    settings,
+    navigation: navigationProps,
+    onNavigate: setPage,
+    onBack: () =>
+      pageNavigation.canGoBack ? pageNavigation.back() : setPage("instances"),
+  };
+  if (page === "instances/create")
+    return (
+      <CreateInstancePage
+        {...workspaceProps}
+        versions={gaming.versions}
+        instances={instances}
+        busy={library.busy || !!gaming.game.activeId}
+        onRefreshVersions={() => void gaming.refresh()}
+        onCreate={async (command) => {
+          if (!(await library.run(command))) return false;
+          setQuery("");
+          setFilter("all");
+          setPage("instances");
+          setNotice("Đã tạo instance.");
+          return true;
+        }}
+      />
+    );
+  if (page.startsWith("instances/edit/"))
+    return (
+      <EditInstancePage
+        key={page + (pageNavigation.editSection ?? "")}
+        {...workspaceProps}
+        id={page.slice("instances/edit/".length)}
+        library={library}
+        gaming={gaming}
+        authentication={authentication}
+        initialSection={pageNavigation.editSection}
+        onBrowseContent={(target) => {
+          selection.onInstanceChange(page.slice("instances/edit/".length));
+          setPackKind(
+            target === "mods"
+              ? "mod"
+              : target === "shaders"
+                ? "shader"
+                : "resourcepack",
+          );
+          setPage("pack");
+        }}
+      />
+    );
+  if (
+    page === "settings" ||
+    page.startsWith("settings/") ||
+    page === "shortcuts" ||
+    ["content", "mods", "resourcepacks", "shaders"].includes(page)
+  )
+    return (
+      <>
+        <SettingsLayout
+          section={
+            ["content", "mods", "resourcepacks", "shaders"].includes(page)
+              ? "about"
+              : page === "shortcuts"
+                ? "shortcuts"
+                : page === "settings/account"
+                  ? "profile"
+                  : page === "settings/help"
+                    ? "about"
+                    : page.startsWith("settings/")
+                      ? (page.slice(
+                          9,
+                        ) as import("@/utils/constant").LauncherSettingsSection)
+                      : "appearance"
+          }
+          settings={settings}
+          navigation={navigationProps}
+          onNavigate={setPage}
+          onMain={() => setPage(lastMainPage.current)}
+          instanceCount={instances.length}
+          unreadCount={notifications.unread}
+        >
+          {(section) =>
+            ["content", "mods", "resourcepacks", "shaders"].includes(page) ? (
+              <ContentPage
+                {...selection}
+                key={page}
+                fixedKind={
+                  page === "content"
+                    ? undefined
+                    : page === "mods"
+                      ? "mod"
+                      : page === "shaders"
+                        ? "shader"
+                        : "resourcepack"
+                }
+                instances={instances}
+                gameBusy={!!gaming.game.activeId}
+                onLibrary={() => setPage("instances")}
+                hideWebview={false}
+                onDetailChange={setContentDetail}
+              />
+            ) : section === "shortcuts" ? (
+              <ShortcutsPage />
+            ) : (
+              <SettingsPage
+                section={section}
+                settings={settings}
+                setSettings={setSettings}
+                theme={theme}
+                setTheme={setTheme}
+                info={info}
+                setNotice={setNotice}
+                onNavigate={setPage}
+                history={gaming.game.history}
+              />
+            )
+          }
+        </SettingsLayout>
+        <AuthScreen
+          compact={compact}
+          showLogo={settings.showTitlebarLogo ?? true}
+          onReturn={() => {
+            setPage("accounts");
+
+            setContentDetail(false);
+          }}
+        />
+      </>
+    );
   return (
     <>
       <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
-        <Titlebar showLogo={library.settings.showTitlebarLogo ?? true} />
-        <NavigationBar
-          sidebarOpen={sidebarOpen}
-          onToggleSidebar={() => setSidebarOpen((open) => !open)}
-          canGoBack={pageNavigation.canGoBack}
-          canGoForward={pageNavigation.canGoForward}
-          onBack={() => {
-            setSelected(null);
-            setCreating(false);
-            setContentDetail(false);
-            pageNavigation.back();
-          }}
-          onForward={() => {
-            setSelected(null);
-            setCreating(false);
-            setContentDetail(false);
-            pageNavigation.forward();
-          }}
+        <Titlebar
+          showLogo={library.settings.showTitlebarLogo ?? true}
+          navigation={compact ? navigationProps : undefined}
         />
+        {!compact && <NavigationBar {...navigationProps} />}
         <SidebarProvider
-          open={sidebarOpen}
+          style={{ "--sidebar-width-icon": "3.5rem" } as React.CSSProperties}
+          open={library.settings.sidebarCollapsible === false || sidebarOpen}
           onOpenChange={setSidebarOpen}
           className="min-h-0 flex-1 overflow-hidden"
         >
           <Dashboard
+            profileName={settings.profileName}
+            profileIcon={settings.profileIcon}
+            collapsible={library.settings.sidebarCollapsible ?? true}
+            collapseMode={library.settings.sidebarCollapseMode ?? "none"}
+            compact={compact}
             page={page}
             onNavigate={setPage}
             instanceCount={instances.length}
@@ -251,66 +368,18 @@ export default function Application() {
             className={`min-w-0 flex-1 ${contentDetail ? "overflow-hidden" : "overflow-y-auto"}`}
           >
             <Wrapper fullWidth={contentDetail} immersive={contentDetail}>
-              {!contentDetail && (
-                <div className="mb-8 flex items-center justify-between gap-4">
-                  <div>
-                    <h1
-                      className="text-2xl font-semibold tracking-tight outline-none"
-                      ref={heading}
-                      tabIndex={-1}
-                    >
-                      {title}
-                    </h1>
-                  </div>
-                  {(page === "home" || page === "library") && (
-                    <Button className="h-9" onClick={() => setCreating(true)}>
-                      <Plus size={17} />
-                      Tạo instance
-                    </Button>
-                  )}
-                </div>
-              )}
-              {!contentDetail && (notice || gaming.error || library.error) && (
-                <div
-                  role="status"
-                  className="mb-4 flex items-center gap-3 rounded-lg border bg-muted/30 p-3 text-sm [&>span]:flex-1"
-                >
-                  <Info size={17} />
-                  <span>{library.error || gaming.error || notice}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9"
-                    aria-label="Đóng thông báo"
-                    onClick={() => {
-                      setNotice("");
-                      gaming.clearError();
-                      library.clearError();
-                    }}
-                  >
-                    <X size={16} />
-                  </Button>
-                </div>
-              )}
-              {!library.ready && (
-                <p role="status">{library.error || "Đang mở thư viện…"}</p>
-              )}
+              {!library.ready && <p role="status">{"Đang mở thư viện…"}</p>}
               <fieldset
                 disabled={!library.ready || library.busy}
                 className={`min-w-0 border-0 p-0 ${contentDetail ? "h-full" : ""}`}
               >
+                {(page === "accounts" || page === "account") && (
+                  <AccountsPage {...authentication} />
+                )}
                 {page === "home" && (
                   <HomePage
+                    {...selection}
                     game={gaming.game}
-                    versions={gaming.versions}
-                    onVersionCreate={(version) =>
-                      void createInstance({
-                        name: `MC ${version}`,
-                        version,
-                        loader: "Vanilla",
-                        loaderVersion: null,
-                      })
-                    }
                     accounts={authentication.auth?.accounts ?? []}
                     accountId={authentication.auth?.selectedAccountId ?? null}
                     onAccount={(id) =>
@@ -321,121 +390,109 @@ export default function Application() {
                     }
                     onStop={(id) => void gaming.run({ action: "stop", id })}
                     instances={instances}
-                    info={info}
-                    onCreate={() => setCreating(true)}
-                    onOpenLibrary={() => setPage("library")}
-                    onSelect={setSelected}
-                    statusLabel={statusLabel}
+                    onCreate={() => setPage("instances/create")}
+                    onOpenLibrary={() => setPage("instances")}
+                    onSelect={openInstance}
                   />
                 )}
-                {page === "shortcuts" && <ShortcutsPage />}
-                {page === "settings/help" && <HelpPage info={info} />}
-                {page === "library" && (
+                {page === "instances" && (
                   <>
-                    <div className="mb-4 flex justify-end gap-2">
-                      <Button
-                        className="h-9"
-                        variant="outline"
-                        disabled={library.busy || !!gaming.game.activeId}
-                        onClick={() =>
-                          void library.run({ action: "orphans.import" })
-                        }
-                      >
-                        Tìm và nhập instance mồ côi
-                      </Button>
-                    </div>
                     <LibraryPage
-                      instances={instances}
+                      onPlay={(instance) => {
+                        selection.onInstanceChange(instance.id);
+                        void gaming.run({ action: "play", instance });
+                      }}
+                      playDisabled={(id) =>
+                        gaming.game.activeIds.includes(id) ||
+                        gaming.game.queue.includes(id)
+                      }
+                      importDisabled={library.busy || !!gaming.game.activeId}
+                      onImportOrphans={() =>
+                        void library.run({ action: "orphans.import" })
+                      }
+                      playTimeLabel={(id) => {
+                        const preferences = minecraftPreferences(settings);
+                        return preferences.showGameTime
+                          ? formatPlayTime(
+                              gaming.game.history
+                                .filter((entry) => entry.instanceId === id)
+                                .reduce(
+                                  (sum, entry) => sum + entry.duration,
+                                  0,
+                                ),
+                              preferences.durationsInHours,
+                            )
+                          : undefined;
+                      }}
+                      instances={[...instances].sort((a, b) => {
+                        if (settings.instanceSort === "last-played") {
+                          const lastPlayed = (id: string) =>
+                            Math.max(
+                              0,
+                              ...gaming.game.history
+                                .filter((entry) => entry.instanceId === id)
+                                .map((entry) => entry.startedAt),
+                            );
+                          return (
+                            lastPlayed(b.id) - lastPlayed(a.id) ||
+                            a.name.localeCompare(b.name)
+                          );
+                        }
+                        return a.name.localeCompare(b.name);
+                      })}
                       query={query}
                       onQueryChange={setQuery}
                       filter={filter}
                       onFilterChange={setFilter}
-                      onCreate={() => setCreating(true)}
-                      onSelect={setSelected}
+                      onCreate={() => setPage("instances/create")}
+                      onSelect={openInstance}
                       statusLabel={statusLabel}
                     />
                   </>
                 )}
                 {page === "downloads" && (
-                  <DownloadsPage {...gaming} instances={instances} />
-                )}
-                {page === "instance-data" && (
-                  <InstanceDataPage
+                  <DownloadsPage
+                    {...gaming}
                     instances={instances}
-                    busy={library.busy || !!gaming.game.activeId}
-                    onChanged={() =>
-                      setNotice("Đã cập nhật thư viện instance.")
-                    }
+                    onConsole={openConsole}
+                    onHistory={() => setPage("settings/history")}
                   />
                 )}
-                {page === "accounts" && <AccountsPage {...authentication} />}
                 {page === "console" && (
-                  <ConsolePage {...gaming} instances={instances} />
-                )}
-                {page === "gallery" && (
-                  <GalleryPage
+                  <ConsolePage
+                    {...gaming}
                     instances={instances}
-                    onOpenDirectory={gaming.openDirectory}
+                    {...selection}
                   />
                 )}
                 {page === "notifications" && (
                   <NotificationsPage {...notifications} />
                 )}
-                {page === "settings/instance" && (
-                  <InstancePreferencesPage
-                    instances={instances}
-                    settings={instanceSettings}
-                    accounts={authentication.auth?.accounts ?? []}
-                    busy={library.busy || !!gaming.game.activeId}
-                    onEdit={setSelected}
-                    onSave={(id, value) =>
-                      library.run({
-                        action: "instance.settings",
-                        id,
-                        settings: value,
-                      })
-                    }
-                  />
-                )}
-                {[
-                  "content",
-                  "mods",
-                  "modpacks",
-                  "resourcepacks",
-                  "shaders",
-                ].includes(page) && (
+                {page === "modpacks" && (
                   <ContentPage
+                    {...selection}
                     key={page}
-                    fixedKind={
-                      page === "mods"
-                        ? "mod"
-                        : page === "modpacks"
-                          ? "modpack"
-                          : page === "resourcepacks"
-                            ? "resourcepack"
-                            : page === "shaders"
-                              ? "shader"
-                              : undefined
-                    }
+                    fixedKind="modpack"
+                    initialProvider="curseforge"
                     instances={instances}
                     gameBusy={!!gaming.game.activeId}
-                    onLibrary={() => setPage("library")}
-                    hideWebview={creating || !!selected}
+                    onLibrary={() => setPage("instances")}
+                    hideWebview={false}
                     onDetailChange={setContentDetail}
                   />
                 )}
-                {page === "settings" && (
-                  <SettingsPage
-                    settings={settings}
-                    setSettings={setSettings}
-                    theme={theme}
-                    setTheme={setTheme}
-                    info={info}
-                    setNotice={setNotice}
-                    history={gaming.game.history}
+                {page === "pack" && (
+                  <PackPage
+                    initialKind={packKind}
+                    {...selection}
+                    instances={instances}
+                    gameBusy={!!gaming.game.activeId}
+                    onLibrary={() => setPage("instances")}
+                    hideWebview={false}
+                    onDetailChange={setContentDetail}
                   />
                 )}
-                {page === "library" && library.trash.length > 0 && (
+                {page === "instances" && library.trash.length > 0 && (
                   <section className="mt-6 space-y-3 rounded-lg border p-4">
                     <h2 className="font-medium">
                       Thùng rác ({library.trash.length})
@@ -489,9 +546,9 @@ export default function Application() {
                           className="h-9"
                           variant="destructive"
                           disabled={!!gaming.game.activeId}
-                          onClick={() => {
+                          onClick={async () => {
                             if (
-                              window.confirm(
+                              await confirmAction(
                                 "Xóa vĩnh viễn instance và toàn bộ saves?",
                               )
                             )
@@ -509,393 +566,18 @@ export default function Application() {
                   </section>
                 )}
               </fieldset>
-
-              {!contentDetail && (
-                <footer className="mt-8 flex justify-between border-t pt-4 text-xs text-muted-foreground">
-                  <span>GORTH LAUNCHER</span>
-                  <span>Không gian riêng cho những thế giới của bạn.</span>
-                </footer>
-              )}
             </Wrapper>
           </main>
         </SidebarProvider>
-        <dialog
-          ref={dialog}
-          className="m-auto max-h-[calc(100vh-3rem)] w-[720px] max-w-[calc(100vw-3rem)] overflow-y-auto rounded-xl border bg-background p-6 text-foreground shadow-lg backdrop:bg-black/50 [&_h2]:text-xl [&_h2]:font-semibold [&_label]:mt-4 [&_label]:flex [&_label]:min-w-0 [&_label]:flex-1 [&_label]:flex-col [&_label]:gap-2 [&_label]:text-sm [&_input]:h-9 [&_select]:h-9"
-          aria-labelledby="instance-dialog-title"
-          onCancel={closeDialog}
-          onClick={(event) => {
-            if (event.target === dialog.current) closeDialog();
-          }}
-        >
-          <div className="mb-4 flex items-start justify-between">
-            <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground [&>svg]:size-5">
-              <Gamepad2 />
-            </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9"
-              aria-label="Đóng hộp thoại"
-              onClick={closeDialog}
-            >
-              <X size={20} />
-            </Button>
-          </div>
-          {creating && (
-            <fieldset disabled={library.busy || !library.ready}>
-              <CreateInstanceForm
-                versions={gaming.versions}
-                onCancel={closeDialog}
-                onSubmit={createInstance}
-              />
-            </fieldset>
-          )}
-          {selected && (
-            <>
-              <h2 id="instance-dialog-title">{selected.name}</h2>
-              <p className="text-sm text-muted-foreground">
-                Minecraft {selected.version} · {selected.loader}{" "}
-                {selected.loaderVersion}
-              </p>
-              <InstanceNameForm
-                key={selected.id}
-                initialName={selected.name}
-                busy={library.busy || !!gaming.game.activeId}
-                onSave={async (name) => {
-                  if (
-                    await library.run({
-                      action: "rename",
-                      id: selected.id,
-                      name,
-                    })
-                  )
-                    setSelected({ ...selected, name });
-                }}
-                onCopy={async (name) => {
-                  if (
-                    await library.run({ action: "copy", id: selected.id, name })
-                  ) {
-                    closeDialog();
-                    setNotice("Đã sao chép instance và dữ liệu game.");
-                  }
-                }}
-              />
-              <section className="mt-5 space-y-3 rounded-lg border p-4">
-                <h3 className="font-medium">Nhận diện & nhóm</h3>
-                <div className="flex gap-2">
-                  <Input
-                    className="h-9 flex-1"
-                    placeholder="Tên nhóm / folder"
-                    value={instanceGroup}
-                    maxLength={60}
-                    onChange={(event) => setInstanceGroup(event.target.value)}
-                  />
-                  <Button
-                    className="h-9"
-                    variant="outline"
-                    disabled={library.busy || !!gaming.game.activeId}
-                    onClick={() =>
-                      void library.run({
-                        action: "metadata",
-                        id: selected.id,
-                        group: instanceGroup.trim() || null,
-                      })
-                    }
-                  >
-                    Lưu nhóm
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    className="h-9"
-                    variant="outline"
-                    disabled={library.busy || !!gaming.game.activeId}
-                    onClick={() =>
-                      void window.electronAPI.library.chooseIcon(selected.id)
-                    }
-                  >
-                    <Image />
-                    Chọn icon
-                  </Button>
-                  {selected.iconData && (
-                    <Button
-                      className="h-9"
-                      variant="ghost"
-                      disabled={library.busy || !!gaming.game.activeId}
-                      onClick={() =>
-                        void library.run({
-                          action: "icon",
-                          id: selected.id,
-                          iconData: null,
-                        })
-                      }
-                    >
-                      Bỏ icon
-                    </Button>
-                  )}
-                  <Button
-                    className="h-9"
-                    variant="outline"
-                    onClick={async () => {
-                      const result =
-                        await window.electronAPI.library.createShortcut(
-                          selected.id,
-                        );
-                      setNotice(
-                        result.ok
-                          ? `Đã tạo shortcut: ${result.path}`
-                          : (result.error ?? "Không tạo được shortcut."),
-                      );
-                    }}
-                  >
-                    <Link />
-                    Desktop shortcut
-                  </Button>
-                </div>
-              </section>
-              <section className="mt-5 space-y-3 rounded-lg border p-4">
-                <h3 className="font-medium">Minecraft & mod loader</h3>
-                <div className="grid grid-cols-3 gap-2">
-                  <NativeSelect
-                    className="w-full"
-                    value={runtimeVersion}
-                    onChange={(event) => {
-                      setRuntimeVersion(event.target.value);
-                      setRuntimeLoader("Vanilla");
-                      setRuntimeLoaderVersion("");
-                    }}
-                  >
-                    {gaming.versions.map((version) => (
-                      <NativeSelectOption key={version.id} value={version.id}>
-                        {version.id}
-                      </NativeSelectOption>
-                    ))}
-                  </NativeSelect>
-                  <NativeSelect
-                    className="w-full"
-                    value={`${runtimeLoader}:${runtimeLoaderVersion}`}
-                    onChange={(event) => {
-                      const [loader, version = ""] =
-                        event.target.value.split(":");
-                      setRuntimeLoader(loader);
-                      setRuntimeLoaderVersion(version);
-                    }}
-                  >
-                    <NativeSelectOption value="Vanilla:">
-                      Vanilla
-                    </NativeSelectOption>
-                    {supportedLoaderCatalog
-                      .filter((entry) => entry.minecraft === runtimeVersion)
-                      .map((entry) => (
-                        <NativeSelectOption
-                          key={`${entry.loader}:${entry.version}`}
-                          value={`${entry.loader}:${entry.version}`}
-                        >
-                          {entry.loader} {entry.version}
-                        </NativeSelectOption>
-                      ))}
-                  </NativeSelect>
-                  <Button
-                    className="h-9"
-                    disabled={library.busy || !!gaming.game.activeId}
-                    onClick={async () => {
-                      if (
-                        !window.confirm(
-                          "Đổi runtime sẽ yêu cầu tải lại game/loader nhưng giữ nguyên saves, mods và config. Tiếp tục?",
-                        )
-                      )
-                        return;
-                      if (
-                        await library.run({
-                          action: "runtime",
-                          id: selected.id,
-                          version: runtimeVersion,
-                          loader: runtimeLoader,
-                          loaderVersion: runtimeLoaderVersion || null,
-                        })
-                      ) {
-                        setSelected({
-                          ...selected,
-                          version: runtimeVersion,
-                          loader: runtimeLoader,
-                          loaderVersion: runtimeLoaderVersion || null,
-                        });
-                        setNotice(
-                          "Đã đổi runtime. Hãy tải game trước khi chơi.",
-                        );
-                      }
-                    }}
-                  >
-                    Đổi runtime
-                  </Button>
-                </div>
-              </section>
-              {instanceSettings[selected.id] && (
-                <InstanceSettingsForm
-                  key={selected.id}
-                  initialSettings={instanceSettings[selected.id]}
-                  accounts={authentication.auth?.accounts ?? []}
-                  busy={library.busy || !!gaming.game.activeId}
-                  onSave={(next) =>
-                    library.run({
-                      action: "instance.settings",
-                      id: selected.id,
-                      settings: next,
-                    })
-                  }
-                />
-              )}
-              {library.busy && (
-                <p role="status" className="mt-2 text-sm">
-                  Đang xử lý dữ liệu instance…
-                </p>
-              )}
-              {library.error && (
-                <p role="alert" className="mt-2 text-sm text-destructive">
-                  {library.error}
-                </p>
-              )}
-              <div className="my-5 flex flex-col gap-3 [&>span]:flex [&>span]:justify-between [&>span]:text-sm [&_strong]:font-medium">
-                <span>
-                  Trạng thái<strong>{statusLabel(selected.id)}</strong>
-                </span>
-                <span>
-                  Ngày tạo
-                  <strong>{formatDate(selected.createdAt)}</strong>
-                </span>
-              </div>
-              <div className="flex items-start gap-3 rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground [&>svg]:size-5 [&>svg]:shrink-0 [&_strong]:font-medium [&_strong]:text-foreground [&_p]:leading-6">
-                <Info size={18} />
-                <p>
-                  {selectedJob?.message ??
-                    "Tải Minecraft và Temurin, sau đó chọn tài khoản game để chơi."}
-                </p>
-              </div>
-              {!authentication.auth?.selectedAccountId &&
-                !instanceSettings[selected.id]?.accountId && (
-                  <p className="mt-3 text-sm text-muted-foreground">
-                    Thêm và chọn tài khoản game ở trang Tài khoản để chơi.
-                  </p>
-                )}
-              {!supportedLoader(selected) && (
-                <p className="mt-3 text-sm text-destructive">
-                  Phiên bản Minecraft hoặc loader không còn được hỗ trợ. Hãy tạo
-                  instance mới từ danh sách ổn định; dữ liệu cũ vẫn được giữ
-                  nguyên.
-                </p>
-              )}
-
-              {selectedJob?.total ? (
-                <progress
-                  className="mt-3 w-full accent-primary"
-                  value={selectedJob.completed}
-                  max={selectedJob.total}
-                  aria-label="Tiến trình tải game"
-                />
-              ) : null}
-              <Button
-                className="mt-3 h-9"
-                variant="ghost"
-                onClick={() => {
-                  closeDialog();
-                  setPage("downloads");
-                }}
-              >
-                Xem tiến trình & nhật ký
-              </Button>
-              <div className="mt-6 flex flex-wrap justify-end gap-2">
-                <Button
-                  disabled={library.busy || !!gaming.game.activeId}
-                  variant="destructive"
-                  className="h-9"
-                  onClick={async () => {
-                    if (
-                      window.confirm(
-                        "Đưa instance “" +
-                          selected.name +
-                          "” và toàn bộ world/dữ liệu game vào thùng rác launcher? Bạn có thể khôi phục từ Thư viện.",
-                      )
-                    ) {
-                      if (
-                        await library.run({ action: "delete", id: selected.id })
-                      ) {
-                        closeDialog();
-                        setNotice(
-                          "Đã chuyển instance vào thùng rác. Có thể khôi phục tại Thư viện.",
-                        );
-                      }
-                    }
-                  }}
-                >
-                  <Trash2 size={16} />
-                  Xóa instance
-                </Button>
-                {selectedBusy ? (
-                  <Button
-                    className="h-9"
-                    variant="outline"
-                    onClick={() =>
-                      void gaming.run({
-                        action:
-                          selectedJob?.phase === "running" ? "stop" : "cancel",
-                        id: selected.id,
-                      })
-                    }
-                  >
-                    Dừng / Hủy
-                  </Button>
-                ) : (
-                  <>
-                    <Button
-                      className="h-9"
-                      variant="outline"
-                      disabled={
-                        library.busy ||
-                        selectedBusy ||
-                        !supportedLoader(selected)
-                      }
-                      onClick={() =>
-                        void gaming.run({
-                          action: "install",
-                          instance: selected,
-                        })
-                      }
-                    >
-                      Tải game
-                    </Button>
-                    <Button
-                      className="h-9"
-                      disabled={
-                        selectedBusy ||
-                        library.busy ||
-                        (!authentication.auth?.selectedAccountId &&
-                          !instanceSettings[selected.id]?.accountId) ||
-                        !supportedLoader(selected)
-                      }
-                      onClick={() =>
-                        void gaming.run({
-                          action: "play",
-                          instance: selected,
-                        })
-                      }
-                    >
-                      Chơi Minecraft
-                    </Button>
-                  </>
-                )}
-              </div>
-            </>
-          )}
-        </dialog>
       </div>
       <AuthScreen
+        compact={compact}
+        showLogo={library.settings.showTitlebarLogo ?? true}
         sidebarOpen={sidebarOpen}
         onToggleSidebar={() => setSidebarOpen((open) => !open)}
         onReturn={() => {
           setPage("accounts");
-          setSelected(null);
-          setCreating(false);
+
           setContentDetail(false);
         }}
       />

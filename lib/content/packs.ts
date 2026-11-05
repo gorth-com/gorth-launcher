@@ -9,12 +9,12 @@ import {
   rename,
   rm,
 } from "node:fs/promises";
-import { z } from "zod";
+import { z } from "@gorth-io/structure/cores/zod";
 import extract from "extract-zip";
 import { safePath, readJson, download, digest } from "@/lib/game/files";
 import { supportedLoader } from "@/lib/game/catalog";
 import { resolveContentFile } from "./providers";
-import type { Instance, Artifact } from "@/lib/utils/interface";
+import type { Instance, Artifact } from "@/utils/interface";
 import type { ContentProvider, ContentQuery } from "./interface";
 
 export interface ModpackReceipt {

@@ -1,6 +1,6 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { appUrl } from "@/lib/utils/environment";
+import { appUrl } from "@/utils/environment";
 
 export function isRpcRendererUrl(value: string, expected: string) {
   try {
@@ -25,13 +25,13 @@ export function getRpcRendererUrl() {
     (typeof MAIN_WINDOW_VITE_DEV_SERVER_URL === "string"
       ? MAIN_WINDOW_VITE_DEV_SERVER_URL
       : "");
-  if (origin) return new URL("assets/index.html", origin).href;
+  if (origin) return new URL("public/index.html", origin).href;
   return pathToFileURL(
     path.join(
       __dirname,
       "../renderer",
       MAIN_WINDOW_VITE_NAME,
-      "assets/index.html",
+      "public/index.html",
     ),
   ).href;
 }

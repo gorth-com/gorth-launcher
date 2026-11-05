@@ -4,11 +4,11 @@ import {
   PanelLeft,
   RefreshCw,
   Undo2,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+} from "@gorth-io/primitive/cores/lucide";
+import { Button } from "@gorth-io/primitive/custom/button";
+import { Input } from "@gorth-io/primitive/default/input";
 
-interface NavigationBarProps {
+export interface NavigationBarProps {
   sidebarOpen?: boolean;
   onToggleSidebar?: () => void;
   onBack: () => void;
@@ -21,7 +21,18 @@ interface NavigationBarProps {
   canReload?: boolean;
 }
 
-export function NavigationBar({
+export function NavigationBar({ ...props }: NavigationBarProps) {
+  return (
+    <header
+      data-launcher-navigation
+      className="[-webkit-app-region:drag] select-none flex h-14 shrink-0 items-center gap-2 border-b bg-sidebar p-2.5 [&_button]:[-webkit-app-region:no-drag]"
+    >
+      <NavigationControls {...props} />
+    </header>
+  );
+}
+
+export function NavigationControls({
   sidebarOpen,
   onToggleSidebar,
   onBack,
@@ -35,10 +46,7 @@ export function NavigationBar({
 }: NavigationBarProps) {
   const BackIcon = authUrl !== undefined ? Undo2 : ArrowLeft;
   return (
-    <header
-      data-launcher-navigation
-      className="app-drag flex h-14 shrink-0 items-center gap-2 border-b bg-background px-3 [&_button]:[-webkit-app-region:no-drag]"
-    >
+    <>
       {onToggleSidebar && authUrl === undefined && (
         <Button
           size="icon"
@@ -78,7 +86,7 @@ export function NavigationBar({
       {authUrl !== undefined ? (
         <Input
           disabled
-          className="app-no-drag h-9 flex-1"
+          className="[-webkit-app-region:no-drag] h-9 flex-1"
           aria-label="Địa chỉ xác thực"
           value={authUrl}
         />
@@ -102,6 +110,6 @@ export function NavigationBar({
           />
         </Button>
       )}
-    </header>
+    </>
   );
 }

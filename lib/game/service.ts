@@ -1,7 +1,15 @@
-import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, shell, screen } from "electron";
+import os from "node:os";
+import { effectiveGameSettings } from "@/lib/library/game-preferences";
+import { requestConfirmation } from "@/main/services/confirmation";
+import {
+  showGameConsole,
+  hideGameConsole,
+} from "@/main/services/game-presentation";
 import { spawn, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
+import { getLauncherFolders, gameFolder } from "@/utils/launcher-folders";
 import { mkdir, stat, writeFile } from "node:fs/promises";
 import { StringDecoder } from "node:string_decoder";
 import type {
@@ -12,7 +20,7 @@ import type {
   Instance,
   InstanceSettings,
   PlaySession,
-} from "@/lib/utils/interface";
+} from "@/utils/interface";
 import { resolveGameSession } from "@/lib/auth/service";
 import {
   installGame,
@@ -22,7 +30,7 @@ import {
   validateInstance,
 } from "./install";
 import { memoryLimit } from "./java";
-import { getJavaEnvironment } from "@/lib/utils/environment";
+import { getJavaEnvironment } from "@/utils/environment";
 import { readJson } from "./files";
 import { manifest } from "./metadata";
 import { supportedRelease } from "./catalog";
@@ -36,6 +44,7 @@ interface WorkCommand {
   settings: InstanceSettings;
 }
 interface Task {
+  ownerId?: number;
   id: string;
   command: WorkCommand;
   controller: AbortController;
@@ -52,7 +61,8 @@ let downloadingId: string | null = null,
   lastBroadcast = 0;
 let shuttingDown = false;
 let historyProvider = () => [] as PlaySession[];
-const root = () => path.join(app.getPath("userData"), "minecraft");
+let consoleLogLimit = () => 1000;
+const root = () => getLauncherFolders(app.getPath("userData")).root;
 export const gameIsBusy = () => tasks.size > 0 || contentIsBusy();
 const activeIds = () =>
   [...tasks.values()]
@@ -153,15 +163,45 @@ async function launch(
   game: Awaited<ReturnType<typeof installGame>>,
   record: (session: PlaySession) => void,
 ) {
-  const { instance, settings } = task.command,
-    session = await resolveGameSession(settings.accountId),
-    agent = session.authlibRoot
+  const { instance, settings } = task.command;
+  const owner = task.ownerId ? BrowserWindow.fromId(task.ownerId) : undefined;
+  const identity = await resolveGameSession(settings.accountId);
+  const elyPolicy = settings.minecraftOptions?.elyPatch ?? "never";
+  const session =
+    !identity.authlibRoot &&
+    (elyPolicy === "always" ||
+      (elyPolicy === "eligible" && identity.accessToken === "0"))
+      ? { ...identity, authlibRoot: "https://authserver.ely.by" }
+      : identity;
+  const agent = session.authlibRoot
       ? await injector(root(), task.controller.signal)
       : undefined,
     environment = getJavaEnvironment(
       settings.environment,
       settings.gpuPreference,
     );
+  if (settings.minecraftOptions?.maximized && !settings.fullscreen) {
+    const area = owner
+      ? screen.getDisplayMatching(owner.getBounds()).workAreaSize
+      : screen.getPrimaryDisplay().workAreaSize;
+    settings.resolutionWidth = area.width;
+    settings.resolutionHeight = area.height;
+  }
+  if (
+    settings.javaOptions?.warnFreeMemory &&
+    settings.memoryMax * 1024 ** 3 > os.freemem()
+  ) {
+    if (
+      !owner ||
+      !(await requestConfirmation(owner, {
+        title: "Not enough free memory",
+        description:
+          "The configured Java heap exceeds currently free memory. Continue anyway?",
+        confirmLabel: "Launch anyway",
+      }))
+    )
+      throw new Error("Launch cancelled because free memory is low.");
+  }
   if (settings.preLaunchCommand)
     await lifecycle(
       settings.preLaunchCommand,
@@ -202,20 +242,34 @@ async function launch(
       const job = jobs.get(instance.id)!;
       for (const line of lines) job.logs.push(redact(line).slice(0, 2000));
       if (remainder.length > 32_000) remainder = "";
-      job.logs = job.logs.slice(-1000);
+      job.logs = job.logs.slice(-consoleLogLimit());
       broadcast();
     };
   };
   child.stdout?.on("data", collect());
   child.stderr?.on("data", collect());
   const startedAt = Date.now();
-  child.once("spawn", () =>
+  child.once("spawn", () => {
+    if (
+      settings.minecraftOptions?.hideLauncher &&
+      owner &&
+      !owner.isDestroyed()
+    )
+      owner.hide();
+    if (settings.minecraftOptions?.consoleOnLaunch)
+      void showGameConsole(instance.id).catch(() => {
+        update(
+          instance.id,
+          { message: "Minecraft is running; its console could not be opened." },
+          true,
+        );
+      });
     update(
       instance.id,
       { phase: "running", message: "Minecraft đang chạy · Eclipse Temurin" },
       true,
-    ),
-  );
+    );
+  });
   const exit = await new Promise<{
     code: number | null;
     signal: string | null;
@@ -230,15 +284,22 @@ async function launch(
   });
   const endedAt = Date.now(),
     crashed = !task.controller.signal.aborted && exit.code !== 0;
-  record({
-    id: randomUUID(),
-    instanceId: instance.id,
-    startedAt,
-    endedAt,
-    duration: endedAt - startedAt,
-    exitCode: exit.code,
-    crashed,
-  });
+  if (settings.minecraftOptions?.recordGameTime !== false)
+    record({
+      id: randomUUID(),
+      instanceId: instance.id,
+      startedAt,
+      endedAt,
+      duration: endedAt - startedAt,
+      exitCode: exit.code,
+      crashed,
+    });
+  if (settings.minecraftOptions?.hideLauncher && owner && !owner.isDestroyed())
+    owner.show();
+  if (crashed && settings.minecraftOptions?.consoleOnCrash)
+    await showGameConsole(instance.id);
+  else if (settings.minecraftOptions?.hideConsoleOnExit)
+    hideGameConsole(instance.id);
   if (settings.postExitCommand && !task.controller.signal.aborted)
     await lifecycle(
       settings.postExitCommand,
@@ -268,6 +329,14 @@ async function launch(
       },
       true,
     );
+  if (
+    settings.minecraftOptions?.quitLauncher &&
+    !shuttingDown &&
+    tasks.size === 1
+  ) {
+    tasks.delete(instance.id);
+    app.quit();
+  }
 }
 async function work(task: Task, record: (session: PlaySession) => void) {
   const { instance, settings } = task.command;
@@ -401,7 +470,7 @@ export async function synchronizeGameLibrary(instances: Instance[]) {
         version: string;
         loader?: string;
         loaderVersion?: string | null;
-      }>(path.join(root(), "instances", item.id, "installed.json"));
+      }>(path.join(gameFolder(root(), "instances"), item.id, "installed.json"));
       if (
         receipt.version === item.version &&
         (receipt.loader ?? "Vanilla") === item.loader &&
@@ -484,6 +553,7 @@ export async function registerGameIpc(
   library: Awaited<ReturnType<typeof createLibraryStore>>,
 ) {
   historyProvider = library.playHistory;
+  consoleLogLimit = () => library.snapshot().settings.consoleLogLimit ?? 1000;
   recordSession = library.recordPlaySession;
   await synchronizeGameLibrary(library.snapshot().instances);
   const trusted = (event: Electron.IpcMainInvokeEvent) => {
@@ -505,7 +575,7 @@ export async function registerGameIpc(
         if (typeof value !== "string" || !/^[a-zA-Z0-9-]{1,80}$/.test(value))
           throw new Error();
         library.getInstance(value);
-        directory = path.join(directory, "instances", value, "game");
+        directory = path.join(gameFolder(directory, "instances"), value, "game");
         if (!(await stat(directory)).isDirectory()) throw new Error();
       } else await mkdir(directory, { recursive: true });
       const error = await shell.openPath(directory);
@@ -529,7 +599,7 @@ export async function registerGameIpc(
       const selected = await dialog.showSaveDialog(
         BrowserWindow.fromWebContents(event.sender)!,
         {
-          defaultPath: `${id}-console.log`,
+          defaultPath: path.join(getLauncherFolders(app.getPath("userData"), app.getPath("downloads")).downloads, `${id}-console.log`),
           filters: [{ name: "Log", extensions: ["log"] }],
         },
       );
@@ -576,13 +646,19 @@ export async function registerGameIpc(
         throw new Error("Đang xử lý dữ liệu instance hoặc nội dung.");
       command.instance = library.getInstance(command.instance.id);
       validateInstance(command.instance);
-      const settings = library.snapshot().instanceSettings[command.instance.id];
-      if (!settings) throw new Error("Không tìm thấy cấu hình instance.");
+      const storedSettings =
+        library.snapshot().instanceSettings[command.instance.id];
+      if (!storedSettings) throw new Error("Không tìm thấy cấu hình instance.");
+      const settings = effectiveGameSettings(
+        library.snapshot().settings,
+        storedSettings,
+      );
       memoryLimit(settings.memoryMin);
       memoryLimit(settings.memoryMax);
       if (tasks.has(command.instance.id))
         throw new Error("Instance này đã có tác vụ hoặc đang chạy.");
       const task: Task = {
+        ownerId: BrowserWindow.fromWebContents(event.sender)?.id,
         id: command.instance.id,
         command: { ...command, settings },
         controller: new AbortController(),

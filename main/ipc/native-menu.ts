@@ -1,5 +1,5 @@
 import { BrowserWindow } from "electron";
-import type { AppMenuAction } from "@/lib/utils/interface";
+import type { AppMenuAction } from "@/utils/interface";
 import { createWindow } from "@/main/windows/capital";
 
 export function sendMenuAction(action: AppMenuAction) {

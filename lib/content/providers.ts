@@ -1,8 +1,13 @@
-import { z } from "zod";
-import { fetcher } from "@/lib/utils/fetcher";
-import axios from "axios";
-import { curseforgeClasses, curseforgePaths, projectWebsite } from "./website";
-import { curseforgeApiKey } from "@/lib/utils/environment";
+import {
+  curseforgeLoaderIds,
+  curseforgeClasses,
+  curseforgePaths,
+} from "@/utils/constant";
+import { z } from "@gorth-io/structure/cores/zod";
+import { fetcher } from "@/utils/fetcher";
+import axios from "@gorth-io/structure/cores/axios";
+import { projectWebsite } from "./website";
+import { curseforgeApiKey } from "@/utils/environment";
 import type {
   ContentFile,
   ContentProject,
@@ -10,7 +15,7 @@ import type {
   ContentQuery,
   ContentVersion,
 } from "./interface";
-const loaderIds: Record<string, number> = { Forge: 1, Fabric: 4, NeoForge: 6 };
+
 export const hasCurseForgeKey = () => Boolean(curseforgeApiKey);
 const identifier = (value: string) => {
   if (!/^[a-zA-Z0-9_-]{1,100}$/.test(value))
@@ -98,8 +103,9 @@ const cfFile = z.object({
 function compatibleMr(value: z.infer<typeof mrVersion>, query: ContentQuery) {
   return (
     value.version_type === "release" &&
-    value.game_versions.includes(query.version) &&
-    (["shader", "resourcepack", "datapack"].includes(query.kind) ||
+    (!query.version || value.game_versions.includes(query.version)) &&
+    (!query.loader ||
+      ["shader", "resourcepack", "datapack", "world"].includes(query.kind) ||
       value.loaders.includes(query.loader.toLowerCase()))
   );
 }
@@ -107,8 +113,9 @@ function compatibleCf(value: z.infer<typeof cfFile>, query: ContentQuery) {
   return (
     value.isAvailable &&
     value.releaseType === 1 &&
-    value.gameVersions.includes(query.version) &&
-    (["shader", "resourcepack", "datapack"].includes(query.kind) ||
+    (!query.version || value.gameVersions.includes(query.version)) &&
+    (!query.loader ||
+      ["shader", "resourcepack", "datapack", "world"].includes(query.kind) ||
       value.gameVersions.some(
         (item) => item.toLowerCase() === query.loader.toLowerCase(),
       ))
@@ -121,12 +128,18 @@ export async function searchContent(
   if (query.provider === "modrinth") {
     const params = new URLSearchParams({
       query: query.query,
-      limit: "20",
+      limit: String(query.limit ?? 20),
+      index:
+        query.sort === "updated"
+          ? "updated"
+          : query.sort === "downloads"
+            ? "downloads"
+            : "relevance",
       offset: String(query.offset),
       facets: JSON.stringify([
         ["project_type:" + query.kind],
-        ["versions:" + query.version],
-        ...(query.kind === "mod" || query.kind === "modpack"
+        ...(query.version ? [["versions:" + query.version]] : []),
+        ...(query.loader && (query.kind === "mod" || query.kind === "modpack")
           ? [["categories:" + query.loader.toLowerCase()]]
           : []),
       ]),
@@ -138,6 +151,11 @@ export async function searchContent(
         title: string;
         description: string;
         downloads: number;
+        icon_url?: string;
+        author?: string;
+        display_categories?: string[];
+        date_modified?: string;
+        date_created?: string;
       }[];
       total_hits: number;
     }>(query.provider, "/search?" + params, signal);
@@ -152,6 +170,11 @@ export async function searchContent(
         name: item.title,
         description: item.description,
         downloads: item.downloads,
+        iconUrl: item.icon_url,
+        author: item.author,
+        categories: item.display_categories,
+        updatedAt: item.date_modified,
+        publishedAt: item.date_created,
       })),
       more: query.offset + result.hits.length < result.total_hits,
     };
@@ -160,13 +183,14 @@ export async function searchContent(
     gameId: "432",
     classId: String(curseforgeClasses[query.kind]),
     searchFilter: query.query,
-    gameVersion: query.version,
-    ...(query.kind === "mod" || query.kind === "modpack"
-      ? { modLoaderType: String(loaderIds[query.loader]) }
+    ...(query.version ? { gameVersion: query.version } : {}),
+    ...(query.loader && (query.kind === "mod" || query.kind === "modpack")
+      ? { modLoaderType: String(curseforgeLoaderIds[query.loader]) }
       : {}),
-    pageSize: "20",
+    pageSize: String(query.limit ?? 20),
     index: String(query.offset),
-    sortField: "2",
+    sortField:
+      query.sort === "updated" ? "3" : query.sort === "downloads" ? "6" : "2",
     sortOrder: "desc",
   });
   const result = await providerJson<{
@@ -176,6 +200,11 @@ export async function searchContent(
       name: string;
       summary: string;
       downloadCount: number;
+      logo?: { thumbnailUrl?: string };
+      authors?: { name: string }[];
+      categories?: { name: string }[];
+      dateModified?: string;
+      dateCreated?: string;
     }[];
     pagination: { totalCount: number };
   }>(query.provider, "/mods/search?" + params, signal);
@@ -190,6 +219,11 @@ export async function searchContent(
       name: item.name,
       description: item.summary,
       downloads: item.downloadCount,
+      iconUrl: item.logo?.thumbnailUrl,
+      author: item.authors?.map((author) => author.name).join(", "),
+      categories: item.categories?.map((category) => category.name),
+      updatedAt: item.dateModified,
+      publishedAt: item.dateCreated,
     })),
     more: query.offset + result.data.length < result.pagination.totalCount,
   };
@@ -202,8 +236,10 @@ export async function contentVersions(
   identifier(projectId);
   if (query.provider === "modrinth") {
     const params = new URLSearchParams({
-      game_versions: JSON.stringify([query.version]),
-      ...(query.kind === "mod" || query.kind === "modpack"
+      ...(query.version
+        ? { game_versions: JSON.stringify([query.version]) }
+        : {}),
+      ...(query.loader && (query.kind === "mod" || query.kind === "modpack")
         ? { loaders: JSON.stringify([query.loader.toLowerCase()]) }
         : {}),
     });
@@ -225,9 +261,9 @@ export async function contentVersions(
       }));
   }
   const params = new URLSearchParams({
-    gameVersion: query.version,
-    ...(query.kind === "mod" || query.kind === "modpack"
-      ? { modLoaderType: String(loaderIds[query.loader]) }
+    ...(query.version ? { gameVersion: query.version } : {}),
+    ...(query.loader && (query.kind === "mod" || query.kind === "modpack")
+      ? { modLoaderType: String(curseforgeLoaderIds[query.loader]) }
       : {}),
     pageSize: "50",
   });

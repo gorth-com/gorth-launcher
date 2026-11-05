@@ -1,9 +1,9 @@
+import { getRpcRendererUrl, isRpcRendererUrl } from "@/main/rpc/sender";
 import { upsertUserProfile } from "@/services/user-profile";
 import { BrowserWindow, ipcMain } from "electron";
 import {
   openAuthView,
   closeAuthView,
-  clearAuthBrowserSession,
   registerAuthViewIpc,
 } from "@/main/services/auth-view";
 import type {
@@ -12,76 +12,79 @@ import type {
   AuthResult,
   AuthSnapshot,
   GameAccount,
-} from "@/lib/utils/interface";
+} from "@/utils/interface";
+import { emptyAuthData, offlineUuid, username } from "@/lib/auth/model";
+import { readVault, writeVault, vaultExists } from "@/lib/auth/vault";
 import {
-  ssoIssuer,
-  ssoOAuthClientId,
-  ssoRedirectUri,
-} from "@/lib/utils/environment";
-import { emptyAuthData, offlineUuid, username } from "./model";
-import { readVault, writeVault, vaultExists } from "./vault";
-import { gorthBinding, loginGorth, refreshGorth, revokeGorth } from "./gorth";
-import { elyBinding } from "./ely";
-import { gameBinding } from "./gorth-game";
-import { AuthHttpError } from "./http";
+  gorthSnapshot,
+  getGorthUserId,
+  loginGorth,
+  restoreGorthSession,
+  signOutGorth,
+  onGorthChanged,
+} from "@/lib/auth/gorth";
+import { elyBinding } from "@/lib/auth/ely";
+import {
+  gameBinding,
+  fetchNativeGameProfile,
+  issueNativeGameSession,
+} from "@/lib/auth/gorth-game";
+import { AuthHttpError } from "@/lib/auth/http";
+import { getLoginBrowser, setLoginBrowser } from "@/lib/auth/login-browser";
 
 let data: AuthData = emptyAuthData();
 let loaded: Promise<void> | undefined;
 let unlocked = false;
 let pending: AuthSnapshot["pending"] = null;
 let operation: AbortController | null = null;
+let gameWarning: string | null = null;
+
 function load() {
-  return (loaded ??= readVault()
-    .then((value) => {
-      data = value;
+  return (loaded ??= (async () => {
+    try {
+      data = await readVault();
       unlocked = true;
-    })
-    .catch((error) => {
+    } catch (error) {
       loaded = undefined;
       throw error;
-    }));
+    }
+  })());
 }
 function expectedBinding(account: GameAccount) {
   return account.provider === "ely" ? elyBinding() : gameBinding();
 }
 function snapshot(): AuthSnapshot {
   return {
-    locked: !unlocked && vaultExists(),
-    launcher: data.launcher
-      ? {
-          id: data.launcher.id,
-          name: data.launcher.name,
-          email: data.launcher.email,
-          username: data.launcher.username,
-          image: data.launcher.image,
-          emailVerified: data.launcher.emailVerified,
-          expiresAt: data.launcher.tokens.expiresAt,
-          canRefresh:
-            !!data.launcher.tokens.refreshToken &&
-            data.launcher.tokens.binding === gorthBinding(),
-          needsLogin:
-            data.launcher.tokens.expiresAt <= Date.now() ||
-            data.launcher.tokens.binding !== gorthBinding(),
-        }
-      : null,
+    loginBrowser: getLoginBrowser(),
+    gameWarning,
+    locked:
+      gorthSnapshot().locked ||
+      (!gorthSnapshot().user && !unlocked && vaultExists()),
+    launcher: gorthSnapshot().user,
     accounts: data.accounts.map((a) => ({
       id: a.id,
       provider: a.provider,
       username: a.username,
+      image:
+        a.provider === "gorth" && a.ownerId === getGorthUserId()
+          ? gorthSnapshot().user?.image
+          : undefined,
       uuid: a.uuid,
       expiresAt: a.tokens?.expiresAt ?? null,
       needsLogin:
-        a.provider !== "offline" &&
-        (!a.tokens ||
-          a.tokens.expiresAt <= Date.now() ||
-          a.tokens.binding !== expectedBinding(a)),
+        a.provider === "gorth"
+          ? !getGorthUserId() || a.ownerId !== getGorthUserId()
+          : a.provider !== "offline" &&
+            (!a.tokens ||
+              a.tokens.expiresAt <= Date.now() ||
+              a.tokens.binding !== expectedBinding(a)),
     })),
     selectedAccountId: data.selectedAccountId,
     pending,
     providers: {
-      gorthLauncher: !!(ssoIssuer && ssoOAuthClientId && ssoRedirectUri),
+      gorthLauncher: gorthSnapshot().configured,
       ely: false,
-      gorthGame: false,
+      gorthGame: gorthSnapshot().configured,
     },
   };
 }
@@ -101,6 +104,28 @@ async function upsert(account: GameAccount) {
     accounts: [...data.accounts.filter((a) => a.id !== account.id), account],
     selectedAccountId: data.selectedAccountId ?? account.id,
   });
+}
+async function syncNativeGameProfile(signal: AbortSignal) {
+  if (!getGorthUserId()) return;
+  try {
+    await load();
+    const profile = await fetchNativeGameProfile(signal);
+    signal.throwIfAborted();
+    if (!profile) {
+      gameWarning =
+        "Tạo tên Minecraft tại trang Profile của website Launcher trước khi chơi trực tuyến.";
+      return;
+    }
+    await upsert(profile);
+    gameWarning = null;
+  } catch (error) {
+    signal.throwIfAborted();
+    gameWarning =
+      "SSO đã đăng nhập. Hồ sơ game chưa sẵn sàng; kiểm tra kết nối và migration website, rồi làm mới phiên.";
+    console.warn("[minecraft/profile]", {
+      status: error instanceof AuthHttpError ? error.status : undefined,
+    });
+  }
 }
 function command(value: unknown): AuthCommand {
   if (!value || typeof value !== "object")
@@ -149,6 +174,22 @@ function publicError(error: unknown) {
 }
 async function refreshAccount(account: GameAccount, signal: AbortSignal) {
   signal.throwIfAborted();
+  if (account.provider === "gorth") {
+    await restoreGorthSession(signal);
+    if (account.ownerId && account.ownerId !== getGorthUserId())
+      throw new Error(
+        "Hãy đăng nhập đúng tài khoản Gorth SSO sở hữu hồ sơ game này.",
+      );
+    const next = await issueNativeGameSession(signal);
+    if (
+      next.uuid !== account.uuid ||
+      (account.ownerId && next.ownerId !== account.ownerId)
+    )
+      throw new Error(
+        "Hồ sơ Minecraft không khớp tài khoản Gorth SSO hiện tại.",
+      );
+    return next;
+  }
   if (account.provider !== "offline")
     throw new Error(
       "Online game accounts are not enabled yet. Use an offline profile.",
@@ -177,20 +218,21 @@ async function execute(
     ownOperation = new AbortController();
     operation = ownOperation;
     const signal = ownOperation.signal;
-    await load();
+    if (
+      ![
+        "launcher.login",
+        "launcher.register",
+        "launcher.logout",
+        "launcher.refresh",
+      ].includes(c.action)
+    )
+      await load();
     signal.throwIfAborted();
     if (c.action === "launcher.unlock") {
-      if (
-        data.launcher &&
-        data.launcher.tokens.binding === gorthBinding() &&
-        data.launcher.tokens.expiresAt <= Date.now() + 30_000 &&
-        data.launcher.tokens.refreshToken
-      ) {
-        const next = await refreshGorth(data.launcher, signal);
-        signal.throwIfAborted();
-        upsertUserProfile(next);
-        await save({ ...data, launcher: next });
-      }
+      if (gorthSnapshot().configured) await restoreGorthSession(signal);
+      const user = gorthSnapshot().user;
+      if (user) upsertUserProfile(user);
+      await syncNativeGameProfile(signal);
       return { ok: true, snapshot: snapshot() };
     }
     switch (c.action) {
@@ -239,62 +281,39 @@ async function execute(
         const mode = c.action === "launcher.register" ? "register" : "login";
         pending = {
           provider: "gorth",
-          expiresAt: Date.now() + (mode === "register" ? 600_000 : 180_000),
+          expiresAt: Date.now() + 120_000,
         };
         changed();
-        const session = await loginGorth(
-          (url, receiveCallback) =>
-            openAuthView(owner, url, receiveCallback, ownOperation!, mode),
-          signal,
-          mode,
-        );
+        openAuthView(owner, ownOperation!, mode);
+        await loginGorth(signal);
         signal.throwIfAborted();
-        upsertUserProfile(session);
-        await save({ ...data, launcher: session });
+        const user = gorthSnapshot().user;
+        if (user) upsertUserProfile(user);
+        await syncNativeGameProfile(signal);
         completed = true;
         break;
       }
-      case "launcher.logout": {
-        const previous = data.launcher;
-        await save({ ...data, launcher: null });
-        await clearAuthBrowserSession();
-        if (previous) await revokeGorth(previous.tokens, signal);
+      case "launcher.logout":
+        gameWarning = null;
+        await signOutGorth();
         break;
-      }
       case "launcher.refresh": {
-        if (!data.launcher) throw new Error("Chưa đăng nhập launcher.");
-        const next = await refreshGorth(data.launcher, signal);
-        signal.throwIfAborted();
-        upsertUserProfile(next);
-        await save({
-          ...data,
-          launcher: next,
-        });
+        // Automatic 401 retries must not unlock a saved session on startup.
+        const session = gorthSnapshot();
+        if (session.locked || !session.user)
+          throw new Error(
+            "Hãy đăng nhập hoặc mở khóa phiên Gorth trước khi làm mới.",
+          );
+        await restoreGorthSession(signal);
+        const user = gorthSnapshot().user;
+        if (user) upsertUserProfile(user);
+        await syncNativeGameProfile(signal);
         break;
       }
     }
     return { ok: true, snapshot: { ...snapshot(), pending: null } };
   } catch (error) {
     if (
-      ownOperation &&
-      unlocked &&
-      (c?.action === "launcher.refresh" ||
-        (c?.action === "launcher.unlock" &&
-          data.launcher &&
-          data.launcher.tokens.expiresAt <= Date.now() + 30_000))
-    ) {
-      data = { ...data, launcher: null };
-      try {
-        await save(data);
-      } catch {
-        return {
-          ok: false,
-          error:
-            "Phiên đã hết hạn nhưng không cập nhật được kho khóa. Hãy mở khóa rồi đăng nhập lại.",
-          snapshot: snapshot(),
-        };
-      }
-    } else if (
       ownOperation &&
       c?.action === "game.refresh" &&
       error instanceof AuthHttpError &&
@@ -331,12 +350,31 @@ export function registerAuthIpc() {
     if (
       !window ||
       window.webContents !== event.sender ||
-      event.senderFrame !== event.sender.mainFrame
+      event.senderFrame !== event.sender.mainFrame ||
+      !event.senderFrame ||
+      !isRpcRendererUrl(event.senderFrame.url, getRpcRendererUrl())
     )
       throw new Error("Untrusted auth sender");
     return window;
   };
+  onGorthChanged(changed);
   registerAuthViewIpc(trusted);
+  ipcMain.handle("auth:login-browser", (event, value: unknown): AuthResult => {
+    trusted(event);
+    try {
+      if (operation)
+        throw new Error("An account operation is already running.");
+      setLoginBrowser(value);
+      changed();
+      return { ok: true, snapshot: snapshot() };
+    } catch {
+      return {
+        ok: false,
+        snapshot: snapshot(),
+        error: "Không thể lưu trình duyệt đăng nhập.",
+      };
+    }
+  });
   ipcMain.handle("auth:snapshot", async (event) => {
     trusted(event);
     try {
@@ -357,27 +395,57 @@ export function registerAuthIpc() {
 export function cancelAuth() {
   operation?.abort();
 }
-// Main-process-only API for the future launch engine. Never expose this over IPC.
+// Main-process-only launch credential. Never expose this over IPC.
 export async function resolveGameSession(accountId?: string | null) {
   await load();
   if (operation) throw new Error("Tài khoản đang được cập nhật.");
-  const account = data.accounts.find(
-    (a) => a.id === (accountId || data.selectedAccountId),
-  );
-  if (!account) throw new Error("Chọn tài khoản game trước khi chơi.");
-  if (account.provider === "offline")
-    return {
-      username: account.username,
-      uuid: account.uuid,
-      accessToken: "0",
-      authlibRoot: null,
-    };
-  throw new Error(
-    "Online game accounts are not enabled yet. Use an offline profile.",
-  );
+  const ownOperation = new AbortController();
+  operation = ownOperation;
+  try {
+    let account = data.accounts.find(
+      (a) => a.id === (accountId || data.selectedAccountId),
+    );
+    if (!account && !accountId && gorthSnapshot().user) {
+      await restoreGorthSession(ownOperation.signal);
+      const profile = await fetchNativeGameProfile(ownOperation.signal);
+      ownOperation.signal.throwIfAborted();
+      if (profile) {
+        account = profile;
+        await upsert(profile);
+      }
+    }
+    if (!account)
+      throw new Error(
+        "Chọn tài khoản game hoặc tạo hồ sơ Minecraft trên website trước khi chơi.",
+      );
+    if (account.provider === "offline")
+      return {
+        username: account.username,
+        uuid: account.uuid,
+        accessToken: "0",
+        authlibRoot: null,
+      };
+    if (account.provider === "gorth") {
+      const next = await refreshAccount(account, ownOperation.signal);
+      ownOperation.signal.throwIfAborted();
+      await upsert(next);
+      if (!next.tokens) throw new Error("Không cấp được phiên Minecraft.");
+      return {
+        username: next.username,
+        uuid: next.uuid,
+        accessToken: next.tokens.accessToken,
+        authlibRoot: next.tokens.binding,
+      };
+    }
+    throw new Error(
+      "Online game accounts are not enabled yet. Use an offline profile.",
+    );
+  } finally {
+    if (operation === ownOperation) operation = null;
+    changed();
+  }
 }
 
 export function getAuthenticatedUserId() {
-  const current = snapshot().launcher;
-  return unlocked && current && !current.needsLogin ? current.id : null;
+  return getGorthUserId();
 }

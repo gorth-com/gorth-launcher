@@ -1,10 +1,15 @@
-import { appUrl } from "@/lib/utils/environment";
+import { appUrl } from "@/utils/environment";
 import { installPortal } from "@/main/windows/portal";
 import { installWebview } from "@/main/windows/webview";
-import { BrowserWindow, dialog, nativeTheme, screen } from "electron";
+import { app, BrowserWindow, dialog, nativeTheme, screen } from "electron";
 import path from "node:path";
 import { readWindowState, trackWindowState } from "@/main/windows/state";
 let mainWindow: BrowserWindow | null = null;
+
+export function getRuntimeAppIconPath() {
+  const filename = process.platform === "win32" ? "favicon.ico" : "favicon.png";
+  return path.join(app.getAppPath(), "public", filename);
+}
 
 export function createWindow() {
   // The launcher stores one window state. Reuse its one main window rather
@@ -18,6 +23,7 @@ export function createWindow() {
   const { isMaximized, ...bounds } = readWindowState();
   const window = new BrowserWindow({
     title: "Gorth Launcher",
+    icon: getRuntimeAppIconPath(),
     ...bounds,
     show: false,
     titleBarStyle: "hidden",
@@ -77,13 +83,13 @@ export function createWindow() {
       try {
         if (MAIN_WINDOW_VITE_DEV_SERVER_URL || appUrl)
           await window.loadURL(
-      new URL("assets/index.html", appUrl || MAIN_WINDOW_VITE_DEV_SERVER_URL).href,
+      new URL("public/index.html", appUrl || MAIN_WINDOW_VITE_DEV_SERVER_URL).href,
           );
         else
           await window.loadFile(
             path.join(
               __dirname,
-              `../renderer/${MAIN_WINDOW_VITE_NAME}/assets/index.html`,
+              `../renderer/${MAIN_WINDOW_VITE_NAME}/public/index.html`,
             ),
           );
         return;

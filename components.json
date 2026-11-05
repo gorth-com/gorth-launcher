@@ -14,8 +14,8 @@
   "rtl": false,
   "aliases": {
     "components": "@/components",
-    "utils": "@/lib/utils",
-    "ui": "@/components/ui",
+    "utils": "@gorth-io/primitive/cores/cn",
+    "ui": "@gorth-io/primitive/default",
     "lib": "@/lib",
     "hooks": "@/hooks"
   },

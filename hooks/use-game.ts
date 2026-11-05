@@ -1,9 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type {
-  GameCommand,
-  GameSnapshot,
-  GameVersion,
-} from "@/lib/utils/interface";
+import type { GameCommand, GameSnapshot, GameVersion } from "@/utils/interface";
 export function useGame() {
   const [game, setGame] = useState<GameSnapshot>({
     directory: "",
@@ -71,11 +67,24 @@ export function useGame() {
     }
   }, []);
   const exportLog = useCallback(async (id: string) => {
-    const result = await window.electronAPI.game.exportLog(id);
-    if (!result.ok) setError(result.error ?? "Không xuất được console.");
-    return result.ok;
+    setError("");
+    try {
+      const result = await window.electronAPI.game.exportLog(id);
+      if (!result.ok) setError(result.error ?? "Không xuất được console.");
+      return result.ok;
+    } catch {
+      setError("Không xuất được console.");
+      return false;
+    }
   }, []);
   return {
+    refresh: async () => {
+      try {
+        setVersions(await window.electronAPI.game.versions());
+      } catch {
+        setError("Không tải được danh sách phiên bản Minecraft.");
+      }
+    },
     game,
     versions,
     error,

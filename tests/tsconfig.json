@@ -1,0 +1,33 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "incremental": false
+  },
+  "include": [
+    "fixtures/instance-workflow/**/*.ts",
+    "fixtures/instance-workflow/**/*.tsx",
+    "fixtures/folders/**/*.ts",
+    "fixtures/folders/**/*.tsx",
+    "fixtures/development-environment/**/*.ts",
+    "game.test.ts",
+    "fixtures/game-settings/**/*.ts",
+    "fixtures/update/**/*.ts",
+    "fixtures/update/**/*.tsx",
+    "fixtures/shared-ui/**/*.ts",
+    "fixtures/shared-ui/**/*.tsx",
+    "vitest/**/*.tsx",
+    "fixtures/auth-callback/**/*.ts",
+    "../forge.env.d.ts",
+    "../vitest.config.ts",
+    "auth.test.ts",
+    "auth-service.test.ts",
+    "auth-view.test.ts",
+    "http.test.ts",
+    "rpc.test.ts",
+    "vitest/**/*.ts",
+    "fixtures/window/**/*.ts",
+    "fixtures/shared-ui/**/*.ts",
+    "fixtures/shared-ui/**/*.tsx"
+  ],
+  "exclude": ["../node_modules", "../.vite", "../out", "../dist", "../packages"]
+}

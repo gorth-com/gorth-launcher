@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { mkdir, writeFile, rename } from "node:fs/promises";
 import { download, json, readJson, safePath } from "./files";
-import type { Argument, Artifact, Rule, Version } from "@/lib/utils/interface";
+import type { Argument, Artifact, Rule, Version } from "@/utils/interface";
 interface Manifest {
   versions: { id: string; type: string; url: string; sha1: string }[];
 }

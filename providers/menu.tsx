@@ -9,13 +9,13 @@ import {
   ScanSearch,
   Settings,
   X,
-} from "lucide-react";
+} from "@gorth-io/primitive/cores/lucide";
 import {
   PopoverMenuItem,
   PopoverMenuLabel,
   PopoverMenuSeparator,
 } from "@/components/element/popover-menu";
-import type { AppMenuAction } from "@/lib/utils/interface";
+import type { AppMenuAction } from "@/utils/interface";
 
 export function MenuPortal() {
   const [menu, setMenu] = useState<{

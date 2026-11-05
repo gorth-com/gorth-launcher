@@ -1,19 +1,17 @@
+import { loaderCatalog } from "@/utils/constant";
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test, vi } from "vitest";
+vi.mock("electron", () => import("./electron-auth-mock"));
 import { mkdtemp, readFile, rm, writeFile, readdir } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import { download, safePath, response } from "../lib/game/files";
 import { allowed, argumentsFor, libraryFiles } from "../lib/game/metadata";
-import type { Version } from "../lib/utils/interface";
+import type { Version } from "@/utils/interface";
 import { launchArguments, validateInstance } from "../lib/game/install";
 import { memoryLimit } from "../lib/game/java";
-import {
-  loaderCatalog,
-  supportedLoader,
-  supportedRelease,
-} from "../lib/game/catalog";
+import { supportedLoader, supportedRelease } from "../lib/game/catalog";
 import { mergeVersion, mavenPath } from "../lib/game/loaders";
 import { legacyArguments } from "../lib/game/install";
 import { defaultInstanceSettings } from "../lib/library/instance-settings";
@@ -164,7 +162,8 @@ test("path and IPC instance validation block traversal and unsupported loaders",
     }),
   );
   assert.throws(() => memoryLimit(0));
-  assert.throws(() => memoryLimit(2.5));
+  assert.equal(memoryLimit(1.5), 1.5);
+  assert.throws(() => memoryLimit(1.0001));
 });
 test("Minecraft rules use ordered overrides, OS/arch and feature matching", () => {
   const context = {

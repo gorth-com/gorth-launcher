@@ -1,5 +1,5 @@
-import { fetcher } from "@/lib/utils/fetcher";
-import type { Method } from "axios";
+import { fetcher } from "@/utils/fetcher";
+import type { Method } from "@gorth-io/structure/cores/axios";
 
 export class AuthHttpError extends Error {
   constructor(

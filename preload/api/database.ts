@@ -3,7 +3,7 @@ import type {
   LibraryCommand,
   LibraryResult,
   LibrarySnapshot,
-} from "@/lib/utils/interface";
+} from "@/utils/interface";
 export const libraryApi = {
   snapshot: (): Promise<LibrarySnapshot> =>
     ipcRenderer.invoke("library:snapshot"),
