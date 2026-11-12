@@ -177,7 +177,7 @@ export function InstanceWorkspace({
           </SidebarFooter>
         </Sidebar>
         <main
-          className="min-w-0 flex-1 overflow-y-auto"
+          className="min-w-0 flex-1 overflow-y-auto scrollbar-none"
           aria-label="Instance workspace"
         >
           <Wrapper>{children}</Wrapper>

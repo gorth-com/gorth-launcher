@@ -1,6 +1,12 @@
 import { z } from "@gorth-io/structure/cores/zod";
 import type { InstanceSettings, Settings } from "@/utils/interface";
-import { javaPreferences, minecraftPreferences } from "./game-preferences";
+import {
+  javaPreferences,
+  minecraftPreferences,
+  javaPreferencesSchema,
+  minecraftPreferencesSchema,
+} from "./game-preferences";
+import { instanceOverridesSchema } from "./instance-overrides";
 
 const safeText = (maximum: number) =>
   z
@@ -13,6 +19,15 @@ const safeText = (maximum: number) =>
 
 export const instanceSettingsSchema = z
   .object({
+    overrides: instanceOverridesSchema.optional(),
+    javaOptions: javaPreferencesSchema.optional(),
+    minecraftOptions: minecraftPreferencesSchema.optional(),
+    wrapperCommand: safeText(4096).optional(),
+    nativeLibraries: z.object({
+      glfw: z.boolean(),
+      openAl: z.boolean(),
+      openGl: z.boolean(),
+    }).optional(),
     memoryMin: z
       .number()
       .min(0.125)
@@ -49,15 +64,36 @@ export const instanceSettingsSchema = z
   })
   .refine((value) => !(value.joinServer && value.joinWorld), {
     message: "Chỉ có thể vào server hoặc world, không thể chọn cả hai.",
+  })
+  .refine((value) => !value.overrides?.javaInstallation || !!value.javaPath.trim(), {
+    message: "Chọn Java executable khi bật Java installation override.",
+  })
+  .refine((value) => !value.overrides?.account || !!value.accountId, {
+    message: "Chọn tài khoản khi bật Override default account.",
+  })
+  .refine((value) => !value.overrides?.autoJoin || !!(value.joinServer.trim() || value.joinWorld.trim()), {
+    message: "Chọn server hoặc world khi bật Auto-join.",
+  })
+  .refine((value) => !value.overrides?.nativeLibraries || !value.nativeLibraries ||
+    (!value.nativeLibraries.glfw || !!value.glfwPath.trim()) &&
+    (!value.nativeLibraries.openAl || !!value.openAlPath.trim()) &&
+    (!value.nativeLibraries.openGl || !!value.openGlPath.trim()), {
+    message: "Nhập đường dẫn cho mỗi native library đang bật.",
   });
 
 export function defaultInstanceSettings(settings: Settings): InstanceSettings {
   const java = javaPreferences(settings);
   const minecraft = minecraftPreferences(settings);
   return {
+    overrides: instanceOverridesSchema.parse({}),
+    javaOptions: java,
+    minecraftOptions: minecraft,
+    wrapperCommand: "",
     memoryMin: java.memoryMinMiB / 1024,
     memoryMax: java.memoryMaxMiB / 1024,
-    javaPath: settings.javaPath,
+    // New instances inherit the current launcher default/major-specific paths.
+    // Older records without flags still treat a nonempty path as an override.
+    javaPath: "",
     jvmArguments: [],
     resolutionWidth: minecraft.windowWidth,
     resolutionHeight: minecraft.windowHeight,

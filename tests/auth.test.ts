@@ -3,6 +3,7 @@ import { betterAuth } from "better-auth";
 import { electron } from "@better-auth/electron";
 import { calls, shell, directory } from "./electron-auth-mock";
 import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { setLoginBrowser } from "@/lib/auth/login-browser";
 vi.mock("electron", () => import("./electron-auth-mock"));
@@ -88,11 +89,14 @@ it("uses official SDK PKCE transfer, restores the SSO identity, switches account
     expect(query.get("client_id")).toBe("gorth-launcher");
     expect(query.get("code_challenge")).toMatch(/^[A-Za-z0-9_-]{43}$/);
     const identifier = "fixture-" + user.id;
+    // Native Electron 1.7.17 binds the transfer to an active browser session.
+    const sourceSession = await context.internalAdapter.createSession(user.id);
     await context.internalAdapter.createVerificationValue({
       identifier: "electron:" + identifier,
       value: JSON.stringify({
         state: query.get("state"),
         codeChallenge: query.get("code_challenge"),
+        sourceSessionTokenHash: createHash("sha256").update(sourceSession.token).digest("base64url"),
         userId: user.id,
       }),
       expiresAt: new Date(Date.now() + 120_000),

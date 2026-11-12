@@ -13,6 +13,7 @@ import { PageShell } from "@/layouts/page-shell";
 import { InstanceSettingsForm } from "@/components/form/instance-settings-form";
 import type {
   AccountView,
+  Settings,
   Instance,
   InstanceSettings,
 } from "@/utils/interface";
@@ -20,6 +21,7 @@ import type {
 export function InstancePreferencesPage({
   instances,
   settings,
+  globalSettings,
   accounts,
   busy,
   onSave,
@@ -27,6 +29,7 @@ export function InstancePreferencesPage({
 }: {
   instances: Instance[];
   settings: Record<string, InstanceSettings>;
+  globalSettings?: Settings;
   accounts: AccountView[];
   busy: boolean;
   onSave: (id: string, value: InstanceSettings) => Promise<boolean>;
@@ -82,7 +85,8 @@ export function InstancePreferencesPage({
             <CardContent>
               <InstanceSettingsForm
                 key={selected.id}
-                expanded
+                instanceId={selected.id}
+                globalSettings={globalSettings}
                 initialSettings={settings[selected.id]}
                 accounts={accounts}
                 busy={busy}

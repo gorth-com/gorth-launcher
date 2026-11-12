@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { RefreshCw, Trash2 } from "@gorth-io/primitive/cores/lucide";
 import { Badge } from "@gorth-io/primitive/custom/badge";
 import { Button } from "@gorth-io/primitive/custom/button";
-import { Card } from "@gorth-io/primitive/default/card";
+import { Card, CardContent } from "@gorth-io/primitive/default/card";
 import type { Instance } from "@/utils/interface";
 import type {
   ContentInventory,
@@ -68,7 +68,8 @@ export function InstalledContentManager({
     }
   };
   return (
-    <section className="flex flex-col gap-4 rounded-lg border p-4">
+    <Card className="py-4">
+      <CardContent className="gap-6 px-4">
       <div className="flex flex-wrap items-end gap-2">
         <Button
           className="h-9"
@@ -163,6 +164,7 @@ export function InstalledContentManager({
             )}
           </Card>
         ))}
-    </section>
+      </CardContent>
+    </Card>
   );
 }

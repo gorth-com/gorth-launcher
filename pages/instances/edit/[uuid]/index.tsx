@@ -1,7 +1,5 @@
 import { useState } from "react";
 import {
-  Play,
-  Square,
   Download,
   Trash2,
   Image,
@@ -55,7 +53,7 @@ function RuntimeEditor({
   const busy = library.busy || !!gaming.game.activeId;
   return (
     <Card>
-      <CardContent className="flex flex-col gap-4">
+      <CardContent className="flex flex-col gap-6">
         <CardTitle>Minecraft &amp; mod loader</CardTitle>
         <InstanceSelect
           label="Minecraft version"
@@ -141,6 +139,7 @@ export function EditInstancePage(
     gaming: ReturnType<typeof useGame>;
     authentication: ReturnType<typeof useAuth>;
     initialSection?: string;
+    onInstanceChange?: (id: string, section: string) => void;
     onBrowseContent?: (page: "mods" | "resourcepacks" | "shaders") => void;
   },
 ) {
@@ -163,18 +162,6 @@ export function EditInstancePage(
       });
     }
   }
-  const job = gaming.game.jobs.find((item) => item.instanceId === props.id);
-  const running =
-    !!job &&
-    [
-      "queued",
-      "checking",
-      "downloading",
-      "paused",
-      "starting",
-      "running",
-      "stopping",
-    ].includes(job.phase);
   const activeSection = instanceEditSections.find(
     (item) => item.id === section,
   )!;
@@ -186,17 +173,21 @@ export function EditInstancePage(
       onSectionChange={setSection}
     >
       <div className="flex flex-col gap-6">
-        <PageHeading
-          title={
-            instance
-              ? `${activeSection.title} · ${instance.name}`
-              : "Instance not found"
-          }
-          icon={activeSection.icon}
-        />
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <PageHeading title={instance ? activeSection.title : "Instance not found"} icon={activeSection.icon} />
+          <div className="w-60 max-w-full">
+            <InstanceSelect label="Switch instance" value={instance?.id ?? ""} disabled={!library.instances.length}
+              items={library.instances.map((item) => ({ value: item.id, label: item.name }))}
+              onChange={(id) => {
+                if (id === instance?.id) return;
+                if (props.onInstanceChange) props.onInstanceChange(id, section);
+                else props.onNavigate(`instances/edit/${id}`);
+              }} />
+          </div>
+        </div>
         {!instance ? (
           <Card>
-            <CardContent className="flex flex-col gap-4">
+            <CardContent className="flex flex-col gap-6">
               <CardDescription>
                 Instance này không tồn tại hoặc đã nằm trong thùng rác.
               </CardDescription>
@@ -225,7 +216,7 @@ export function EditInstancePage(
                   </div>
                 </CardHeader>
                 <Separator />
-                <CardContent className="flex flex-col gap-4">
+                <CardContent className="flex flex-col gap-6">
                   <InstanceNameForm
                     key={instance.id + instance.name}
                     initialName={instance.name}
@@ -389,10 +380,13 @@ export function EditInstancePage(
             {section === "settings" &&
               library.instanceSettings[instance.id] && (
                 <InstanceSettingsForm
-                  expanded
+                  key={instance.id}
+                  instanceId={instance.id}
+                  globalSettings={library.settings}
                   initialSettings={library.instanceSettings[instance.id]}
                   accounts={authentication.auth?.accounts ?? []}
                   busy={busy}
+                  onOpenJava={() => props.onNavigate("settings/runtime")}
                   onSave={(settings) =>
                     library.run({
                       action: "instance.settings",
@@ -403,7 +397,7 @@ export function EditInstancePage(
                 />
               )}
             {["mod", "resourcepack", "shader"].includes(section) && (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-6">
                 <div className="flex justify-end">
                   <Button
                     variant="outline"
@@ -459,61 +453,6 @@ export function EditInstancePage(
                 instances={[instance]}
               />
             )}
-            <Separator />
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <Button variant="outline" onClick={props.onBack}>
-                Close
-              </Button>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => props.onNavigate("downloads")}
-                >
-                  Progress &amp; downloads
-                </Button>
-                {running ? (
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      void gaming.run({
-                        action: job?.phase === "running" ? "stop" : "cancel",
-                        id: instance.id,
-                      })
-                    }
-                  >
-                    <Square />
-                    Stop / Cancel
-                  </Button>
-                ) : (
-                  <>
-                    <Button
-                      variant="outline"
-                      disabled={busy || !supportedLoader(instance)}
-                      onClick={() =>
-                        void gaming.run({ action: "install", instance })
-                      }
-                    >
-                      <Download />
-                      Download game
-                    </Button>
-                    <Button
-                      disabled={
-                        busy ||
-                        !supportedLoader(instance) ||
-                        (!authentication.auth?.selectedAccountId &&
-                          !library.instanceSettings[instance.id]?.accountId)
-                      }
-                      onClick={() =>
-                        void gaming.run({ action: "play", instance })
-                      }
-                    >
-                      <Play />
-                      Launch
-                    </Button>
-                  </>
-                )}
-              </div>
-            </div>
           </>
         )}
       </div>

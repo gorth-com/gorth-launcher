@@ -59,6 +59,7 @@ it("applies global defaults without replacing instance overrides or account bind
   });
   const instance = {
     ...defaults,
+    overrides: undefined, // Legacy records predate explicit inheritance switches.
     memoryMax: 3,
     accountId: "gorth:fixture",
     environment: { SHARED: "instance" },

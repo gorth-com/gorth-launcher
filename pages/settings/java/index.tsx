@@ -10,14 +10,9 @@ import {
 } from "@gorth-io/primitive/default/card";
 import { Separator } from "@gorth-io/primitive/default/separator";
 import { Input } from "@gorth-io/primitive/default/input";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "@gorth-io/primitive/default/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@gorth-io/primitive/default/dialog";
+import { Field, FieldLabel } from "@gorth-io/primitive/default/field";
+import { JavaInstallations } from "@/components/element/java-installations";
 import { Textarea } from "@gorth-io/primitive/default/textarea";
 import { RadioGroup, RadioGroupItem } from "@gorth-io/primitive/custom/radio";
 import {
@@ -44,16 +39,21 @@ export function JavaSettings({
   setSettings: Dispatch<SetStateAction<Settings>>;
 }) {
   const [major, setMajor] = useState(17);
-  const [installationQuery, setInstallationQuery] = useState("");
+  const [detectTarget, setDetectTarget] = useState<"path" | "paths.17" | "paths.21" | "paths.25" | null>(null);
   const installed = useQuery({
     queryKey: ["java-installations"],
     queryFn: () => window.electronAPI.settings.javaInstallations(),
     staleTime: 60000,
     retry: false,
   });
+  const refreshInstallations = async () => {
+    const result = await installed.refetch();
+    if (result.error) toast.add({ title: "Could not detect Java", type: "error" });
+  };
   const form = useForm({
     defaultValues: {
       path: settings.javaPath,
+      paths: { "17": settings.javaPaths?.["17"] ?? "", "21": settings.javaPaths?.["21"] ?? "", "25": settings.javaPaths?.["25"] ?? "" },
       preferences: javaPreferences(settings),
     },
     onSubmit: ({ value }) => {
@@ -69,6 +69,7 @@ export function JavaSettings({
       setSettings((previous) => ({
         ...previous,
         javaPath: value.path.trim(),
+        javaPaths: { "17": value.paths["17"].trim(), "21": value.paths["21"].trim(), "25": value.paths["25"].trim() },
         memory: Math.ceil(parsed.data.memoryMaxMiB / 1024),
         java: parsed.data,
       }));
@@ -76,16 +77,16 @@ export function JavaSettings({
     },
   });
   const choose = useMutation({
-    mutationFn: () => window.electronAPI.settings.chooseJava(),
-    onSuccess: (file) => {
-      if (file) form.setFieldValue("path", file);
+    mutationFn: async (field: NonNullable<typeof detectTarget>) => ({ field, file: await window.electronAPI.settings.chooseJava() }),
+    onSuccess: ({ field, file }) => {
+      if (file) form.setFieldValue(field, file);
     },
     onError: () => toast.add({ title: "Could not choose Java", type: "error" }),
   });
   const test = useMutation({
     mutationFn: () =>
       window.electronAPI.settings.testJava({
-        path: form.state.values.path,
+        path: ([17, 21, 25].includes(major) ? form.state.values.paths[String(major) as "17" | "21" | "25"] : "") || form.state.values.path,
         major,
         preferences: form.state.values.preferences,
       }),
@@ -127,50 +128,23 @@ export function JavaSettings({
                   use Mojang when enabled, otherwise Eclipse Temurin.
                 </CardDescription>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={installed.isFetching}
-                  onClick={async () => {
-                    const result = await installed.refetch();
-                    const match = result.data?.find(
-                      (item) => item.major === major,
-                    );
-                    if (match) {
-                      form.setFieldValue("path", match.path);
-                      toast.add({ title: "Java detected", type: "success" });
-                    } else
-                      toast.add({
-                        title: "No matching Java installation found",
-                        type: "warning",
-                      });
-                  }}
-                >
-                  Detect
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={choose.isPending}
-                  onClick={() => choose.mutate()}
-                >
-                  Browse
-                </Button>
-              </div>
             </CardHeader>
-            <CardContent className="flex flex-col px-4 pb-4">
-              <form.Field name="path">
-                {(field) => (
-                  <Input
-                    id="java-path"
-                    aria-label="Java executable"
-                    placeholder="Automatic runtime selection"
-                    value={field.state.value}
-                    onChange={(event) => field.handleChange(event.target.value)}
-                  />
-                )}
-              </form.Field>
+            <CardContent className="flex flex-col gap-4 px-4 pb-4">
+              {([
+                { field: "path", label: "Default Java executable" },
+                { field: "paths.17", label: "Java 17 executable" },
+                { field: "paths.21", label: "Java 21 executable" },
+                { field: "paths.25", label: "Java 25 executable" },
+              ] as const).map((item) => <form.Field key={item.field} name={item.field}>{(field) => (
+                <Field className="gap-1">
+                  <FieldLabel htmlFor={`java-${item.field}`}>{item.label}</FieldLabel>
+                  <div className="flex items-center gap-2">
+                    <Input className="min-w-0 flex-1" id={`java-${item.field}`} placeholder={item.field === "path" ? "Automatic runtime selection" : "Use default or automatic selection"} value={field.state.value} onChange={(event) => field.handleChange(event.target.value)} />
+                    <Button type="button" variant="outline" onClick={() => { setDetectTarget(item.field); void refreshInstallations(); }}>Detect</Button>
+                    <Button type="button" variant="outline" disabled={choose.isPending} onClick={() => choose.mutate(item.field)}>Browse</Button>
+                  </div>
+                </Field>
+              )}</form.Field>)}
             </CardContent>
             <form.Field name="preferences">
               {(field) => {
@@ -362,82 +336,24 @@ export function JavaSettings({
           <Card className="gap-0 py-0">
             <div className="flex flex-wrap items-center justify-between gap-4 p-4">
               <CardTitle>Installed Java runtimes</CardTitle>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={installed.isFetching}
-                onClick={() => void installed.refetch()}
-              >
-                Refresh
-              </Button>
             </div>
             <Separator />
-            <div className="p-4">
-              <Input
-                aria-label="Search Java installations"
-                placeholder="Search version, architecture, vendor or path…"
-                value={installationQuery}
-                onChange={(event) => setInstallationQuery(event.target.value)}
-              />
-            </div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Version</TableHead>
-                  <TableHead>Architecture</TableHead>
-                  <TableHead>Vendor</TableHead>
-                  <TableHead>Path</TableHead>
-                  <TableHead>
-                    <span className="sr-only">Select runtime</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {installed.data
-                  ?.filter((item) =>
-                    `${item.version} ${item.architecture} ${item.vendor} ${item.path}`
-                      .toLowerCase()
-                      .includes(installationQuery.trim().toLowerCase()),
-                  )
-                  .map((item) => (
-                    <TableRow key={item.path}>
-                      <TableCell>{item.version}</TableCell>
-                      <TableCell>{item.architecture}</TableCell>
-                      <TableCell>{item.vendor}</TableCell>
-                      <TableCell className="break-all whitespace-normal">
-                        {item.path}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => {
-                            form.setFieldValue("path", item.path);
-                            toast.add({
-                              title: "Java selected; save to apply",
-                              type: "info",
-                            });
-                          }}
-                        >
-                          Use
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-            {!installed.data?.length && (
-              <div className="p-4">
-                <CardDescription>
-                  {installed.isFetching
-                    ? "Scanning installed runtimes…"
-                    : "No runtimes found. Use Browse to choose an executable."}
-                </CardDescription>
-              </div>
-            )}
+            <div className="p-4"><JavaInstallations items={installed.data ?? []} loading={installed.isFetching}
+              onRefresh={() => void refreshInstallations()}
+              onSelect={(item) => { form.setFieldValue("path", item.path); toast.add({ title: "Default Java selected; save to apply", type: "info" }); }} /></div>
           </Card>
         </TabsContent>
       </Tabs>
+      <Dialog open={detectTarget !== null} onOpenChange={(open) => { if (!open) setDetectTarget(null); }}>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto scrollbar-none sm:max-w-4xl">
+          <DialogHeader><DialogTitle>{detectTarget === "path" ? "Select default Java" : `Select Java ${detectTarget?.split(".")[1] ?? ""}`}</DialogTitle>
+            <DialogDescription>Choose an installed runtime. Save Java settings to apply the selected path.</DialogDescription></DialogHeader>
+          <JavaInstallations variant="dialog" key={detectTarget} items={installed.data ?? []} loading={installed.isFetching}
+            major={detectTarget && detectTarget !== "path" ? Number(detectTarget.split(".")[1]) : undefined}
+            onRefresh={() => void refreshInstallations()}
+            onSelect={(item) => { if (detectTarget) form.setFieldValue(detectTarget, item.path); setDetectTarget(null); }} />
+        </DialogContent>
+      </Dialog>
       <div className="flex gap-2">
         <Button type="submit">Save Java settings</Button>
         <Button
@@ -446,6 +362,7 @@ export function JavaSettings({
           onClick={() =>
             form.reset({
               path: "",
+              paths: { "17": "", "21": "", "25": "" },
               preferences: javaPreferences({ memory: 4, javaPath: "" }),
             })
           }

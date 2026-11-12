@@ -12,6 +12,7 @@ import type {
 import { download, json, readJson, safePath } from "./files";
 import { argumentsFor, libraryFiles, versionMetadata } from "./metadata";
 import { ensureJava, memoryLimit } from "./java";
+import { javaPathForMajor } from "@/lib/library/java-paths";
 import { presetArguments } from "@/lib/library/game-preferences";
 import { supportedLoader } from "./catalog";
 import { installLoader } from "./loaders";
@@ -47,7 +48,7 @@ export async function installGame(
   progress("Kiểm tra Eclipse Temurin " + runtime, 0, 0);
   const java = await ensureJava(
     root,
-    settings.javaPath,
+    javaPathForMajor(settings, runtime),
     signal,
     (message) => progress(message, 0, 0),
     runtime,
@@ -320,18 +321,33 @@ export function launchArguments(
       String(settings.resolutionHeight),
     );
   if (settings.joinServer) {
-    const separator = settings.joinServer.lastIndexOf(":");
-    const hasPort =
-      separator > 0 &&
-      /^\d{1,5}$/.test(settings.joinServer.slice(separator + 1));
-    gameArguments.push(
-      "--server",
-      hasPort ? settings.joinServer.slice(0, separator) : settings.joinServer,
+    const quickPlay = game.version.arguments?.game.some((argument) =>
+      typeof argument !== "string" &&
+      argument.rules?.some((rule) => rule.features?.is_quick_play_multiplayer === true),
     );
-    if (hasPort)
-      gameArguments.push("--port", settings.joinServer.slice(separator + 1));
-  } else if (settings.joinWorld)
+    if (quickPlay) {
+      gameArguments.push("--quickPlayMultiplayer", settings.joinServer);
+    } else {
+      const separator = settings.joinServer.lastIndexOf(":");
+      const hasPort =
+        separator > 0 &&
+        /^\d{1,5}$/.test(settings.joinServer.slice(separator + 1));
+      gameArguments.push(
+        "--server",
+        hasPort ? settings.joinServer.slice(0, separator) : settings.joinServer,
+      );
+      if (hasPort)
+        gameArguments.push("--port", settings.joinServer.slice(separator + 1));
+    }
+  } else if (settings.joinWorld) {
+    const quickPlay = game.version.arguments?.game.some((argument) =>
+      typeof argument !== "string" &&
+      argument.rules?.some((rule) => rule.features?.is_quick_play_singleplayer === true),
+    );
+    if (!quickPlay)
+      throw new Error("Phiên bản Minecraft này chưa hỗ trợ tự vào world qua Quick Play.");
     gameArguments.push("--quickPlaySingleplayer", settings.joinWorld);
+  }
   return [...args, game.version.mainClass, ...gameArguments];
 }
 

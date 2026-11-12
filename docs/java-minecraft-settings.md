@@ -12,7 +12,7 @@ Java (settings/runtime) and Minecraft (settings/instance) retain the existing fu
 - Auto-detect selects an installed matching Java version; a mismatched configured runtime falls back to discovery only when auto-detection is enabled.
 - Auto-download Mojang Java changes the download source. Otherwise the existing Temurin downloader remains available. Existing suitable runtimes are reused. Mojang uses official runtime metadata, validates the manifest and raw-file SHA-1/size, restricts destinations and symlinks to staging, and checks the executable before publishing the runtime. Unavailable platform/component combinations produce an error, not a silent architecture fallback.
 - Minimum/maximum memory are specified in MiB. Fractional-GB instance memory remains supported at MiB precision. Free-memory warnings are confirmed before launching.
-- Mojang optimized defaults, GC presets (None/G1/Shenandoah/ZGC), a generated-arguments preview and custom arguments (one per line). Global custom arguments precede instance custom arguments.
+- Mojang optimized defaults, GC presets (None/G1/Shenandoah/ZGC), a generated-arguments preview and custom arguments (one per line). Legacy records append instance arguments to global arguments; explicit Java Arguments overrides replace the global group. See [per-instance Settings](instances.md#per-instance-settings).
 - PermGen is displayed disabled: it was removed in Java 8 and is not a valid option for supported runtimes. No PermGen flag is generated. GC availability depends on the chosen Java build; use Test settings.
 
 ## Minecraft
@@ -23,7 +23,7 @@ Java (settings/runtime) and Minecraft (settings/instance) retain the existing fu
 - Hide launcher after successful Java process spawn; restore it when the game exits. Quit-on-exit applies only when no other launcher game task remains.
 - Show console on launch/crash, hide on normal exit. Console is a separate Electron window using the existing ConsolePage and preload. It is reused per instance and preserves contextIsolation, sandbox and disabled nodeIntegration.
 - Record play time controls future local history records. Show-instance-time and show-total-time control the instance list/Home/Downloads/History displays. The hours preference formats durations without changing stored milliseconds.
-- Global GPU/native library defaults, pre-launch/post-exit commands and environment variables. Existing per-instance values take priority. Commands remain direct executable invocation, not shell expressions, and existing Java environment filtering remains enabled.
+- Global GPU/native library defaults, pre-launch/post-exit commands and environment variables. Explicit per-instance group switches select custom values or live global inheritance; older records keep their original precedence until saved. Commands remain direct executable invocation, not shell expressions, and existing Java environment filtering remains enabled.
 
 ## Verification
 

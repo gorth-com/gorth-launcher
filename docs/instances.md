@@ -11,6 +11,7 @@
 - Home only contains quick play (instance/account selection, Play/Stop) and six unique recently played instances.
 - Instances is the only full management list, with search/filter/grid/list and no secondary instance selector.
 - Edit owns runtime, per-instance settings, installed content, data, screenshots and logs. Child tools are pinned to its UUID and do not show redundant instance selectors.
+- The editor heading shows the current section and an instance selector on the right. Switching instances keeps the section and updates the shared tool selection; each instance has a separate form state.
 - Content/Mods/Modpacks/Resource Packs/Shaders search and install online content only; installed-content management lives in Edit. Browse/install from an editor preserves that instance as the target.
 - Downloads contains task status, progress, pause/resume/cancel/stop and links to Console and Launch History, not copies of the log/history views.
 - The renderer root owns a shared selection across Home, Edit, Content and Console. Editor URLs synchronize that selection; deleting the chosen instance falls back to an existing instance. Legacy tool redirects replace history so Back does not bounce through the old URL.
@@ -25,3 +26,17 @@ Create supports Custom, existing archive/folder import, Modrinth and CurseForge 
 Custom creation validates name, runtime, group and a whitelisted Lucide icon in both renderer and main. Metadata is inserted together in SQLite. Existing image icons remain supported; Lucide icons use the `lucide:` marker in the existing icon field, without a database migration.
 
 Create/Edit/Data preserve titlebar, navigation controls, Back, account footer, auth overlay, tooltips and confirmation/toast portals. Filesystem, game execution and import/export remain behind existing IPC APIs. Saved shortcut action identifiers are preserved; navigation maps legacy identifiers to canonical pages.
+
+## Per-instance Settings
+
+Settings contains General, Java, Tweaks, Custom Commands and Environment Variables tabs. Use each group's switch to enable its own settings; disabling it preserves the saved custom values while applying the current global settings at launch. New instances inherit global settings. Older records without override switches keep their original behavior and are upgraded when explicitly saved.
+
+- General: Ely.by patch policy, window/fullscreen/resolution, launcher hide/quit, console launch/crash/exit behavior, play-time visibility/recording, default account and server/world auto-join. Worlds come from the existing instance-data API. Modern game metadata selects Quick Play; older server launches retain legacy arguments. Singleplayer auto-join requires Quick Play support in the game metadata.
+- Java: executable with Detect/Browse on the input row, compatibility checks, Test settings, MiB memory, free-memory warning, optimized defaults, collector and JVM arguments. Detect reuses the Java Installations component, query and native discovery. The required-major selector controls the test only; launch uses the game's actual runtime requirement. PermGen is a read-only legacy value and never generates an obsolete Java flag.
+- Tweaks: GPU and separate GLFW/OpenAL/OpenGL enable switches/paths. Turning a library off preserves its path. All native operations remain in main.
+- Custom Commands: pre-launch, wrapper and post-exit. Commands run without a shell in the instance game directory. They receive INST_NAME, INST_ID, INST_DIR, INST_MC_DIR and INST_JAVA. The wrapper receives the Java executable followed by the original argument array. Authentication arguments are not duplicated into environment variables or logged.
+- Environment Variables: Add/Remove/Clear with validated unique names. Enabling this group replaces user-configured global environment entries, including replacement with an empty set. System environment filtering and GPU overrides still apply.
+
+Legacy online fixes, Global Data Packs and Mod Download Loader overrides are locked with an explanation until a supported patch/mod/catalog contract exists. These are not advertised as working.
+
+Changes use the existing instance-settings JSON in SQLite; no database migration or dependency installation is needed. Errors are reported through the existing toast provider. Automated checks cover schema validation, inheritance, legacy records, SQLite reopen, argument assembly and actual Electron form interactions using an isolated profile and mocked native dialogs. They do not start a real Minecraft game.

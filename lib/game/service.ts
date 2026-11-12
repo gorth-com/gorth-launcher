@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, shell, screen } from "electron";
 import os from "node:os";
 import { effectiveGameSettings } from "@/lib/library/game-preferences";
+import { launchProcess } from "./launch-process";
 import { requestConfirmation } from "@/main/services/confirmation";
 import {
   showGameConsole,
@@ -180,6 +181,13 @@ async function launch(
       settings.environment,
       settings.gpuPreference,
     );
+  Object.assign(environment, {
+    INST_NAME: instance.name,
+    INST_ID: instance.id,
+    INST_DIR: path.dirname(game.gameDir),
+    INST_MC_DIR: game.gameDir,
+    INST_JAVA: game.java,
+  });
   if (settings.minecraftOptions?.maximized && !settings.fullscreen) {
     const area = owner
       ? screen.getDisplayMatching(owner.getBounds()).workAreaSize
@@ -215,9 +223,14 @@ async function launch(
     { phase: "starting", message: "Đang khởi chạy Minecraft…" },
     true,
   );
-  const child = spawn(
+  const command = launchProcess(
     game.java,
     launchArguments(game, session, settings, agent),
+    settings.wrapperCommand,
+  );
+  const child = spawn(
+    command.executable,
+    command.arguments,
     {
       cwd: game.gameDir,
       env: environment,

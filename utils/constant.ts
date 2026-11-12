@@ -117,6 +117,7 @@ export const defaultSettings: Settings = {
   showTitlebarLogo: true,
   memory: 4,
   javaPath: "",
+  javaPaths: { "17": "", "21": "", "25": "" },
   trashRetentionDays: 30,
   keepSavesOnTrashCleanup: true,
 };

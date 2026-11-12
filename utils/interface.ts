@@ -43,6 +43,7 @@ export interface InstanceSelectionProps {
 }
 
 export interface Settings {
+  javaPaths?: Partial<Record<"17" | "21" | "25", string>>;
   java?: import("@/lib/library/game-preferences").JavaPreferences;
   minecraft?: import("@/lib/library/game-preferences").MinecraftPreferences;
   locale?: "system" | "en" | "vi";
@@ -69,6 +70,10 @@ export interface TrashEntry extends Instance {
 
 export type GpuPreference = "default" | "high-performance" | "integrated";
 export interface InstanceSettings {
+  overrides?: import("@/lib/library/instance-overrides").InstanceOverrides;
+  wrapperCommand?: string;
+  nativeLibraries?: { glfw: boolean; openAl: boolean; openGl: boolean };
+  javaPaths?: Partial<Record<"default" | "17" | "21" | "25", string>>;
   javaOptions?: import("@/lib/library/game-preferences").JavaPreferences;
   minecraftOptions?: import("@/lib/library/game-preferences").MinecraftPreferences;
   memoryMin: number;

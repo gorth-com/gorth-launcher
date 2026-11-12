@@ -35,7 +35,7 @@ import {
 } from "@/layouts/navigation-bar";
 import { useLauncherNavigation } from "@/hooks/use-launcher-navigation";
 import { useJavaSetup } from "@/hooks/use-java-setup";
-import { minecraftPreferences } from "@/lib/library/game-preferences";
+import { effectiveGameSettings, minecraftPreferences } from "@/lib/library/game-preferences";
 import { formatPlayTime } from "@/utils/formatter";
 import { Wrapper } from "@/layouts/wrapper";
 import { type Instance, type Page } from "@/utils/interface";
@@ -247,6 +247,10 @@ export default function Application() {
         gaming={gaming}
         authentication={authentication}
         initialSection={pageNavigation.editSection}
+        onInstanceChange={(id, section) => {
+          selection.onInstanceChange(id);
+          setPage(`instances/edit/${id}`, { section });
+        }}
         onBrowseContent={(target) => {
           selection.onInstanceChange(page.slice("instances/edit/".length));
           setPackKind(
@@ -411,7 +415,10 @@ export default function Application() {
                         void library.run({ action: "orphans.import" })
                       }
                       playTimeLabel={(id) => {
-                        const preferences = minecraftPreferences(settings);
+                        const stored = library.instanceSettings[id];
+                        const preferences = stored
+                          ? effectiveGameSettings(settings, stored).minecraftOptions!
+                          : minecraftPreferences(settings);
                         return preferences.showGameTime
                           ? formatPlayTime(
                               gaming.game.history
