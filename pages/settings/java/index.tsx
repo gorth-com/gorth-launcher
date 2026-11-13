@@ -1,6 +1,9 @@
 import { Fragment, useState, type Dispatch, type SetStateAction } from "react";
 import { useForm } from "@gorth-io/primitive/cores/tanstack/form";
-import { useQuery, useMutation } from "@gorth-io/primitive/cores/tanstack/query";
+import {
+  useQuery,
+  useMutation,
+} from "@gorth-io/primitive/cores/tanstack/query";
 import {
   Card,
   CardTitle,
@@ -10,7 +13,7 @@ import {
 } from "@gorth-io/primitive/default/card";
 import { Separator } from "@gorth-io/primitive/default/separator";
 import { Input } from "@gorth-io/primitive/default/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@gorth-io/primitive/default/dialog";
+import { Dialog, DialogContent } from "@gorth-io/primitive/default/dialog";
 import { Field, FieldLabel } from "@gorth-io/primitive/default/field";
 import { JavaInstallations } from "@/components/element/java-installations";
 import { Textarea } from "@gorth-io/primitive/default/textarea";
@@ -39,7 +42,9 @@ export function JavaSettings({
   setSettings: Dispatch<SetStateAction<Settings>>;
 }) {
   const [major, setMajor] = useState(17);
-  const [detectTarget, setDetectTarget] = useState<"path" | "paths.17" | "paths.21" | "paths.25" | null>(null);
+  const [detectTarget, setDetectTarget] = useState<
+    "path" | "paths.17" | "paths.21" | "paths.25" | null
+  >(null);
   const installed = useQuery({
     queryKey: ["java-installations"],
     queryFn: () => window.electronAPI.settings.javaInstallations(),
@@ -48,12 +53,17 @@ export function JavaSettings({
   });
   const refreshInstallations = async () => {
     const result = await installed.refetch();
-    if (result.error) toast.add({ title: "Could not detect Java", type: "error" });
+    if (result.error)
+      toast.add({ title: "Could not detect Java", type: "error" });
   };
   const form = useForm({
     defaultValues: {
       path: settings.javaPath,
-      paths: { "17": settings.javaPaths?.["17"] ?? "", "21": settings.javaPaths?.["21"] ?? "", "25": settings.javaPaths?.["25"] ?? "" },
+      paths: {
+        "17": settings.javaPaths?.["17"] ?? "",
+        "21": settings.javaPaths?.["21"] ?? "",
+        "25": settings.javaPaths?.["25"] ?? "",
+      },
       preferences: javaPreferences(settings),
     },
     onSubmit: ({ value }) => {
@@ -69,7 +79,11 @@ export function JavaSettings({
       setSettings((previous) => ({
         ...previous,
         javaPath: value.path.trim(),
-        javaPaths: { "17": value.paths["17"].trim(), "21": value.paths["21"].trim(), "25": value.paths["25"].trim() },
+        javaPaths: {
+          "17": value.paths["17"].trim(),
+          "21": value.paths["21"].trim(),
+          "25": value.paths["25"].trim(),
+        },
         memory: Math.ceil(parsed.data.memoryMaxMiB / 1024),
         java: parsed.data,
       }));
@@ -77,7 +91,10 @@ export function JavaSettings({
     },
   });
   const choose = useMutation({
-    mutationFn: async (field: NonNullable<typeof detectTarget>) => ({ field, file: await window.electronAPI.settings.chooseJava() }),
+    mutationFn: async (field: NonNullable<typeof detectTarget>) => ({
+      field,
+      file: await window.electronAPI.settings.chooseJava(),
+    }),
     onSuccess: ({ field, file }) => {
       if (file) form.setFieldValue(field, file);
     },
@@ -86,7 +103,10 @@ export function JavaSettings({
   const test = useMutation({
     mutationFn: () =>
       window.electronAPI.settings.testJava({
-        path: ([17, 21, 25].includes(major) ? form.state.values.paths[String(major) as "17" | "21" | "25"] : "") || form.state.values.path,
+        path:
+          ([17, 21, 25].includes(major)
+            ? form.state.values.paths[String(major) as "17" | "21" | "25"]
+            : "") || form.state.values.path,
         major,
         preferences: form.state.values.preferences,
       }),
@@ -114,10 +134,28 @@ export function JavaSettings({
       className="flex flex-col gap-4"
     >
       <Tabs defaultValue="general">
-        <TabsList>
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="installations">Installations</TabsTrigger>
-        </TabsList>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <TabsList>
+            <TabsTrigger value="general">General</TabsTrigger>
+            <TabsTrigger value="installations">Installations</TabsTrigger>
+          </TabsList>
+          <div className="flex gap-2">
+            <Button type="submit">Save Java settings</Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                form.reset({
+                  path: "",
+                  paths: { "17": "", "21": "", "25": "" },
+                  preferences: javaPreferences({ memory: 4, javaPath: "" }),
+                })
+              }
+            >
+              Reset Java settings
+            </Button>
+          </div>
+        </div>
         <TabsContent value="general">
           <Card className="gap-0 overflow-hidden py-0">
             <CardHeader className="flex flex-row justify-between gap-1 p-4">
@@ -130,21 +168,57 @@ export function JavaSettings({
               </div>
             </CardHeader>
             <CardContent className="flex flex-col gap-4 px-4 pb-4">
-              {([
-                { field: "path", label: "Default Java executable" },
-                { field: "paths.17", label: "Java 17 executable" },
-                { field: "paths.21", label: "Java 21 executable" },
-                { field: "paths.25", label: "Java 25 executable" },
-              ] as const).map((item) => <form.Field key={item.field} name={item.field}>{(field) => (
-                <Field className="gap-1">
-                  <FieldLabel htmlFor={`java-${item.field}`}>{item.label}</FieldLabel>
-                  <div className="flex items-center gap-2">
-                    <Input className="min-w-0 flex-1" id={`java-${item.field}`} placeholder={item.field === "path" ? "Automatic runtime selection" : "Use default or automatic selection"} value={field.state.value} onChange={(event) => field.handleChange(event.target.value)} />
-                    <Button type="button" variant="outline" onClick={() => { setDetectTarget(item.field); void refreshInstallations(); }}>Detect</Button>
-                    <Button type="button" variant="outline" disabled={choose.isPending} onClick={() => choose.mutate(item.field)}>Browse</Button>
-                  </div>
-                </Field>
-              )}</form.Field>)}
+              {(
+                [
+                  { field: "path", label: "Default Java executable" },
+                  { field: "paths.17", label: "Java 17 executable" },
+                  { field: "paths.21", label: "Java 21 executable" },
+                  { field: "paths.25", label: "Java 25 executable" },
+                ] as const
+              ).map((item) => (
+                <form.Field key={item.field} name={item.field}>
+                  {(field) => (
+                    <Field className="gap-1">
+                      <FieldLabel htmlFor={`java-${item.field}`}>
+                        {item.label}
+                      </FieldLabel>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          className="min-w-0 flex-1"
+                          id={`java-${item.field}`}
+                          placeholder={
+                            item.field === "path"
+                              ? "Automatic runtime selection"
+                              : "Use default or automatic selection"
+                          }
+                          value={field.state.value}
+                          onChange={(event) =>
+                            field.handleChange(event.target.value)
+                          }
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setDetectTarget(item.field);
+                            void refreshInstallations();
+                          }}
+                        >
+                          Detect
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={choose.isPending}
+                          onClick={() => choose.mutate(item.field)}
+                        >
+                          Browse
+                        </Button>
+                      </div>
+                    </Field>
+                  )}
+                </form.Field>
+              ))}
             </CardContent>
             <form.Field name="preferences">
               {(field) => {
@@ -333,43 +407,64 @@ export function JavaSettings({
           </Card>
         </TabsContent>
         <TabsContent value="installations">
-          <Card className="gap-0 py-0">
-            <div className="flex flex-wrap items-center justify-between gap-4 p-4">
-              <CardTitle>Installed Java runtimes</CardTitle>
-            </div>
-            <Separator />
-            <div className="p-4"><JavaInstallations items={installed.data ?? []} loading={installed.isFetching}
-              onRefresh={() => void refreshInstallations()}
-              onSelect={(item) => { form.setFieldValue("path", item.path); toast.add({ title: "Default Java selected; save to apply", type: "info" }); }} /></div>
-          </Card>
+          <form.Field name="path">
+            {(field) => (
+              <JavaInstallations
+                selectedPath={field.state.value}
+                items={installed.data ?? []}
+                loading={installed.isFetching}
+                onRefresh={() => void refreshInstallations()}
+                onSelect={(item) => {
+                  field.handleChange(item.path);
+                  toast.add({
+                    title: "Default Java selected; save to apply",
+                    type: "info",
+                  });
+                }}
+              />
+            )}
+          </form.Field>
         </TabsContent>
       </Tabs>
-      <Dialog open={detectTarget !== null} onOpenChange={(open) => { if (!open) setDetectTarget(null); }}>
-        <DialogContent className="max-h-[90dvh] overflow-y-auto scrollbar-none sm:max-w-4xl">
-          <DialogHeader><DialogTitle>{detectTarget === "path" ? "Select default Java" : `Select Java ${detectTarget?.split(".")[1] ?? ""}`}</DialogTitle>
-            <DialogDescription>Choose an installed runtime. Save Java settings to apply the selected path.</DialogDescription></DialogHeader>
-          <JavaInstallations variant="dialog" key={detectTarget} items={installed.data ?? []} loading={installed.isFetching}
-            major={detectTarget && detectTarget !== "path" ? Number(detectTarget.split(".")[1]) : undefined}
+      <Dialog
+        open={detectTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDetectTarget(null);
+        }}
+      >
+        <DialogContent className="max-h-[90dvh] overflow-hidden sm:max-w-4xl">
+          <JavaInstallations
+            variant="dialog"
+            key={detectTarget}
+            selectedPath={
+              detectTarget === "path"
+                ? form.state.values.path
+                : detectTarget
+                  ? form.state.values.paths[
+                      detectTarget.split(".")[1] as "17" | "21" | "25"
+                    ]
+                  : ""
+            }
+            title={
+              detectTarget === "path"
+                ? "Select default Java"
+                : `Select Java ${detectTarget?.split(".")[1] ?? ""}`
+            }
+            items={installed.data ?? []}
+            loading={installed.isFetching}
+            major={
+              detectTarget && detectTarget !== "path"
+                ? Number(detectTarget.split(".")[1])
+                : undefined
+            }
             onRefresh={() => void refreshInstallations()}
-            onSelect={(item) => { if (detectTarget) form.setFieldValue(detectTarget, item.path); setDetectTarget(null); }} />
+            onSelect={(item) => {
+              if (detectTarget) form.setFieldValue(detectTarget, item.path);
+              setDetectTarget(null);
+            }}
+          />
         </DialogContent>
       </Dialog>
-      <div className="flex gap-2">
-        <Button type="submit">Save Java settings</Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() =>
-            form.reset({
-              path: "",
-              paths: { "17": "", "21": "", "25": "" },
-              preferences: javaPreferences({ memory: 4, javaPath: "" }),
-            })
-          }
-        >
-          Reset Java settings
-        </Button>
-      </div>
     </form>
   );
 }

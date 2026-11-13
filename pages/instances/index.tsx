@@ -197,9 +197,7 @@ export function LibraryPage({
         )}
       </section>
       <section className="flex min-w-0 flex-col gap-6">
-        <Card className="h-full">
-
-        </Card>
+        <Card className="h-full"></Card>
       </section>
     </section>
   );

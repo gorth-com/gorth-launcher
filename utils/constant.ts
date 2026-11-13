@@ -65,11 +65,11 @@ export const navigation = [
 }>;
 
 export const launcherSettingsSections = [
+  { id: "general", label: "General", icon: SettingsIcon },
   { id: "appearance", label: "Appearance", icon: Palette },
   { id: "content", label: "Content", icon: PanelsTopLeft },
   { id: "shortcuts", label: "Shortcuts", icon: Keyboard },
   { id: "profile", label: "Gorth profile", icon: UserRound },
-  { id: "general", label: "General", icon: SettingsIcon },
   { id: "folders", label: "Folders", icon: Folder },
   { id: "language", label: "Language", icon: Languages },
   { id: "services", label: "Services", icon: Plug },
@@ -159,6 +159,7 @@ export const updateRepository = {
 
 // Deliberately curated releases, not a moving 'latest' channel.
 export const loaderCatalog = [
+  { loader: "Forge", minecraft: "1.20.1", version: "47.4.28" },
   { loader: "Forge", minecraft: "1.20.1", version: "47.4.10" },
   { loader: "Forge", minecraft: "1.20.1", version: "47.4.0" },
   { loader: "Forge", minecraft: "1.19.2", version: "43.5.0" },

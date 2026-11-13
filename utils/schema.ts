@@ -11,4 +11,3 @@ export function parseHttpUrl(value: string): URL {
 export function parseHttpsUrl(value: string): URL {
   return new URL(httpsUrlSchema.parse(value));
 }
-

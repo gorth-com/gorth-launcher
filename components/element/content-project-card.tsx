@@ -14,14 +14,17 @@ import {
 } from "@gorth-io/primitive/default/card";
 import { formatDate, formatInitials, formatNumber } from "@/utils/formatter";
 import type { ContentProject, ContentQuery } from "@/lib/content/interface";
+import type { ReactNode } from "react";
 
 interface ContentProjectCardProps {
   project: ContentProject;
-  query: ContentQuery;
+  query?: ContentQuery;
+  actions?: ReactNode;
+  metadata?: ReactNode;
   layout: "list" | "grid";
   busy: boolean;
-  onOpen: () => void;
-  onInstall: () => void;
+  onOpen?: () => void;
+  onInstall?: () => void;
 }
 
 export function ContentProjectCard({
@@ -31,6 +34,8 @@ export function ContentProjectCard({
   busy,
   onOpen,
   onInstall,
+  actions,
+  metadata,
 }: ContentProjectCardProps) {
   const vertical = layout === "grid";
   const categories = project.categories ?? [];
@@ -61,14 +66,18 @@ export function ContentProjectCard({
           >
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <CardTitle>
-                <button
-                  type="button"
-                  className="text-left hover:underline"
-                  disabled={busy}
-                  onClick={onOpen}
-                >
-                  {project.name}
-                </button>
+                {onOpen ? (
+                  <button
+                    type="button"
+                    className="text-left hover:underline"
+                    disabled={busy}
+                    onClick={onOpen}
+                  >
+                    {project.name}
+                  </button>
+                ) : (
+                  project.name
+                )}
               </CardTitle>
               {project.author && (
                 <CardDescription className="truncate">
@@ -80,46 +89,56 @@ export function ContentProjectCard({
               </CardDescription>
             </div>
             <div className="flex shrink-0 flex-wrap gap-2">
-              <Button
-                variant="outline"
-                disabled={busy}
-                onClick={onOpen}
-                title="Choose a release on the project page"
-              >
-                <Download /> Download
-              </Button>
-              <Button variant="default" disabled={busy} onClick={onInstall}>
-                Install
-              </Button>
+              {actions ?? (
+                <>
+                  <Button
+                    variant="outline"
+                    disabled={busy}
+                    onClick={onInstall}
+                    title="Chọn phiên bản để tải và cài đặt"
+                  >
+                    <Download /> Download
+                  </Button>
+                  <Button variant="default" disabled={busy} onClick={onInstall}>
+                    Install
+                  </Button>
+                </>
+              )}
             </div>
           </div>
           <div className="mt-auto flex flex-wrap items-center gap-2">
-            {categories.slice(0, vertical ? 1 : 2).map((category) => (
-              <Badge key={category} variant="secondary">
-                {category}
-              </Badge>
-            ))}
-            {categories.length > (vertical ? 1 : 2) && (
-              <Badge variant="secondary">
-                +{categories.length - (vertical ? 1 : 2)}
-              </Badge>
-            )}
-            <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
-              <Download className="size-3.5" />
-              {formatNumber(project.downloads)}
-            </span>
-            {date && Number.isFinite(Date.parse(date)) && (
-              <span
-                title={project.publishedAt ? "Published" : "Updated"}
-                className="inline-flex items-center gap-2 text-xs text-muted-foreground"
-              >
-                <Clock className="size-3.5" />
-                {formatDate(new Date(date))}
-              </span>
-            )}
-            {query.loader && <Badge variant="secondary">{query.loader}</Badge>}
-            {query.version && (
-              <Badge variant="secondary">{query.version}</Badge>
+            {metadata ?? (
+              <>
+                {categories.slice(0, vertical ? 1 : 2).map((category) => (
+                  <Badge key={category} variant="secondary">
+                    {category}
+                  </Badge>
+                ))}
+                {categories.length > (vertical ? 1 : 2) && (
+                  <Badge variant="secondary">
+                    +{categories.length - (vertical ? 1 : 2)}
+                  </Badge>
+                )}
+                <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+                  <Download className="size-3.5" />
+                  {formatNumber(project.downloads)}
+                </span>
+                {date && Number.isFinite(Date.parse(date)) && (
+                  <span
+                    title={project.publishedAt ? "Published" : "Updated"}
+                    className="inline-flex items-center gap-2 text-xs text-muted-foreground"
+                  >
+                    <Clock className="size-3.5" />
+                    {formatDate(new Date(date))}
+                  </span>
+                )}
+                {query?.loader && (
+                  <Badge variant="secondary">{query.loader}</Badge>
+                )}
+                {query?.version && (
+                  <Badge variant="secondary">{query.version}</Badge>
+                )}
+              </>
             )}
           </div>
         </div>

@@ -1,6 +1,10 @@
 import { useFeedbackToast } from "@/hooks/use-feedback-toast";
 import { createElement, useEffect, useRef, useState } from "react";
-import { ArrowLeft, RotateCw } from "@gorth-io/primitive/cores/lucide";
+import {
+  ArrowLeft,
+  PanelRight,
+  RotateCw,
+} from "@gorth-io/primitive/cores/lucide";
 import { Button } from "@gorth-io/primitive/custom/button";
 import { Input } from "@gorth-io/primitive/default/input";
 import { allowedContentWebsite } from "@/lib/content/website";
@@ -11,11 +15,15 @@ export function ProjectWebview({
   hidden,
   onBack,
   backDisabled,
+  sidebarOpen,
+  onToggleSidebar,
 }: {
   url: string;
   hidden: boolean;
   onBack: () => void;
   backDisabled: boolean;
+  sidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
 }) {
   const view = useRef<Electron.WebviewTag>(null);
   const [loading, setLoading] = useState(true);
@@ -99,6 +107,20 @@ export function ProjectWebview({
           readOnly
           value={url}
         />
+        {onToggleSidebar && (
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="h-9 shrink-0"
+            aria-label="Toggle project sidebar"
+            aria-expanded={sidebarOpen}
+            aria-controls="project-detail-sidebar"
+            onClick={onToggleSidebar}
+          >
+            <PanelRight />
+          </Button>
+        )}
         {loading && (
           <span role="status" className="sr-only">
             Đang tải…

@@ -89,4 +89,3 @@ A signed two-version GitHub Releases installation test remains required on macOS
 - [Official update.electronjs.org service and asset requirements](https://github.com/electron/update.electronjs.org)
 - [Forge macOS code signing](https://www.electronforge.io/guides/code-signing/code-signing-macos)
 - [Forge Squirrel.Windows maker](https://www.electronforge.io/config/makers/squirrel.windows)
-

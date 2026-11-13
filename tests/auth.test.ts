@@ -96,7 +96,9 @@ it("uses official SDK PKCE transfer, restores the SSO identity, switches account
       value: JSON.stringify({
         state: query.get("state"),
         codeChallenge: query.get("code_challenge"),
-        sourceSessionTokenHash: createHash("sha256").update(sourceSession.token).digest("base64url"),
+        sourceSessionTokenHash: createHash("sha256")
+          .update(sourceSession.token)
+          .digest("base64url"),
         userId: user.id,
       }),
       expiresAt: new Date(Date.now() + 120_000),

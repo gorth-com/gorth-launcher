@@ -1,3 +1,4 @@
+import { ScrollArea, ScrollBar } from "@gorth-io/primitive/default/scroll-area";
 import { useState, type CSSProperties, type ReactNode } from "react";
 import type { LucideIcon } from "@gorth-io/primitive/cores/lucide";
 import {
@@ -176,12 +177,14 @@ export function InstanceWorkspace({
             />
           </SidebarFooter>
         </Sidebar>
-        <main
-          className="min-w-0 flex-1 overflow-y-auto scrollbar-none"
-          aria-label="Instance workspace"
+        <ScrollArea
+          role="main"
+          render={<main aria-label="Instance workspace" />}
+          className="h-full min-h-0 min-w-0 flex-1"
         >
           <Wrapper>{children}</Wrapper>
-        </main>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
       </SidebarProvider>
       <AuthScreen compact={compact} onReturn={() => {}} />
     </div>

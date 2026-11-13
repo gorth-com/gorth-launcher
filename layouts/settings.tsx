@@ -30,7 +30,7 @@ export function SettingsLayout({
   unreadCount,
   children,
 }: SettingsLayoutProps) {
-  const [section, setSection] = useState<LauncherSettingsSection>("appearance");
+  const [section, setSection] = useState<LauncherSettingsSection>("general");
   const [open, setOpen] = useState(true);
   const currentSection = selectedSection ?? section;
   const compact = settings.tabLayout === "compact";

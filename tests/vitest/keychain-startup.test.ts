@@ -35,7 +35,10 @@ it("propagates denied key access without overwriting credentials", () => {
 });
 
 it("initializes only in the owning instance after app readiness and before creating a window", () => {
-  const source = readFileSync(new URL("../../app/main.ts", import.meta.url), "utf8");
+  const source = readFileSync(
+    new URL("../../app/main.ts", import.meta.url),
+    "utf8",
+  );
   const ready = source.indexOf(".whenReady()");
   const owner = source.indexOf("if (!ownsDataDirectory) return;", ready);
   const initialize = source.indexOf("initializeSecureStorage();", owner);

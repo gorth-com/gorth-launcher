@@ -8,5 +8,9 @@ await build({
   format: "cjs",
   outfile: ".vite/instance-data-test.cjs",
 });
-const result = spawnSync(process.execPath, ["--test", ".vite/instance-data-test.cjs"], { stdio: "inherit" });
+const result = spawnSync(
+  process.execPath,
+  ["--test", ".vite/instance-data-test.cjs"],
+  { stdio: "inherit" },
+);
 process.exitCode = result.status ?? 1;

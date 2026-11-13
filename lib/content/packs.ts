@@ -15,7 +15,12 @@ import { safePath, readJson, download, digest } from "@/lib/game/files";
 import { supportedLoader } from "@/lib/game/catalog";
 import { resolveContentFile } from "./providers";
 import type { Instance, Artifact } from "@/utils/interface";
-import type { ContentProvider, ContentQuery } from "./interface";
+import type {
+  ContentFile,
+  ContentProvider,
+  ContentQuery,
+  OptionalMod,
+} from "./interface";
 
 export interface ModpackReceipt {
   version: 1;
@@ -270,6 +275,15 @@ export async function unpackPack(
   staging: string,
   signal: AbortSignal,
   progress: (message: string, done?: number, total?: number) => void,
+  websiteDownload?: (
+    file: ContentFile,
+    target: string,
+    signal: AbortSignal,
+  ) => Promise<void>,
+  chooseOptional?: (
+    items: OptionalMod[],
+    signal: AbortSignal,
+  ) => Promise<string[]>,
 ): Promise<Omit<Instance, "id" | "createdAt">> {
   if ((await stat(archive)).size > 1024 ** 3)
     throw new Error("Archive modpack vượt 1 GB.");
@@ -299,7 +313,12 @@ export async function unpackPack(
     },
   });
   signal.throwIfAborted();
-  const files: { relative: string; artifact: Artifact }[] = [];
+  let files: {
+    relative: string;
+    artifact: Artifact;
+    blocked?: ContentFile;
+    optionalId?: string;
+  }[] = [];
   let name: string;
   let runtime: ReturnType<typeof packRuntime>;
   let overrides: string[];
@@ -319,10 +338,15 @@ export async function unpackPack(
     runtime = packRuntime(pack.dependencies);
     overrides = ["overrides", "client-overrides"];
     for (const file of pack.files) {
-      if (file.env?.client === "unsupported" || file.env?.client === "optional")
+      if (
+        file.env?.client === "unsupported" ||
+        (file.env?.client === "optional" && !chooseOptional)
+      )
         continue;
       files.push({
         relative: file.path,
+        optionalId:
+          file.env?.client === "optional" ? `file:${file.path}` : undefined,
         artifact: {
           url: file.downloads[0],
           sha1: file.hashes.sha1,
@@ -355,7 +379,9 @@ export async function unpackPack(
       version: runtime.version,
       loader: runtime.loader,
     };
-    for (const file of pack.files.filter((item) => item.required)) {
+    for (const file of pack.files.filter(
+      (item) => item.required || chooseOptional,
+    )) {
       progress("Đang đọc manifest CurseForge", files.length, pack.files.length);
       const resolved = await resolveContentFile(
         query,
@@ -363,6 +389,7 @@ export async function unpackPack(
         String(file.fileID),
         signal,
         true,
+        Boolean(websiteDownload),
       );
       if (
         path.basename(resolved.filename) !== resolved.filename ||
@@ -374,9 +401,57 @@ export async function unpackPack(
       files.push({
         relative: (resolved.directory ?? "mods") + "/" + resolved.filename,
         artifact: resolved.artifact,
+        optionalId: !file.required
+          ? `file:${file.projectID}:${file.fileID}`
+          : undefined,
+        blocked: resolved.websiteDownload ? resolved : undefined,
       });
     }
   }
+  const disabled = new Set<string>();
+  async function findDisabled(directory: string, prefix = "") {
+    let entries;
+    try {
+      entries = await readdir(directory, { withFileTypes: true });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+      throw error;
+    }
+    for (const entry of entries) {
+      signal.throwIfAborted();
+      const relative = prefix + entry.name;
+      const source = contentPath(directory, entry.name);
+      if ((await lstat(source)).isSymbolicLink())
+        throw new Error("Pack chứa symlink.");
+      if (entry.isDirectory()) await findDisabled(source, relative + "/");
+      else if (
+        relative.startsWith("mods/") &&
+        relative.endsWith(".jar.disabled")
+      )
+        disabled.add(relative);
+    }
+  }
+  for (const folder of overrides)
+    await findDisabled(contentPath(unpacked, folder));
+  const optional: OptionalMod[] = [
+    ...files
+      .filter((file) => file.optionalId)
+      .map((file) => ({ id: file.optionalId!, name: file.relative })),
+    ...[...disabled].map((relative) => ({
+      id: `override:${relative}`,
+      name: relative.slice(0, -9),
+    })),
+  ];
+  const selected = new Set(
+    chooseOptional && optional.length
+      ? await chooseOptional(optional, signal)
+      : [],
+  );
+  if ([...selected].some((id) => !optional.some((item) => item.id === id)))
+    throw new Error("Lựa chọn mod không hợp lệ.");
+  files = files.filter(
+    (file) => !file.optionalId || selected.has(file.optionalId),
+  );
   const targets = new Set<string>();
   let total = 0;
   for (const file of files) {
@@ -387,9 +462,32 @@ export async function unpackPack(
     total += file.artifact.size ?? 0;
   }
   if (total > 20 * 1024 ** 3) throw new Error("Modpack vượt 20 GB.");
+  const blockedTotal = files.filter((file) => file.blocked).length;
+  let blockedDone = 0;
+  for (const file of files) {
+    if (!file.blocked) continue;
+    signal.throwIfAborted();
+    progress(
+      `Đang tải mod qua trang chính thức: ${blockedDone}/${blockedTotal}`,
+      blockedDone,
+      blockedTotal,
+    );
+    await websiteDownload!(
+      file.blocked,
+      contentPath(game, file.relative),
+      signal,
+    );
+    blockedDone++;
+    progress(
+      `Đã tải mod qua trang chính thức: ${blockedDone}/${blockedTotal}`,
+      blockedDone,
+      blockedTotal,
+    );
+  }
   for (let index = 0; index < files.length; index++) {
     signal.throwIfAborted();
-    progress("Đang tải file modpack", index, files.length);
+    progress(`Đang tải ${files[index].relative}`, index, files.length);
+    if (files[index].blocked) continue;
     await download(
       files[index].artifact,
       contentPath(game, files[index].relative),
@@ -398,6 +496,17 @@ export async function unpackPack(
   }
   for (const folder of overrides)
     await copyOverrides(contentPath(unpacked, folder), game, signal);
+  for (const relative of disabled) {
+    if (!selected.has(`override:${relative}`)) continue;
+    const target = contentPath(game, relative.slice(0, -9));
+    try {
+      await lstat(target);
+      throw new Error("Mod đã bật trùng tên với mod tùy chọn.");
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+    await rename(contentPath(game, relative), target);
+  }
   signal.throwIfAborted();
   await writeFile(
     path.join(staging, "payload", packReceiptName),

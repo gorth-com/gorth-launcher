@@ -11,13 +11,22 @@ it("returns from Settings to the previous route rather than always Home", () => 
 });
 
 it("keeps settings in its own window layout and preserves the authentication overlay", () => {
-  const source = readFileSync(new URL("../../app/index.tsx", import.meta.url), "utf8");
+  const source = readFileSync(
+    new URL("../../app/index.tsx", import.meta.url),
+    "utf8",
+  );
   const start = source.indexOf('page === "settings" ||');
   expect(start).toBeGreaterThan(-1);
-  const branch = source.slice(start, source.indexOf("<div className=\"flex h-dvh", start));
+  const branch = source.slice(
+    start,
+    source.indexOf('<div className="flex h-dvh', start),
+  );
   expect(branch).toContain("<SettingsLayout");
   expect(branch).toContain("<AuthScreen");
   expect(branch).toContain("setPage(lastMainPage.current)");
-  const page = readFileSync(new URL("../../pages/settings/index.tsx", import.meta.url), "utf8");
+  const page = readFileSync(
+    new URL("../../pages/settings/index.tsx", import.meta.url),
+    "utf8",
+  );
   expect(page).not.toContain('<nav aria-label="Launcher settings sections"');
 });

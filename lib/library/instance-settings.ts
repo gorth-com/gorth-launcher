@@ -23,11 +23,13 @@ export const instanceSettingsSchema = z
     javaOptions: javaPreferencesSchema.optional(),
     minecraftOptions: minecraftPreferencesSchema.optional(),
     wrapperCommand: safeText(4096).optional(),
-    nativeLibraries: z.object({
-      glfw: z.boolean(),
-      openAl: z.boolean(),
-      openGl: z.boolean(),
-    }).optional(),
+    nativeLibraries: z
+      .object({
+        glfw: z.boolean(),
+        openAl: z.boolean(),
+        openGl: z.boolean(),
+      })
+      .optional(),
     memoryMin: z
       .number()
       .min(0.125)
@@ -65,21 +67,34 @@ export const instanceSettingsSchema = z
   .refine((value) => !(value.joinServer && value.joinWorld), {
     message: "Chỉ có thể vào server hoặc world, không thể chọn cả hai.",
   })
-  .refine((value) => !value.overrides?.javaInstallation || !!value.javaPath.trim(), {
-    message: "Chọn Java executable khi bật Java installation override.",
-  })
+  .refine(
+    (value) => !value.overrides?.javaInstallation || !!value.javaPath.trim(),
+    {
+      message: "Chọn Java executable khi bật Java installation override.",
+    },
+  )
   .refine((value) => !value.overrides?.account || !!value.accountId, {
     message: "Chọn tài khoản khi bật Override default account.",
   })
-  .refine((value) => !value.overrides?.autoJoin || !!(value.joinServer.trim() || value.joinWorld.trim()), {
-    message: "Chọn server hoặc world khi bật Auto-join.",
-  })
-  .refine((value) => !value.overrides?.nativeLibraries || !value.nativeLibraries ||
-    (!value.nativeLibraries.glfw || !!value.glfwPath.trim()) &&
-    (!value.nativeLibraries.openAl || !!value.openAlPath.trim()) &&
-    (!value.nativeLibraries.openGl || !!value.openGlPath.trim()), {
-    message: "Nhập đường dẫn cho mỗi native library đang bật.",
-  });
+  .refine(
+    (value) =>
+      !value.overrides?.autoJoin ||
+      !!(value.joinServer.trim() || value.joinWorld.trim()),
+    {
+      message: "Chọn server hoặc world khi bật Auto-join.",
+    },
+  )
+  .refine(
+    (value) =>
+      !value.overrides?.nativeLibraries ||
+      !value.nativeLibraries ||
+      ((!value.nativeLibraries.glfw || !!value.glfwPath.trim()) &&
+        (!value.nativeLibraries.openAl || !!value.openAlPath.trim()) &&
+        (!value.nativeLibraries.openGl || !!value.openGlPath.trim())),
+    {
+      message: "Nhập đường dẫn cho mỗi native library đang bật.",
+    },
+  );
 
 export function defaultInstanceSettings(settings: Settings): InstanceSettings {
   const java = javaPreferences(settings);

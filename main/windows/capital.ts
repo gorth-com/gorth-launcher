@@ -62,7 +62,8 @@ export function createWindow() {
   });
   window.webContents.on("will-navigate", (event, url) => {
     if (
-      new URL(url).origin !== new URL(appUrl || MAIN_WINDOW_VITE_DEV_SERVER_URL).origin
+      new URL(url).origin !==
+      new URL(appUrl || MAIN_WINDOW_VITE_DEV_SERVER_URL).origin
     )
       event.preventDefault();
   });
@@ -83,7 +84,10 @@ export function createWindow() {
       try {
         if (MAIN_WINDOW_VITE_DEV_SERVER_URL || appUrl)
           await window.loadURL(
-      new URL("public/index.html", appUrl || MAIN_WINDOW_VITE_DEV_SERVER_URL).href,
+            new URL(
+              "public/index.html",
+              appUrl || MAIN_WINDOW_VITE_DEV_SERVER_URL,
+            ).href,
           );
         else
           await window.loadFile(

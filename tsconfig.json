@@ -34,5 +34,13 @@
     "**/*.tsx",
     "**/*.mjs"
   ],
-  "exclude": ["node_modules", ".nitro", ".vite", "out", "dist", "packages", "tests"]
+  "exclude": [
+    "node_modules",
+    ".nitro",
+    ".vite",
+    "out",
+    "dist",
+    "packages",
+    "tests"
+  ]
 }

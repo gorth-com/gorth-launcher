@@ -25,7 +25,9 @@ it.each([false, true])(
     const manifest = Buffer.from(
       JSON.stringify({
         files: {
-          ...(!malicious ? { "runtime-alias": { type: "link", target: executable } } : {}),
+          ...(!malicious
+            ? { "runtime-alias": { type: "link", target: executable } }
+            : {}),
           [malicious ? "../escape" : executable]: {
             type: "file",
             executable: true,

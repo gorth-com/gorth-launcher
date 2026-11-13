@@ -45,6 +45,26 @@ afterEach(() => {
 });
 
 describe("development lifecycle", () => {
+  it("keeps the app alive while Vite is slow or restarting during startup", async () => {
+    dispose = installDevelopmentLifecycle("http://localhost:5173");
+    await vi.advanceTimersByTimeAsync(1000);
+    probe.emit(
+      "error",
+      Object.assign(new Error("refused"), { code: "ECONNREFUSED" }),
+    );
+    await vi.advanceTimersByTimeAsync(1000);
+    probe.emit(
+      "error",
+      Object.assign(new Error("refused"), { code: "ECONNREFUSED" }),
+    );
+    expect(mocks.app.quit).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(15_000);
+    probe.emit("error", new Error("Vite probe timed out"));
+    expect(mocks.app.quit).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1000);
+    respond({ resume: vi.fn() } as unknown as IncomingMessage);
+    expect(mocks.app.quit).not.toHaveBeenCalled();
+  });
   it.each(["SIGINT", "SIGTERM"] as const)(
     "quits gracefully on %s",
     async (signal) => {
@@ -73,16 +93,25 @@ describe("development lifecycle", () => {
 
   it("requires two failed probes and recovers after a successful response", async () => {
     dispose = installDevelopmentLifecycle("http://localhost:5173");
-    await vi.advanceTimersByTimeAsync(1000);
-    probe.emit("error", new Error("Connection refused"));
+    await vi.advanceTimersByTimeAsync(10_000);
+    probe.emit(
+      "error",
+      Object.assign(new Error("Connection refused"), { code: "ECONNREFUSED" }),
+    );
     await vi.advanceTimersByTimeAsync(1000);
     respond({ resume: vi.fn() } as unknown as IncomingMessage);
-    await vi.advanceTimersByTimeAsync(1000);
-    probe.emit("error", new Error("Connection refused"));
+    await vi.advanceTimersByTimeAsync(10_000);
+    probe.emit(
+      "error",
+      Object.assign(new Error("Connection refused"), { code: "ECONNREFUSED" }),
+    );
     await Promise.resolve();
     expect(mocks.app.quit).not.toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(1000);
-    probe.emit("error", new Error("Connection refused"));
+    await vi.advanceTimersByTimeAsync(10_000);
+    probe.emit(
+      "error",
+      Object.assign(new Error("Connection refused"), { code: "ECONNREFUSED" }),
+    );
     await Promise.resolve();
     expect(mocks.app.quit).toHaveBeenCalledOnce();
   });

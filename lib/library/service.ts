@@ -136,6 +136,13 @@ export async function registerLibraryIpc() {
         };
       }
       const snapshot = await store.command(raw);
+      if (
+        raw &&
+        typeof raw === "object" &&
+        "action" in raw &&
+        raw.action === "navigation.save"
+      )
+        return { ok: true, snapshot };
       await synchronizeGameLibrary(snapshot.instances);
       for (const window of BrowserWindow.getAllWindows())
         window.webContents.send("library:changed", snapshot);

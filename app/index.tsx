@@ -35,7 +35,10 @@ import {
 } from "@/layouts/navigation-bar";
 import { useLauncherNavigation } from "@/hooks/use-launcher-navigation";
 import { useJavaSetup } from "@/hooks/use-java-setup";
-import { effectiveGameSettings, minecraftPreferences } from "@/lib/library/game-preferences";
+import {
+  effectiveGameSettings,
+  minecraftPreferences,
+} from "@/lib/library/game-preferences";
 import { formatPlayTime } from "@/utils/formatter";
 import { Wrapper } from "@/layouts/wrapper";
 import { type Instance, type Page } from "@/utils/interface";
@@ -247,6 +250,12 @@ export default function Application() {
         gaming={gaming}
         authentication={authentication}
         initialSection={pageNavigation.editSection}
+        onSectionChange={(section) =>
+          setPage(page as `instances/edit/${string}`, {
+            section,
+            replace: true,
+          })
+        }
         onInstanceChange={(id, section) => {
           selection.onInstanceChange(id);
           setPage(`instances/edit/${id}`, { section });
@@ -286,7 +295,7 @@ export default function Application() {
                       ? (page.slice(
                           9,
                         ) as import("@/utils/constant").LauncherSettingsSection)
-                      : "appearance"
+                      : "general"
           }
           settings={settings}
           navigation={navigationProps}
@@ -417,7 +426,8 @@ export default function Application() {
                       playTimeLabel={(id) => {
                         const stored = library.instanceSettings[id];
                         const preferences = stored
-                          ? effectiveGameSettings(settings, stored).minecraftOptions!
+                          ? effectiveGameSettings(settings, stored)
+                              .minecraftOptions!
                           : minecraftPreferences(settings);
                         return preferences.showGameTime
                           ? formatPlayTime(

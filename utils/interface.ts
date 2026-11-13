@@ -43,6 +43,8 @@ export interface InstanceSelectionProps {
 }
 
 export interface Settings {
+  startup?: "restore" | "home" | "page";
+  startupPage?: string;
   javaPaths?: Partial<Record<"17" | "21" | "25", string>>;
   java?: import("@/lib/library/game-preferences").JavaPreferences;
   minecraft?: import("@/lib/library/game-preferences").MinecraftPreferences;
@@ -96,12 +98,14 @@ export interface InstanceSettings {
 }
 
 export interface LibrarySnapshot {
+  lastLocation?: string;
   instances: Instance[];
   settings: Settings;
   instanceSettings: Record<string, InstanceSettings>;
   trash: TrashEntry[];
 }
 export type LibraryCommand =
+  | { action: "navigation.save"; location: string }
   | {
       action: "create";
       name: string;

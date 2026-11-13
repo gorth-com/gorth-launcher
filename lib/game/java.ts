@@ -285,6 +285,7 @@ export async function discoverJava(root: string): Promise<JavaInstallation[]> {
         ),
       );
   }
+  const systemCandidates = new Set(candidates);
   if (process.platform === "darwin") {
     for (const directory of ["/opt/homebrew/opt", "/usr/local/opt"]) {
       try {
@@ -360,7 +361,11 @@ export async function discoverJava(root: string): Promise<JavaInstallation[]> {
       const resolved = await realpath(candidate);
       if (inspected.has(resolved)) continue;
       inspected.add(resolved);
-      found.push(await inspectJava(candidate));
+      const installation = await inspectJava(candidate);
+      installation.systemDefault =
+        systemCandidates.has(candidate) &&
+        !found.some((item) => item.systemDefault);
+      found.push(installation);
     } catch {
       /* invalid installations are not selectable */
     }

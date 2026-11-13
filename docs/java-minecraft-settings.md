@@ -32,6 +32,7 @@ Java (settings/runtime) and Minecraft (settings/instance) retain the existing fu
 - No real Minecraft session, live account, or full production runtime download is launched by these fixtures. Public Mojang metadata was checked separately.
 
 References:
+
 - https://docs.oracle.com/en/java/javase/17/docs/specs/man/java.html
 - https://launchermeta.mojang.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json
 - https://docs.ely.by/en/authlib-injector.html

@@ -67,15 +67,15 @@ start a new login. No environment or database migration is required.
 
 During development, Forge's `MAIN_WINDOW_VITE_DEV_SERVER_URL` is the source of truth for the window, trusted IPC sender and private Nitro endpoint. `VITE_PUBLIC_APP_URL` configures the packaged application. Auth still requires the current `VITE_PUBLIC_AUTH_URL` and `VITE_PUBLIC_OAUTH_CLIENT_ID` keys from `.env.example`; restart Forge after changing environment files.
 
-| Context | Variable | Local value |
-| --- | --- | --- |
-| Desktop renderer/main | VITE_PUBLIC_APP_URL | http://localhost:5502 |
-| Desktop auth backend | VITE_PUBLIC_AUTH_URL | http://localhost:5504 |
-| Native SDK client ID | VITE_PUBLIC_OAUTH_CLIENT_ID | gorth-launcher |
-| Website SSO origin | NEXT_PUBLIC_AUTH_URL | http://localhost:3000 |
-| Website OAuth client ID | NEXT_PUBLIC_OAUTH_CLIENT_ID | gorth-launcher-website |
-| Website app origin | NEXT_PUBLIC_APP_URL | http://localhost:5504 |
-| Website private secret | NEXT_SESSION_SECRET | Existing secret value; never expose it |
+| Context                           | Variable                                  | Local value                                     |
+| --------------------------------- | ----------------------------------------- | ----------------------------------------------- |
+| Desktop renderer/main             | VITE_PUBLIC_APP_URL                       | http://localhost:5502                           |
+| Desktop auth backend              | VITE_PUBLIC_AUTH_URL                      | http://localhost:5504                           |
+| Native SDK client ID              | VITE_PUBLIC_OAUTH_CLIENT_ID               | gorth-launcher                                  |
+| Website SSO origin                | NEXT_PUBLIC_AUTH_URL                      | http://localhost:3000                           |
+| Website OAuth client ID           | NEXT_PUBLIC_OAUTH_CLIENT_ID               | gorth-launcher-website                          |
+| Website app origin                | NEXT_PUBLIC_APP_URL                       | http://localhost:5504                           |
+| Website private secret            | NEXT_SESSION_SECRET                       | Existing secret value; never expose it          |
 | Website Minecraft texture signing | NEXT_MINECRAFT_SIGNING_PRIVATE_KEY_BASE64 | Private RSA PEM encoded as base64, backend only |
 
 There are no old SSO_* or VITE_APP_URL aliases. Keep the existing website secret when renaming NEXT_AUTH_SECRET to NEXT_SESSION_SECRET, because OAuth account tokens were encrypted with it. Configure production origins with HTTPS. The website must be running when signing in or verifying a native session.
@@ -116,6 +116,7 @@ The package's declarations advertise kElectron, but its JavaScript client does n
 - pnpm exec tsc --noEmit
 
 Reference: [official Electron integration](https://better-auth.com/docs/integrations/electron).
+
 # Keychain at startup
 
 After Electron readiness, the owning app instance initializes the synchronous
@@ -125,4 +126,3 @@ read, rewritten or created. macOS decides whether a permission dialog is needed.
 If access is denied, the app reports it and continues without deleting data or
 falling back to plaintext. Session unlocking and verification remain separate
 auth operations; startup key access does not imply a verified signed-in user.
-

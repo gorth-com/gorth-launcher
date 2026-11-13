@@ -1,9 +1,19 @@
 import type { LucideIcon } from "@gorth-io/primitive/cores/lucide";
-import { EllipsisVertical, LogOut, User } from "@gorth-io/primitive/cores/lucide";
+import {
+  EllipsisVertical,
+  LogOut,
+  User,
+} from "@gorth-io/primitive/cores/lucide";
 import { NavAccount, NavIdentity } from "@/components/dashboard/nav-identity";
 import { Separator } from "@gorth-io/primitive/default/separator";
-import { SidebarMenu, SidebarMenuItem } from "@gorth-io/primitive/custom/sidebar";
-import type { NavDropdown, UserProps } from "@gorth-io/primitive/utils/interface";
+import {
+  SidebarMenu,
+  SidebarMenuItem,
+} from "@gorth-io/primitive/custom/sidebar";
+import type {
+  NavDropdown,
+  UserProps,
+} from "@gorth-io/primitive/utils/interface";
 import { DashboardMenu, DashboardMenuItem } from "@/components/dashboard/menu";
 interface NavUserProps {
   localIcon?: LucideIcon;

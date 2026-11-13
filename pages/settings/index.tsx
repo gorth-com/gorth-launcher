@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { StartupSettings } from "@/components/element/startup-settings";
 import { FoldersCard } from "@/components/element/folders-card";
 import { JavaSettings } from "./java";
 import { MinecraftSettings } from "./minecraft";
@@ -55,7 +56,7 @@ interface SettingsPageProps {
 }
 export function SettingsPage({
   onNavigate,
-  section = "appearance",
+  section = "general",
   settings,
   setSettings,
   theme,
@@ -93,7 +94,10 @@ export function SettingsPage({
       {section === "proxy" && <ProxySettingsCard />}
       {section === "folders" && <FoldersCard />}
       {section === "general" && (
-        <GeneralSettings settings={settings} setSettings={setSettings} />
+        <>
+          <StartupSettings settings={settings} setSettings={setSettings} />
+          <GeneralSettings settings={settings} setSettings={setSettings} />
+        </>
       )}
       {section === "language" && (
         <LanguageSettings settings={settings} setSettings={setSettings} />

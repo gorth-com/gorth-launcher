@@ -50,14 +50,14 @@ Không thay đổi phiên bản ứng dụng qua env: phiên bản lấy từ `p
 
 ## File được tạo
 
-| Nền tảng | Asset tải trực tiếp |
-| --- | --- |
-| macOS Intel x64 | `gorth-launcher-darwin-x64.dmg` |
-| macOS Apple Silicon arm64 | `gorth-launcher-darwin-arm64.dmg` |
-| Windows x64 | `gorth-launcher-win32-x64-setup.exe` |
-| Windows x64 | `gorth-launcher-win32-x64-setup.msi` |
-| Linux Debian/Ubuntu x64 | `gorth-launcher-linux-x64.deb` |
-| Linux RPM x64 | `gorth-launcher-linux-x64.rpm` |
+| Nền tảng                  | Asset tải trực tiếp                  |
+| ------------------------- | ------------------------------------ |
+| macOS Intel x64           | `gorth-launcher-darwin-x64.dmg`      |
+| macOS Apple Silicon arm64 | `gorth-launcher-darwin-arm64.dmg`    |
+| Windows x64               | `gorth-launcher-win32-x64-setup.exe` |
+| Windows x64               | `gorth-launcher-win32-x64-setup.msi` |
+| Linux Debian/Ubuntu x64   | `gorth-launcher-linux-x64.deb`       |
+| Linux RPM x64             | `gorth-launcher-linux-x64.rpm`       |
 
 Giữ thêm ZIP cho từng kiến trúc macOS, `RELEASES` và `*-full.nupkg` Windows để updater hoạt động.
 MSI dùng bộ tạo Squirrel hiện có (`noMsi: false`): đây là bootstrapper Squirrel, không phải WiX MSI enterprise độc lập.
@@ -201,4 +201,3 @@ Kiểm thử script với dữ liệu giả không thay thế kiểm thử cài 
 - [Forge Squirrel.Windows](https://www.electronforge.io/config/makers/squirrel.windows)
 - [Forge macOS signing](https://www.electronforge.io/guides/code-signing/code-signing-macos)
 - [GitHub runner OS/architecture](https://docs.github.com/en/actions/how-tos/write-workflows/choose-where-workflows-run/choose-the-runner-for-a-job)
-

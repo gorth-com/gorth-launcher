@@ -106,7 +106,9 @@ export async function versionMetadata(
   );
   if (!entry) throw new Error("Không tìm thấy phiên bản Minecraft: " + id);
   if (!supportedRelease(entry))
-    throw new Error("Chỉ hỗ trợ Minecraft release từ 1.7.10 trở lên; không hỗ trợ snapshot.");
+    throw new Error(
+      "Chỉ hỗ trợ Minecraft release từ 1.7.10 trở lên; không hỗ trợ snapshot.",
+    );
   const file = safePath(root, "versions/" + id + "/" + id + ".json");
   await download(entry, file, signal);
   const data = await readJson<Version>(file);

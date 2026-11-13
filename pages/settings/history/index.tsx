@@ -2,7 +2,11 @@ import { useMemo } from "react";
 import type { ColumnDef } from "@gorth-io/primitive/cores/tanstack/table";
 import { DataTable, dataTableFeatures } from "@/components/custom/data-table";
 import type { PlaySession } from "@/utils/interface";
-import { formatDateTime, formatMinutes, formatPlayTime } from "@/utils/formatter";
+import {
+  formatDateTime,
+  formatMinutes,
+  formatPlayTime,
+} from "@/utils/formatter";
 
 const columns: ColumnDef<typeof dataTableFeatures, PlaySession>[] = [
   { accessorKey: "instanceId", header: "Instance" },
@@ -25,12 +29,32 @@ const columns: ColumnDef<typeof dataTableFeatures, PlaySession>[] = [
 function getSearchText(item: PlaySession) {
   return item.instanceId + " " + (item.crashed ? "Crash" : "Exited");
 }
-export function LaunchHistory({ history, locale, hours = false, showTime = true }: { history: PlaySession[]; locale?: string; hours?: boolean; showTime?: boolean }) {
-  const localizedColumns = columns.map((column) => "accessorKey" in column && column.accessorKey === "startedAt"
-    ? { ...column, cell: ({ row }: { row: { original: PlaySession } }) => formatDateTime(row.original.startedAt, locale) }
-    : "accessorKey" in column && column.accessorKey === "duration"
-      ? { ...column, cell: ({ row }: { row: { original: PlaySession } }) => showTime ? formatPlayTime(row.original.duration, hours) : "—" }
-      : column);
+export function LaunchHistory({
+  history,
+  locale,
+  hours = false,
+  showTime = true,
+}: {
+  history: PlaySession[];
+  locale?: string;
+  hours?: boolean;
+  showTime?: boolean;
+}) {
+  const localizedColumns = columns.map((column) =>
+    "accessorKey" in column && column.accessorKey === "startedAt"
+      ? {
+          ...column,
+          cell: ({ row }: { row: { original: PlaySession } }) =>
+            formatDateTime(row.original.startedAt, locale),
+        }
+      : "accessorKey" in column && column.accessorKey === "duration"
+        ? {
+            ...column,
+            cell: ({ row }: { row: { original: PlaySession } }) =>
+              showTime ? formatPlayTime(row.original.duration, hours) : "—",
+          }
+        : column,
+  );
   const sorted = useMemo(
     () => [...history].sort((a, b) => b.startedAt - a.startedAt),
     [history],

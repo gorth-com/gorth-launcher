@@ -2,7 +2,11 @@ import { legacyArguments } from "./install";
 
 // Keep Java's argument array intact, including paths with spaces and tokens.
 // The caller spawns this command with shell:false and never logs its arguments.
-export function launchProcess(java: string, args: string[], wrapperCommand = "") {
+export function launchProcess(
+  java: string,
+  args: string[],
+  wrapperCommand = "",
+) {
   const wrapper = legacyArguments(wrapperCommand);
   return {
     executable: wrapper[0] ?? java,

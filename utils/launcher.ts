@@ -72,9 +72,18 @@ export function readSettings(): Settings {
           : 4,
       javaPath: typeof data?.javaPath === "string" ? data.javaPath : "",
       javaPaths: {
-        "17": typeof data?.javaPaths?.["17"] === "string" ? data.javaPaths["17"] : "",
-        "21": typeof data?.javaPaths?.["21"] === "string" ? data.javaPaths["21"] : "",
-        "25": typeof data?.javaPaths?.["25"] === "string" ? data.javaPaths["25"] : "",
+        "17":
+          typeof data?.javaPaths?.["17"] === "string"
+            ? data.javaPaths["17"]
+            : "",
+        "21":
+          typeof data?.javaPaths?.["21"] === "string"
+            ? data.javaPaths["21"]
+            : "",
+        "25":
+          typeof data?.javaPaths?.["25"] === "string"
+            ? data.javaPaths["25"]
+            : "",
       },
       trashRetentionDays:
         typeof data?.trashRetentionDays === "number"

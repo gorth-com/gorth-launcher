@@ -8,7 +8,11 @@ import {
   useTable,
 } from "@gorth-io/primitive/cores/tanstack/table";
 import { useVirtualizer } from "@gorth-io/primitive/cores/tanstack/virtual";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "@gorth-io/primitive/cores/lucide";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+} from "@gorth-io/primitive/cores/lucide";
 import { Button } from "@gorth-io/primitive/custom/button";
 import { Input } from "@gorth-io/primitive/default/input";
 import {

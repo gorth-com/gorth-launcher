@@ -1,9 +1,17 @@
 import { expect, it } from "vitest";
-import { launcherPages, launcherSettingsSections, navigation } from "@/utils/constant";
+import {
+  launcherPages,
+  launcherSettingsSections,
+  navigation,
+} from "@/utils/constant";
 import { createLauncherRouter } from "@/lib/navigation";
 
 it("places Content and Shortcuts after Appearance and registers every settings route", () => {
-  expect(launcherSettingsSections.slice(0, 3).map((item) => item.id)).toEqual(["appearance", "content", "shortcuts"]);
+  expect(launcherSettingsSections.slice(0, 3).map((item) => item.id)).toEqual([
+    "appearance",
+    "content",
+    "shortcuts",
+  ]);
   const router = createLauncherRouter(() => null);
   for (const section of launcherSettingsSections) {
     const page = `settings/${section.id}` as const;

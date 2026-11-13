@@ -1,5 +1,10 @@
 import { useForm } from "@gorth-io/primitive/cores/tanstack/form";
-import { Globe2, UserRound, Rocket, Star } from "@gorth-io/primitive/cores/lucide";
+import {
+  Globe2,
+  UserRound,
+  Rocket,
+  Star,
+} from "@gorth-io/primitive/cores/lucide";
 import { CardTitle } from "@gorth-io/primitive/default/card";
 import { Input } from "@gorth-io/primitive/default/input";
 import { Button } from "@gorth-io/primitive/custom/button";

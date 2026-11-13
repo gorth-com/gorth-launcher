@@ -1,12 +1,6 @@
 import path from "node:path";
 import { createReadStream, createWriteStream } from "node:fs";
-import {
-  lstat,
-  readdir,
-  readFile,
-  stat,
-  writeFile,
-} from "node:fs/promises";
+import { lstat, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { once } from "node:events";
 import extract from "extract-zip";
 import { contentPath } from "@/lib/content/packs";

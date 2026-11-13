@@ -63,7 +63,11 @@ export function MenuPortal() {
     action();
   };
   const selectAction = (action: AppMenuAction) => {
-    window.dispatchEvent(new CustomEvent<AppMenuAction>("launcher:menu-action", { detail: action }));
+    window.dispatchEvent(
+      new CustomEvent<AppMenuAction>("launcher:menu-action", {
+        detail: action,
+      }),
+    );
     setMenu(null);
   };
   const command = (
@@ -89,9 +93,7 @@ export function MenuPortal() {
           </PopoverMenuLabel>
           {menu.titlebar ? (
             <>
-              <PopoverMenuItem
-                onClick={() => selectAction("new-instance")}
-              >
+              <PopoverMenuItem onClick={() => selectAction("new-instance")}>
                 <Plus />
                 New instance
               </PopoverMenuItem>

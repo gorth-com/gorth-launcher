@@ -9,7 +9,10 @@ import {
   type RouteComponent,
 } from "@gorth-io/primitive/cores/tanstack/router";
 
-function createLauncherRouter(component: RouteComponent) {
+function createLauncherRouter(
+  component: RouteComponent,
+  initialLocation = "/home",
+) {
   const root = createRootRoute({ component });
   const routes = launcherPages.map((page) =>
     createRoute({
@@ -35,7 +38,7 @@ function createLauncherRouter(component: RouteComponent) {
         }),
       }),
     ]),
-    history: createMemoryHistory({ initialEntries: ["/home"] }),
+    history: createMemoryHistory({ initialEntries: [initialLocation] }),
     defaultPendingMinMs: 0,
   });
 }

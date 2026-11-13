@@ -49,7 +49,9 @@ it("initially shows only 26, 1.21 and 1.20 families with expansion in the card f
     expect(html).not.toContain(`value="${id}"`);
   expect(html).toMatch(/data-slot="card-footer"[\s\S]*?Show more/);
   expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Hide less<\/button>/);
-  expect(html).toContain("scroll-fade scrollbar-none overflow-y-auto");
+  expect(html).toContain('data-slot="scroll-area"');
+  expect(html).toContain("scroll-area-viewport]]:scroll-fade");
+  expect(html).not.toContain("scrollbar-none");
   expect(html).toContain("justify-end gap-2");
 });
 it("moves both actions into the heading and associates Create with the original form", () => {

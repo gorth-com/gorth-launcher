@@ -28,8 +28,12 @@ export interface ContentVersion {
   id: string;
   name: string;
   filename: string;
+  gameVersions?: string[];
+  loaders?: string[];
 }
 export interface ContentStatus {
+  optionalMods?: { requestId: string; items: OptionalMod[] };
+  logs?: string[];
   busy: boolean;
   message: string;
   completed: number;
@@ -43,7 +47,12 @@ export interface ContentInstall {
   instanceId?: string;
   worldName?: string;
 }
+export interface OptionalMod {
+  id: string;
+  name: string;
+}
 export interface ContentFile {
+  websiteDownload?: string;
   directory?: "mods" | "resourcepacks" | "shaderpacks" | "datapacks";
   projectId: string;
   versionId: string;

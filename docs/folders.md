@@ -51,4 +51,3 @@ Unit tests kiểm tra path, routing, IPC và persistence.
 Native UI fixture chạy Electron với profile/thư mục tạm và API dialog/Open giả lập.
 Nó kiểm chứng input, click và cập nhật UI, **không chứng minh Finder/Explorer hoặc native dialog thật đã được người dùng thao tác**.
 Không dùng profile thật, không đổi path thật trong kiểm thử.
-

@@ -1,22 +1,24 @@
 import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@gorth-io/primitive/default/select";
+  ContentInstallDialog,
+  ContentVersionPicker,
+} from "@/components/element/content-install-dialog";
+import { Progress } from "@gorth-io/primitive/default/progress";
 import { contentLabels } from "@/utils/constant";
-import { useState } from "react";
-import { Download, Layers } from "@gorth-io/primitive/cores/lucide";
-import { Button } from "@gorth-io/primitive/custom/button";
+import { useState, type CSSProperties } from "react";
+import { Copy, Download, Layers } from "@gorth-io/primitive/cores/lucide";
+import { Badge } from "@gorth-io/primitive/custom/badge";
+import { Separator } from "@gorth-io/primitive/default/separator";
+import { CardTitle } from "@gorth-io/primitive/default/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@gorth-io/primitive/default/dialog";
+  SidebarProvider,
+  Sidebar,
+  SidebarHeader,
+  SidebarContent,
+  SidebarFooter,
+} from "@gorth-io/primitive/custom/sidebar";
+import { toast } from "@/providers/toaster";
+import { Button } from "@gorth-io/primitive/custom/button";
+
 import type {
   ContentProject,
   ContentQuery,
@@ -24,7 +26,7 @@ import type {
   ContentVersion,
 } from "@/lib/content/interface";
 
-import { formatNumber } from "@/utils/formatter";
+import { formatDateTime, formatNumber } from "@/utils/formatter";
 import { ProjectWebview } from "../project-webview";
 
 export function ProjectDetail({
@@ -62,62 +64,35 @@ export function ProjectDetail({
 }) {
   const [open, setOpen] = useState(initialInstallOpen);
   const [installed, setInstalled] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const pack = query.kind === "modpack";
+  const selectedVersion = versions.find((version) => version.id === versionId);
+  const gameVersions =
+    selectedVersion?.gameVersions ?? (query.version ? [query.version] : []);
+  const loaders =
+    selectedVersion?.loaders ?? (query.loader ? [query.loader] : []);
+  const dateLabel = (value?: string) =>
+    value && Number.isFinite(Date.parse(value))
+      ? formatDateTime(new Date(value))
+      : "Không cung cấp";
   const canInstall = !!versionId && (pack || !!targetName) && !busy;
-  const picker = (
-    <label className="grid min-w-0 gap-2 text-sm">
-      Phiên bản release
-      <Select
-        items={
-          versions.length
-            ? versions.map((version) => ({
-                value: version.id,
-                label: version.name,
-              }))
-            : [
-                {
-                  value: "",
-                  label: pending
-                    ? "Đang lấy phiên bản…"
-                    : "Không có bản phù hợp",
-                },
-              ]
-        }
-        value={versionId}
-        disabled={busy || !versions.length}
-        onValueChange={(selectedValue) => {
-          if (selectedValue === null) return;
-          setVersionId(String(selectedValue));
-        }}
-      >
-        <SelectTrigger
-          aria-label="Phiên bản release"
-          className="w-full min-w-0"
-        >
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {!versions.length && (
-            <SelectItem value="">
-              {pending ? "Đang lấy phiên bản…" : "Không có bản phù hợp"}
-            </SelectItem>
-          )}
-          {versions.map((version) => (
-            <SelectItem key={version.id} value={version.id}>
-              {version.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </label>
+  const picker = () => (
+    <ContentVersionPicker
+      versions={versions}
+      versionId={versionId}
+      setVersionId={setVersionId}
+      busy={busy}
+      pending={pending}
+    />
   );
   const feedback = (
     <>
       {!status.error && status.message && (
-        <div role="status" className="space-y-2 text-sm">
+        <div role="status" className="flex flex-col gap-2 text-sm">
           <p>{status.message}</p>
           {status.total > 0 && (
-            <progress
+            <Progress
+              aria-label="Tiến độ cài đặt nội dung"
               className="w-full"
               max={status.total}
               value={status.completed}
@@ -133,120 +108,189 @@ export function ProjectDetail({
     </>
   );
   return (
-    <section className="flex h-full min-h-0 min-w-0">
+    <SidebarProvider
+      open={sidebarOpen}
+      onOpenChange={setSidebarOpen}
+      className="h-full min-h-0 min-w-0"
+      style={{ "--sidebar-width": "360px" } as CSSProperties}
+    >
       <ProjectWebview
         url={project.url}
         hidden={open || hideWebview}
         onBack={onBack}
         backDisabled={pending}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => setSidebarOpen((value) => !value)}
       />
-      <aside
-        aria-label="Chi tiết dự án"
-        className="w-80 shrink-0 space-y-5 overflow-y-auto border-l bg-card p-5"
-      >
-        <div className="space-y-2">
-          <p className="text-xs text-muted-foreground">
-            {query.provider === "modrinth" ? "Modrinth" : "CurseForge"} ·{" "}
-            {contentLabels[query.kind]}
-          </p>
-          <h3 className="font-semibold">{project.name}</h3>
-          <p className="break-words text-sm text-muted-foreground">
-            {project.description}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {formatNumber(project.downloads)} lượt tải
-          </p>
-        </div>
-        <div className="space-y-1 text-sm">
-          <p>Minecraft {query.version}</p>
-          {(query.kind === "mod" || pack) && <p>{query.loader}</p>}
-          {!pack && <p>Instance: {targetName ?? "Chưa chọn"}</p>}
-        </div>
-        {picker}
-        <Button
-          className="h-9 w-full"
-          disabled={!canInstall}
-          onClick={() => setOpen(true)}
+      {sidebarOpen && (
+        <Sidebar
+          side="right"
+          collapsible="none"
+          id="project-detail-sidebar"
+          aria-label="Chi tiết dự án"
+          className="min-h-0 shrink-0 gap-0 overflow-hidden border-l p-0"
         >
-          <Download size={16} /> Cài đặt{pack ? " modpack" : ""}
-        </Button>
-        {!pack && !targetName && (
-          <p className="text-xs text-muted-foreground">
-            Quay lại kết quả và chọn instance để cài nội dung.
-          </p>
-        )}
-        {query.kind === "shader" && (
-          <p className="text-xs text-muted-foreground">
-            Launcher sẽ tự cài Iris và dependency phù hợp cho instance Fabric
-            hoặc NeoForge.
-          </p>
-        )}
-        {!open && feedback}
-        {installed && (
-          <div className="space-y-2 text-sm">
-            <p>
-              {pack
-                ? "Đã tạo instance. Mở thư viện và chọn Chơi để tải runtime/game và khởi chạy."
-                : "Đã cài nội dung vào instance."}
+          <SidebarHeader className="gap-4 p-4">
+            <Badge variant="secondary" className="self-start">
+              {query.provider === "modrinth" ? "Modrinth" : "CurseForge"}
+            </Badge>
+            <CardTitle>{project.name}</CardTitle>
+            <p className="break-words text-sm text-muted-foreground">
+              {project.description}
             </p>
+          </SidebarHeader>
+          <Separator />
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+            <SidebarContent
+              className="flex-none gap-4 overflow-visible p-4"
+              aria-label="Details"
+            >
+              <CardTitle>Details</CardTitle>
+              <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-4 gap-y-3 text-sm leading-5">
+                <dt className="text-muted-foreground">Downloads:</dt>
+                <dd>{formatNumber(project.downloads)}</dd>
+                <dt className="text-muted-foreground">Created:</dt>
+                <dd>{dateLabel(project.publishedAt)}</dd>
+                <dt className="text-muted-foreground">Updated:</dt>
+                <dd>{dateLabel(project.updatedAt)}</dd>
+                <dt className="text-muted-foreground">Project ID:</dt>
+                <dd className="flex min-w-0 items-start gap-2 leading-5">
+                  <span className="break-all">{project.id}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="size-5 shrink-0 p-0"
+                    aria-label="Copy project ID"
+                    onClick={() =>
+                      void navigator.clipboard.writeText(project.id).then(
+                        () =>
+                          toast.add({
+                            title: "Đã sao chép Project ID",
+                            type: "success",
+                          }),
+                        () =>
+                          toast.add({
+                            title: "Không sao chép được Project ID",
+                            type: "error",
+                          }),
+                      )
+                    }
+                  >
+                    <Copy className="size-4" />
+                  </Button>
+                </dd>
+                <dt className="text-muted-foreground">License:</dt>
+                <dd className="text-muted-foreground">Không cung cấp</dd>
+              </dl>
+            </SidebarContent>
+            <Separator />
+            <SidebarContent
+              className="flex-none gap-4 overflow-visible p-4"
+              aria-label="Game Versions"
+            >
+              <CardTitle>Game Versions</CardTitle>
+              <div className="flex flex-wrap gap-2">
+                {[...new Set(gameVersions)].map((version) => (
+                  <Badge key={version} variant="secondary">
+                    {version}
+                  </Badge>
+                ))}
+                {!gameVersions.length && (
+                  <p className="text-sm text-muted-foreground">
+                    Không cung cấp
+                  </p>
+                )}
+              </div>
+            </SidebarContent>
+            <Separator />
+            <SidebarContent
+              className="flex-none gap-4 overflow-visible p-4"
+              aria-label="Mod Loaders"
+            >
+              <CardTitle>Mod Loaders</CardTitle>
+              <div className="flex flex-wrap gap-2">
+                {[...new Set(loaders)].map((loader) => (
+                  <Badge key={loader} variant="secondary">
+                    {loader}
+                  </Badge>
+                ))}
+                {!loaders.length && (
+                  <p className="text-sm text-muted-foreground">
+                    Không cung cấp
+                  </p>
+                )}
+              </div>
+            </SidebarContent>
+            <Separator />
+            <SidebarContent
+              className="flex-none gap-4 overflow-visible p-4"
+              aria-label="Class & Categories"
+            >
+              <CardTitle>Class &amp; Categories</CardTitle>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="secondary">{contentLabels[query.kind]}</Badge>
+                {[...new Set(project.categories ?? [])].map((category) => (
+                  <Badge key={category} variant="secondary">
+                    {category}
+                  </Badge>
+                ))}
+              </div>
+            </SidebarContent>
+            <SidebarContent className="flex-none gap-4 overflow-visible px-4 pb-4">
+              {!pack && (
+                <p className="text-sm">Instance: {targetName ?? "Chưa chọn"}</p>
+              )}
+              {!open && feedback}
+              {installed && (
+                <div className="flex flex-col gap-2 text-sm">
+                  <p>
+                    {pack
+                      ? "Đã tạo instance. Mở thư viện và chọn Chơi để tải runtime/game và khởi chạy."
+                      : "Đã cài nội dung vào instance."}
+                  </p>
+                  <Button
+                    className="h-9 w-full"
+                    variant="outline"
+                    onClick={onLibrary}
+                  >
+                    <Layers size={16} /> Mở thư viện instance
+                  </Button>
+                </div>
+              )}
+            </SidebarContent>
+          </div>
+          <Separator />
+          <SidebarFooter className="gap-4 p-4">
+            {picker()}
             <Button
               className="h-9 w-full"
-              variant="outline"
-              onClick={onLibrary}
-            >
-              <Layers size={16} /> Mở thư viện instance
-            </Button>
-          </div>
-        )}
-      </aside>
-      <Dialog
-        open={open}
-        onOpenChange={(value) => {
-          if (!busy) setOpen(value);
-        }}
-      >
-        <DialogContent showCloseButton={!busy}>
-          <DialogHeader>
-            <DialogTitle>Cài đặt {project.name}</DialogTitle>
-            <DialogDescription>
-              {pack
-                ? "Chọn phiên bản để tạo một instance mới trong thư viện. Minecraft và loader được lấy từ modpack."
-                : `Cài vào ${targetName ?? "instance đã chọn"}.`}
-            </DialogDescription>
-          </DialogHeader>
-          {picker}
-          <p className="text-xs text-muted-foreground">
-            {pack
-              ? "Chỉ chấp nhận loader nằm trong danh sách ổn định của launcher."
-              : "Mod sẽ kèm dependency bắt buộc; shader tự cài Iris; texture/data pack được lưu đúng thư mục."}
-          </p>
-          {feedback}
-          <DialogFooter>
-            <Button
-              className="h-9"
-              variant="outline"
-              disabled={busy}
-              onClick={() => setOpen(false)}
-            >
-              Đóng
-            </Button>
-            <Button
-              className="h-9"
               disabled={!canInstall}
-              onClick={async () => {
-                const ok = await onInstall();
-                if (ok) {
-                  setInstalled(true);
-                  setOpen(false);
-                }
-              }}
+              onClick={() => setOpen(true)}
             >
-              <Download size={16} />
-              {busy ? "Đang cài đặt…" : "Cài đặt"}
+              <Download size={16} /> Cài đặt{pack ? " modpack" : ""}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </section>
+          </SidebarFooter>
+        </Sidebar>
+      )}
+      <ContentInstallDialog
+        key={open ? "open" : "closed"}
+        open={open}
+        onClose={() => setOpen(false)}
+        project={project}
+        pack={pack}
+        targetName={targetName}
+        versions={versions}
+        versionId={versionId}
+        setVersionId={setVersionId}
+        busy={busy}
+        pending={pending}
+        status={status}
+        onInstall={onInstall}
+        onCancel={onCancel}
+        onDone={onLibrary}
+        onInstalled={() => setInstalled(true)}
+      />
+    </SidebarProvider>
   );
 }

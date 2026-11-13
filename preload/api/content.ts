@@ -34,6 +34,11 @@ export const contentApi = {
   importPack: (): Promise<ContentResult<null>> =>
     ipcRenderer.invoke("content:import"),
   cancel: (): Promise<void> => ipcRenderer.invoke("content:cancel"),
+  selectOptional: (
+    requestId: string,
+    ids: string[],
+  ): Promise<ContentResult<null>> =>
+    ipcRenderer.invoke("content:select-optional", { requestId, ids }),
   onChanged: (callback: (status: ContentStatus) => void) => {
     const listener = (
       _event: Electron.IpcRendererEvent,

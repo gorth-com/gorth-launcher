@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { useQuery } from "@gorth-io/primitive/cores/tanstack/query";
-import { RouterProvider, useRouterState } from "@gorth-io/primitive/cores/tanstack/router";
+import {
+  RouterProvider,
+  useRouterState,
+} from "@gorth-io/primitive/cores/tanstack/router";
 import type { ColumnDef } from "@gorth-io/primitive/cores/tanstack/table";
 import { createLauncherRouter } from "@/lib/navigation";
 import { DataTable, dataTableFeatures } from "@/components/custom/data-table";

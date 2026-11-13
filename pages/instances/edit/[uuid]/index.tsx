@@ -139,6 +139,7 @@ export function EditInstancePage(
     gaming: ReturnType<typeof useGame>;
     authentication: ReturnType<typeof useAuth>;
     initialSection?: string;
+    onSectionChange?: (section: string) => void;
     onInstanceChange?: (id: string, section: string) => void;
     onBrowseContent?: (page: "mods" | "resourcepacks" | "shaders") => void;
   },
@@ -170,19 +171,32 @@ export function EditInstancePage(
       {...props}
       sections={instanceEditSections}
       section={section}
-      onSectionChange={setSection}
+      onSectionChange={(next) => {
+        setSection(next);
+        props.onSectionChange?.(next);
+      }}
     >
       <div className="flex flex-col gap-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <PageHeading title={instance ? activeSection.title : "Instance not found"} icon={activeSection.icon} />
+          <PageHeading
+            title={instance ? activeSection.title : "Instance not found"}
+            icon={activeSection.icon}
+          />
           <div className="w-60 max-w-full">
-            <InstanceSelect label="Switch instance" value={instance?.id ?? ""} disabled={!library.instances.length}
-              items={library.instances.map((item) => ({ value: item.id, label: item.name }))}
+            <InstanceSelect
+              label="Switch instance"
+              value={instance?.id ?? ""}
+              disabled={!library.instances.length}
+              items={library.instances.map((item) => ({
+                value: item.id,
+                label: item.name,
+              }))}
               onChange={(id) => {
                 if (id === instance?.id) return;
                 if (props.onInstanceChange) props.onInstanceChange(id, section);
                 else props.onNavigate(`instances/edit/${id}`);
-              }} />
+              }}
+            />
           </div>
         </div>
         {!instance ? (
@@ -211,9 +225,7 @@ export function EditInstancePage(
                       </CardDescription>
                     </div>
                   </div>
-                  <div>
-
-                  </div>
+                  <div></div>
                 </CardHeader>
                 <Separator />
                 <CardContent className="flex flex-col gap-6">
@@ -398,47 +410,47 @@ export function EditInstancePage(
               )}
             {["mod", "resourcepack", "shader"].includes(section) && (
               <div className="flex flex-col gap-6">
-                <div className="flex justify-end">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      const page =
-                        section === "mod"
-                          ? "mods"
-                          : section === "shader"
-                            ? "shaders"
-                            : "resourcepacks";
-                      if (props.onBrowseContent) props.onBrowseContent(page);
-                      else props.onNavigate(page);
-                    }}
-                  >
-                    <Download />
-                    Browse &amp; install
-                  </Button>
-                </div>
                 <InstalledContentManager
                   key={instance.id + section}
                   instance={instance}
                   unavailable={busy}
                   kind={section as "mod" | "resourcepack" | "shader"}
+                  toolbarActions={
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        const page =
+                          section === "mod"
+                            ? "mods"
+                            : section === "shader"
+                              ? "shaders"
+                              : "resourcepacks";
+                        if (props.onBrowseContent) props.onBrowseContent(page);
+                        else props.onNavigate(page);
+                      }}
+                    >
+                      <Download />
+                      Browse &amp; install
+                    </Button>
+                  }
                 />
               </div>
             )}
             {["notes", "worlds", "servers", "screenshots", "logs"].includes(
               section,
             ) && (
-                <InstanceDataPage
-                  key={instance.id + section}
-                  instances={[instance]}
-                  fixedInstanceId={instance.id}
-                  section={
-                    section as
+              <InstanceDataPage
+                key={instance.id + section}
+                instances={[instance]}
+                fixedInstanceId={instance.id}
+                section={
+                  section as
                     "notes" | "worlds" | "servers" | "screenshots" | "logs"
-                  }
-                  busy={busy}
-                  onChanged={() => { }}
-                />
-              )}
+                }
+                busy={busy}
+                onChanged={() => {}}
+              />
+            )}
             {section === "console" && (
               <ConsolePage
                 {...gaming}

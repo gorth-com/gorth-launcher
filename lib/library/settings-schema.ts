@@ -1,10 +1,17 @@
 import { z } from "@gorth-io/structure/cores/zod";
+import { validStartupLocation } from "@/lib/startup";
 import {
   javaPreferencesSchema,
   minecraftPreferencesSchema,
 } from "./game-preferences";
 
 export const settingsSchema = z.object({
+  startup: z.enum(["restore", "home", "page"]).default("restore"),
+  startupPage: z
+    .string()
+    .max(300)
+    .refine(validStartupLocation)
+    .default("/home"),
   java: javaPreferencesSchema.optional(),
   minecraft: minecraftPreferencesSchema.optional(),
   locale: z.enum(["system", "en", "vi"]).default("system"),
@@ -26,11 +33,13 @@ export const settingsSchema = z.object({
   showTitlebarLogo: z.boolean().default(true),
   memory: z.number().int().min(1).max(64),
   javaPath: z.string().max(4096),
-  javaPaths: z.object({
-    "17": z.string().max(4096).default(""),
-    "21": z.string().max(4096).default(""),
-    "25": z.string().max(4096).default(""),
-  }).default({ "17": "", "21": "", "25": "" }),
+  javaPaths: z
+    .object({
+      "17": z.string().max(4096).default(""),
+      "21": z.string().max(4096).default(""),
+      "25": z.string().max(4096).default(""),
+    })
+    .default({ "17": "", "21": "", "25": "" }),
   trashRetentionDays: z.number().int().min(0).max(365).default(30),
   keepSavesOnTrashCleanup: z.boolean().default(true),
 });

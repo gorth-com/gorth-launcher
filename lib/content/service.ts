@@ -12,6 +12,8 @@ import {
   finishContent,
   subscribeContent,
   updateContent,
+  requestOptionalMods,
+  selectOptionalMods,
 } from "./state";
 import {
   contentVersions,
@@ -26,6 +28,7 @@ import {
   manageSchema,
   querySchema,
   versionsSchema,
+  optionalModsSchema,
 } from "./schema";
 import {
   contentInventory,
@@ -34,9 +37,31 @@ import {
   mutateInstalledContent,
   regularDirectory,
 } from "./install";
-import { mergeModpackUpdate, setModpackSource, unpackPack } from "./packs";
+import {
+  mergeModpackUpdate,
+  setModpackSource,
+  unpackPack as unpackPackArchive,
+} from "./packs";
+import { downloadWebsiteFile } from "@/main/services/content-download";
 import { installWorld } from "./world";
 import type { ContentResult } from "./interface";
+
+const unpackPack: typeof unpackPackArchive = (
+  archive,
+  staging,
+  signal,
+  progress,
+  websiteDownload = downloadWebsiteFile,
+  chooseOptional,
+) =>
+  unpackPackArchive(
+    archive,
+    staging,
+    signal,
+    progress,
+    websiteDownload,
+    chooseOptional,
+  );
 
 export function registerContentIpc(
   library: Awaited<ReturnType<typeof createLibraryStore>>,
@@ -52,7 +77,7 @@ export function registerContentIpc(
     return window;
   };
   const root = () => getLauncherFolders(app.getPath("userData")).root;
-  const run = async <T>(
+  const run = async <T,>(
     action: () => Promise<T>,
   ): Promise<ContentResult<T>> => {
     try {
@@ -80,6 +105,14 @@ export function registerContentIpc(
   ipcMain.handle("content:cancel", (event) => {
     trusted(event);
     cancelContent();
+  });
+  ipcMain.handle("content:select-optional", (event, raw) => {
+    trusted(event);
+    return run(async () => {
+      const input = optionalModsSchema.parse(raw);
+      selectOptionalMods(input.requestId, input.ids);
+      return null;
+    });
   });
   ipcMain.handle("content:search", (event, raw) => {
     trusted(event);
@@ -172,9 +205,17 @@ export function registerContentIpc(
       projectId: string;
       versionId: string;
     } | null = null,
+    interactive = false,
   ) {
     updateContent("Kiểm tra modpack…");
-    const item = await unpackPack(archive, staging, signal, updateContent);
+    const item = await unpackPack(
+      archive,
+      staging,
+      signal,
+      updateContent,
+      downloadWebsiteFile,
+      interactive ? requestOptionalMods : undefined,
+    );
     await setModpackSource(path.join(staging, "payload"), source);
     signal.throwIfAborted();
     await library.importInstance(item, path.join(staging, "payload"));
@@ -280,11 +321,17 @@ export function registerContentIpc(
           const archive = path.join(staging, "pack.zip");
           updateContent("Đang tải archive modpack…");
           await download(file.artifact, archive, signal);
-          await importArchive(archive, staging, signal, {
-            provider: input.query.provider,
-            projectId: input.projectId,
-            versionId: input.versionId,
-          });
+          await importArchive(
+            archive,
+            staging,
+            signal,
+            {
+              provider: input.query.provider,
+              projectId: input.projectId,
+              versionId: input.versionId,
+            },
+            true,
+          );
         }
       });
       return null;

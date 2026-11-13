@@ -128,7 +128,7 @@ it.each([
       "utf8",
     );
     expect(hashes.trim().split("\n")).toHaveLength(names.length);
-    expect(hashes).toMatch(/^[a-f0-9]{64}  /);
+    expect(hashes).toMatch(/^[a-f0-9]{64} {2}/);
     expect(
       await readFile(path.join(root, "out/make", names[0]), "utf8"),
     ).not.toBe("");

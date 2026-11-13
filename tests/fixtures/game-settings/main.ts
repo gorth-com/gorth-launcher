@@ -32,9 +32,11 @@ void (async () => {
       "game-console",
     );
     // Electron exposes this inspection method at runtime, but not in its public types.
-    const preferences = (window.webContents as typeof window.webContents & {
-      getLastWebPreferences(): Electron.WebPreferences;
-    }).getLastWebPreferences();
+    const preferences = (
+      window.webContents as typeof window.webContents & {
+        getLastWebPreferences(): Electron.WebPreferences;
+      }
+    ).getLastWebPreferences();
     result.secure =
       preferences.contextIsolation &&
       preferences.sandbox &&

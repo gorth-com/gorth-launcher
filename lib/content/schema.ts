@@ -2,6 +2,10 @@ import { loaderCatalog } from "@/utils/constant";
 import { z } from "@gorth-io/structure/cores/zod";
 import { supportedVanillaVersion } from "@/lib/game/catalog";
 export const contentId = z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/);
+export const optionalModsSchema = z.object({
+  requestId: z.string().uuid(),
+  ids: z.array(z.string().max(2048)).max(50000),
+});
 export const querySchema = z
   .object({
     provider: z.enum(["modrinth", "curseforge"]),

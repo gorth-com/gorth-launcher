@@ -43,28 +43,28 @@ So với nhóm Prism:
 
 ## 3. Ma trận tính năng chính
 
-| Hạng mục | Gorth hiện tại | Dawn checkout | Nhóm Prism/fork |
-| --- | --- | --- | --- |
-| Nền tảng | Electron Forge, Vite, React, TypeScript, shadcn | Electron-vite, electron-builder, React, Zustand, UI custom | C++/Qt/CMake, hệ task/model native |
-| Dữ liệu chính | SQLite/Drizzle; một số dữ liệu vẫn JSON/vault | JSON DB tự viết | Cấu hình INI/JSON và thư mục instance |
-| Download/play/repair | Có engine riêng, xác minh hash/cache | Có engine, cache/download song song | Có engine/task/component sâu hơn |
-| Minecraft | Release từ 1.7.10, không snapshot | Có release/snapshot catalog | Catalog/component rộng; khác nhau theo checkout |
-| Fabric/Forge/NeoForge | Có, chỉ cặp version được pin | Có, thêm Quilt, giải version linh hoạt | Có workflow chọn/install component rộng |
-| Java | Temurin đúng major/arch/vendor; tự tải | Quét PATH/common roots, chọn Java tương thích, tự tải | Discovery/check/auto-install và settings phong phú |
-| Game account | **Offline hoạt động; Ely/Gorth online bị tắt** | Offline + Microsoft | Prism Microsoft/offline có điều kiện; Pinecone/Freesm thêm Ely, Freesm custom auth |
-| Launcher account | Gorth SSO nhúng, profile cache SQLite | Chưa thấy Gorth SSO/tách identity launcher tương đương | Không phải mô hình SSO Gorth |
-| Instance lifecycle | Create/rename/copy/Trash/restore/purge/icon/group/shortcut/orphan | Create/update/duplicate/delete/export/import, favorite/tag | Quản lý instance/group/component sâu, shortcut/copy/import/export |
-| Settings riêng | RAM min/max, JVM, Java, window, env, account, join, commands, native/GPU | RAM/Java/JVM/window và metadata instance; ít trường nâng cao hơn | Overrides, commands/wrapper, native workarounds, performance và công cụ |
-| Modrinth/CurseForge | Search/version/install/inventory/update/dependency guards | Search/install/toggle/remove; update quản lý hạn chế | Search/install/update/export và resource models chuyên dụng |
-| Modpack update | Có giữ modified/untracked files; cùng runtime | Chưa thấy merge-update giữ thay đổi tương đương | Có managed-pack/update workflows; không mặc định mọi workflow đều cùng ngữ nghĩa |
-| Shader/resource/data pack | Có; Iris tự cài cho loader được hỗ trợ | Shader/resource; chưa thấy data pack và Iris auto-install tương đương | Có resource/shader/data pack models/parser |
-| World/server/notes/log | Có UI + xử lý backup/restore, NBT servers.dat, notes, log/crash | Gallery/console; chưa thấy bộ quản lý world/server/notes tương đương | Có các trang/model/task chuyên dụng |
-| Import/export | mrpack, CF ZIP; instance ZIP; Prism/FTB local một phần | ZIP Dawn; mrpack; CF modpack chưa đầy đủ manifest | Instance ZIP, mrpack/CF export, nhiều nền tảng pack |
-| Nhiều game | Có cho nhiều instance khác nhau | Có session Map theo instance | Có launch tasks/instance/process controls |
-| Queue/pause/resume | FIFO install queue, pause/resume, không bền qua restart | Worker queue tải file; chưa thấy IPC pause/resume hoàn chỉnh | NetJob/task, concurrency/retry; không suy ra mọi loại resume từ tên lớp |
-| Console/history | 1.000 dòng/job; 1.000 phiên lưu SQLite; search/filter/export | 400 console events; 500 history; playtime instance tích lũy | Console/log pages, diagnostics/tools phong phú |
-| Gallery/notification | Preview/reveal/manual refresh; notification phiên chạy | Screenshot watcher; notification UI/store | Screenshots UI; Freesm thêm clipboard conveniences |
-| Updater/phát hành | Có makers/fuses, chưa thấy updater/signing pipeline | Có builder và dependency updater, chưa thấy integration updater chạy thật | Có updater subsystem; cấu hình/phân phối khác nhau |
+| Hạng mục                  | Gorth hiện tại                                                           | Dawn checkout                                                             | Nhóm Prism/fork                                                                    |
+| ------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Nền tảng                  | Electron Forge, Vite, React, TypeScript, shadcn                          | Electron-vite, electron-builder, React, Zustand, UI custom                | C++/Qt/CMake, hệ task/model native                                                 |
+| Dữ liệu chính             | SQLite/Drizzle; một số dữ liệu vẫn JSON/vault                            | JSON DB tự viết                                                           | Cấu hình INI/JSON và thư mục instance                                              |
+| Download/play/repair      | Có engine riêng, xác minh hash/cache                                     | Có engine, cache/download song song                                       | Có engine/task/component sâu hơn                                                   |
+| Minecraft                 | Release từ 1.7.10, không snapshot                                        | Có release/snapshot catalog                                               | Catalog/component rộng; khác nhau theo checkout                                    |
+| Fabric/Forge/NeoForge     | Có, chỉ cặp version được pin                                             | Có, thêm Quilt, giải version linh hoạt                                    | Có workflow chọn/install component rộng                                            |
+| Java                      | Temurin đúng major/arch/vendor; tự tải                                   | Quét PATH/common roots, chọn Java tương thích, tự tải                     | Discovery/check/auto-install và settings phong phú                                 |
+| Game account              | **Offline hoạt động; Ely/Gorth online bị tắt**                           | Offline + Microsoft                                                       | Prism Microsoft/offline có điều kiện; Pinecone/Freesm thêm Ely, Freesm custom auth |
+| Launcher account          | Gorth SSO nhúng, profile cache SQLite                                    | Chưa thấy Gorth SSO/tách identity launcher tương đương                    | Không phải mô hình SSO Gorth                                                       |
+| Instance lifecycle        | Create/rename/copy/Trash/restore/purge/icon/group/shortcut/orphan        | Create/update/duplicate/delete/export/import, favorite/tag                | Quản lý instance/group/component sâu, shortcut/copy/import/export                  |
+| Settings riêng            | RAM min/max, JVM, Java, window, env, account, join, commands, native/GPU | RAM/Java/JVM/window và metadata instance; ít trường nâng cao hơn          | Overrides, commands/wrapper, native workarounds, performance và công cụ            |
+| Modrinth/CurseForge       | Search/version/install/inventory/update/dependency guards                | Search/install/toggle/remove; update quản lý hạn chế                      | Search/install/update/export và resource models chuyên dụng                        |
+| Modpack update            | Có giữ modified/untracked files; cùng runtime                            | Chưa thấy merge-update giữ thay đổi tương đương                           | Có managed-pack/update workflows; không mặc định mọi workflow đều cùng ngữ nghĩa   |
+| Shader/resource/data pack | Có; Iris tự cài cho loader được hỗ trợ                                   | Shader/resource; chưa thấy data pack và Iris auto-install tương đương     | Có resource/shader/data pack models/parser                                         |
+| World/server/notes/log    | Có UI + xử lý backup/restore, NBT servers.dat, notes, log/crash          | Gallery/console; chưa thấy bộ quản lý world/server/notes tương đương      | Có các trang/model/task chuyên dụng                                                |
+| Import/export             | mrpack, CF ZIP; instance ZIP; Prism/FTB local một phần                   | ZIP Dawn; mrpack; CF modpack chưa đầy đủ manifest                         | Instance ZIP, mrpack/CF export, nhiều nền tảng pack                                |
+| Nhiều game                | Có cho nhiều instance khác nhau                                          | Có session Map theo instance                                              | Có launch tasks/instance/process controls                                          |
+| Queue/pause/resume        | FIFO install queue, pause/resume, không bền qua restart                  | Worker queue tải file; chưa thấy IPC pause/resume hoàn chỉnh              | NetJob/task, concurrency/retry; không suy ra mọi loại resume từ tên lớp            |
+| Console/history           | 1.000 dòng/job; 1.000 phiên lưu SQLite; search/filter/export             | 400 console events; 500 history; playtime instance tích lũy               | Console/log pages, diagnostics/tools phong phú                                     |
+| Gallery/notification      | Preview/reveal/manual refresh; notification phiên chạy                   | Screenshot watcher; notification UI/store                                 | Screenshots UI; Freesm thêm clipboard conveniences                                 |
+| Updater/phát hành         | Có makers/fuses, chưa thấy updater/signing pipeline                      | Có builder và dependency updater, chưa thấy integration updater chạy thật | Có updater subsystem; cấu hình/phân phối khác nhau                                 |
 
 Các kết luận trong bảng được giải thích và dẫn nguồn ở các phần sau; “có” không đồng nghĩa đã chạy thử trên Windows, Linux và mọi kiến trúc CPU.
 
@@ -142,14 +142,14 @@ Nguồn: [files](../lib/game/files.ts), [install](../lib/game/install.ts), [serv
 
 ### Catalog Gorth đang cho phép
 
-| Loader | Minecraft | Loader version |
-| --- | --- | --- |
-| Forge | 1.20.1 | 47.4.10 |
-| Forge | 1.19.2 | 43.5.0 |
-| NeoForge legacy | 1.20.1 | 47.1.106 |
-| NeoForge | 1.21.1 | 21.1.217 |
-| Fabric | 1.20.1 | 0.16.14 |
-| Fabric | 1.21.1 | 0.19.3 hoặc 0.16.14 |
+| Loader          | Minecraft | Loader version      |
+| --------------- | --------- | ------------------- |
+| Forge           | 1.20.1    | 47.4.10             |
+| Forge           | 1.19.2    | 43.5.0              |
+| NeoForge legacy | 1.20.1    | 47.1.106            |
+| NeoForge        | 1.21.1    | 21.1.217            |
+| Fabric          | 1.20.1    | 0.16.14             |
+| Fabric          | 1.21.1    | 0.19.3 hoặc 0.16.14 |
 
 Nguồn duy nhất cho chính sách này là [catalog.ts](../lib/game/catalog.ts). Không kiểm tra lại promotions/live release trong lần audit này; “pin” không có nghĩa mọi tổ hợp mod đều ổn định.
 
@@ -185,11 +185,11 @@ Nguồn: [Dawn AccountService](../packages/dawn-launcher/src/launcher/AccountSer
 
 ### Không gộp ba fork thành một sản phẩm hoàn toàn giống nhau
 
-| Checkout | Khác biệt cần giữ khi đối chiếu với Gorth |
-| --- | --- |
-| Prism | Nền component/task/resource/tooling dùng làm chuẩn về chiều sâu; chính sách offline trong checkout còn ràng buộc Microsoft account hợp lệ |
-| Pinecone/ElyPrism | Điểm phân biệt là Ely OAuth/device flow và official Authlib patches; Gorth có SSO launcher nhưng chưa đạt parity online identity/skin của fork này |
-| Freesm | Thêm custom auth, bỏ hạn chế offline, tiện ích clipboard screenshot và tùy biến giao diện/cat packs; không phải mọi khác biệt đều là chức năng game core cần Gorth sao chép |
+| Checkout          | Khác biệt cần giữ khi đối chiếu với Gorth                                                                                                                                   |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Prism             | Nền component/task/resource/tooling dùng làm chuẩn về chiều sâu; chính sách offline trong checkout còn ràng buộc Microsoft account hợp lệ                                   |
+| Pinecone/ElyPrism | Điểm phân biệt là Ely OAuth/device flow và official Authlib patches; Gorth có SSO launcher nhưng chưa đạt parity online identity/skin của fork này                          |
+| Freesm            | Thêm custom auth, bỏ hạn chế offline, tiện ích clipboard screenshot và tùy biến giao diện/cat packs; không phải mọi khác biệt đều là chức năng game core cần Gorth sao chép |
 
 Freesm đang khai báo nền/version khác Prism và Pinecone trong checkout này, nên component/provider/updater phải được nghiệm thu theo từng fork. Nguồn bổ sung: [Pinecone README](../packages/elyprism-pinecone/README.md), [Freesm README](../packages/FreesmLauncher/docs/README.md), [Freesm ScreenshotsPage](../packages/FreesmLauncher/launcher/ui/pages/instance/ScreenshotsPage.cpp).
 
@@ -346,22 +346,22 @@ Renderer build Gorth lần này khoảng **865,01 kB JS minified / 267,00 kB gzi
 
 ## 13. Kiểm thử thực hiện trong lần audit này
 
-| Lệnh | Kết quả | Phạm vi chứng minh |
-| --- | --- | --- |
-| `pnpm typecheck` | Pass | TypeScript app |
-| `pnpm exec tsc --project tests/tsconfig.json --noEmit` | Pass | TypeScript các Vitest fixture/test được cấu hình |
-| `pnpm lint` | **Fail: 1 error** | Import `callerClient` không dùng ở `tests/http.test.ts:14` |
-| `pnpm test:unit` | 10/10 pass | Development/Forge lifecycle logic |
-| `pnpm test:window` | 6/6 pass | Electron thật, factory/preload, close/SIGINT/SIGTERM/server down/parent exit/SIGKILL parent; profile tạm |
-| `pnpm test:game` | 7/7 pass | Rules/catalog/arguments/hash/cache/cancellation và crash heuristic; không chạy Minecraft thật |
-| `pnpm test:library` | 6/6 pass | SQLite/migration/lifecycle/recovery/guard với dữ liệu kiểm thử |
-| `pnpm test:content` | 9/9 pass | Provider fixtures, pack paths/dependencies/hash/inventory/update giữ file sửa |
-| `pnpm test:instance-data` | 2/2 pass | NBT server round-trip và ZIP nested world; không phải toàn bộ import/export settings |
-| `pnpm test:rpc` | 6/6 pass | IPC adapter, schema/settings/routes và renderer URL guard |
-| `pnpm test:auth` | 5/5 pass khi chạy ngoài sandbox | OIDC giả lập loopback, offline identity, vault/service/auth-view guards; không đăng nhập SSO thật |
-| `pnpm exec vite build` | Pass, warning chunk size | Renderer production build |
-| `pnpm exec vite build --config rollup.config.ts --ssr app/main.ts --outDir .vite/audit-main` | Pass | Compile main với entry explicit; không phải đóng gói Forge |
-| `pnpm exec vite build --config rolldown.config.ts --ssr app/preload.ts --outDir .vite/audit-preload` | Pass | Compile preload với entry explicit; không phải installer |
+| Lệnh                                                                                                 | Kết quả                         | Phạm vi chứng minh                                                                                       |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `pnpm typecheck`                                                                                     | Pass                            | TypeScript app                                                                                           |
+| `pnpm exec tsc --project tests/tsconfig.json --noEmit`                                               | Pass                            | TypeScript các Vitest fixture/test được cấu hình                                                         |
+| `pnpm lint`                                                                                          | **Fail: 1 error**               | Import `callerClient` không dùng ở `tests/http.test.ts:14`                                               |
+| `pnpm test:unit`                                                                                     | 10/10 pass                      | Development/Forge lifecycle logic                                                                        |
+| `pnpm test:window`                                                                                   | 6/6 pass                        | Electron thật, factory/preload, close/SIGINT/SIGTERM/server down/parent exit/SIGKILL parent; profile tạm |
+| `pnpm test:game`                                                                                     | 7/7 pass                        | Rules/catalog/arguments/hash/cache/cancellation và crash heuristic; không chạy Minecraft thật            |
+| `pnpm test:library`                                                                                  | 6/6 pass                        | SQLite/migration/lifecycle/recovery/guard với dữ liệu kiểm thử                                           |
+| `pnpm test:content`                                                                                  | 9/9 pass                        | Provider fixtures, pack paths/dependencies/hash/inventory/update giữ file sửa                            |
+| `pnpm test:instance-data`                                                                            | 2/2 pass                        | NBT server round-trip và ZIP nested world; không phải toàn bộ import/export settings                     |
+| `pnpm test:rpc`                                                                                      | 6/6 pass                        | IPC adapter, schema/settings/routes và renderer URL guard                                                |
+| `pnpm test:auth`                                                                                     | 5/5 pass khi chạy ngoài sandbox | OIDC giả lập loopback, offline identity, vault/service/auth-view guards; không đăng nhập SSO thật        |
+| `pnpm exec vite build`                                                                               | Pass, warning chunk size        | Renderer production build                                                                                |
+| `pnpm exec vite build --config rollup.config.ts --ssr app/main.ts --outDir .vite/audit-main`         | Pass                            | Compile main với entry explicit; không phải đóng gói Forge                                               |
+| `pnpm exec vite build --config rolldown.config.ts --ssr app/preload.ts --outDir .vite/audit-preload` | Pass                            | Compile preload với entry explicit; không phải installer                                                 |
 
 Auth test ban đầu bị sandbox chặn `listen 127.0.0.1` (`EPERM`); rerun ngoài sandbox với SSO fixture đã pass. Không đánh dấu lần bị chặn là bug login sản phẩm. Config main/preload là cấu hình được Forge bổ sung entry; chạy Vite standalone không có entry không phải cách kiểm tra chúng.
 

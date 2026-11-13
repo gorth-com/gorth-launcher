@@ -1,3 +1,4 @@
+import { ScrollArea, ScrollBar } from "@gorth-io/primitive/default/scroll-area";
 import { useId, useState } from "react";
 import { useForm, useStore } from "@gorth-io/primitive/cores/tanstack/form";
 import { Plus, RefreshCw, Import } from "@gorth-io/primitive/cores/lucide";
@@ -268,13 +269,13 @@ export function CreateInstancePage(
                                       value,
                                     })),
                                     ...(field.state.value &&
-                                      !groups.includes(field.state.value)
+                                    !groups.includes(field.state.value)
                                       ? [
-                                        {
-                                          value: field.state.value,
-                                          label: field.state.value,
-                                        },
-                                      ]
+                                          {
+                                            value: field.state.value,
+                                            label: field.state.value,
+                                          },
+                                        ]
                                       : []),
                                   ]}
                                 />
@@ -359,7 +360,7 @@ export function CreateInstancePage(
                   <CardContent className="p-0">
                     <form.Field name="version">
                       {(field) => (
-                        <div className="h-96 scroll-fade scrollbar-none overflow-y-auto xx:h-64">
+                        <ScrollArea className="h-96 xx:h-64 [&_[data-slot=scroll-area-viewport]]:scroll-fade">
                           <RadioGroup
                             className="flex flex-col gap-4 p-4 pr-6"
                             aria-label="Minecraft version"
@@ -396,7 +397,8 @@ export function CreateInstancePage(
                                 </label>
                               ))}
                           </RadioGroup>
-                        </div>
+                          <ScrollBar orientation="horizontal" />
+                        </ScrollArea>
                       )}
                     </form.Field>
                     {!props.versions.length && (
@@ -487,7 +489,7 @@ export function CreateInstancePage(
                                   Math.max(
                                     0,
                                     older.indexOf(versionFamily(nextVersion)) +
-                                    1,
+                                      1,
                                   ),
                                 );
                                 form.setFieldValue(

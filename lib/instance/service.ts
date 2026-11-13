@@ -412,7 +412,11 @@ export function registerInstanceDataIpc(
       const instance = library.getInstance(id.parse(raw?.instanceId));
       const selected = await dialog.showSaveDialog(window, {
         title: "Xuất instance",
-        defaultPath: path.join(getLauncherFolders(app.getPath("userData"), app.getPath("downloads")).downloads, instance.name.replace(/[^a-zA-Z0-9._ -]/g, "_") + ".zip"),
+        defaultPath: path.join(
+          getLauncherFolders(app.getPath("userData"), app.getPath("downloads"))
+            .downloads,
+          instance.name.replace(/[^a-zA-Z0-9._ -]/g, "_") + ".zip",
+        ),
         filters: [{ name: "Instance ZIP", extensions: ["zip"] }],
       });
       if (selected.canceled || !selected.filePath) return null;

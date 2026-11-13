@@ -258,6 +258,8 @@ export async function contentVersions(
         id: v.id,
         name: v.name,
         filename: (v.files.find((f) => f.primary) ?? v.files[0]).filename,
+        gameVersions: v.game_versions,
+        loaders: v.loaders,
       }));
   }
   const params = new URLSearchParams({
@@ -280,6 +282,14 @@ export async function contentVersions(
       id: String(v.id),
       name: v.displayName,
       filename: v.fileName,
+      gameVersions: v.gameVersions.filter((value) =>
+        /^\d+(?:\.\d+){1,2}$/.test(value),
+      ),
+      loaders: Object.keys(curseforgeLoaderIds).filter((loader) =>
+        v.gameVersions.some(
+          (value) => value.toLowerCase() === loader.toLowerCase(),
+        ),
+      ),
     }));
 }
 export async function resolveContentFile(
@@ -288,6 +298,7 @@ export async function resolveContentFile(
   versionId: string,
   signal: AbortSignal,
   pinnedPackFile = false,
+  allowWebsiteDownload = false,
 ): Promise<ContentFile> {
   identifier(projectId);
   identifier(versionId);
@@ -360,7 +371,23 @@ export async function resolveContentFile(
     ).includes(project.data.classId)
   )
     throw new Error("File CurseForge không tương thích hoặc không khả dụng.");
-  if (!v.downloadUrl || project.data.allowModDistribution === false)
+  const blocked = !v.downloadUrl || project.data.allowModDistribution === false;
+  const websiteDownload =
+    "https://www.curseforge.com/minecraft/" +
+    curseforgePaths[
+      project.data.classId === 12
+        ? "resourcepack"
+        : project.data.classId === 6552
+          ? "shader"
+          : project.data.classId === 6945
+            ? "datapack"
+            : query.kind
+    ] +
+    "/" +
+    encodeURIComponent(project.data.slug ?? projectId) +
+    "/download/" +
+    versionId;
+  if (blocked && !allowWebsiteDownload)
     throw new Error(
       "Tác giả không cho tải file này qua ứng dụng bên thứ ba. Tải thủ công từ https://www.curseforge.com/minecraft/" +
         curseforgePaths[query.kind] +
@@ -384,7 +411,12 @@ export async function resolveContentFile(
           : project.data.classId === 6945
             ? "datapacks"
             : "mods",
-    artifact: { url: v.downloadUrl, sha1, size: v.fileLength },
+    websiteDownload: blocked ? websiteDownload : undefined,
+    artifact: {
+      url: v.downloadUrl ?? websiteDownload,
+      sha1,
+      size: v.fileLength,
+    },
     required: v.dependencies
       .filter((d) => d.relationType === 3)
       .map((d) => ({ projectId: String(d.modId) })),

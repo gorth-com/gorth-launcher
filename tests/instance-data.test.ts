@@ -25,23 +25,36 @@ test("servers.dat round trip preserves and updates server compounds", () => {
   assert.equal(nbtString(items[0], "ip"), "play.gorth.local");
   setNbtString(items[0], "name", "Renamed");
   assert.equal(
-    nbtString(serverCompounds(readServersNbt(writeServersNbt(parsed)))[0], "name"),
+    nbtString(
+      serverCompounds(readServersNbt(writeServersNbt(parsed)))[0],
+      "name",
+    ),
     "Renamed",
   );
 });
 
 test("instance ZIP export can be safely restored with nested world data", async () => {
-  const temporary = await mkdtemp(path.join(os.tmpdir(), "gorth-instance-data-"));
+  const temporary = await mkdtemp(
+    path.join(os.tmpdir(), "gorth-instance-data-"),
+  );
   try {
-    const source = path.join(temporary, "source"), archive = path.join(temporary, "world.zip"), restored = path.join(temporary, "restored");
+    const source = path.join(temporary, "source"),
+      archive = path.join(temporary, "world.zip"),
+      restored = path.join(temporary, "restored");
     await mkdir(path.join(source, "region"), { recursive: true });
     await writeFile(path.join(source, "level.dat"), "level");
     await writeFile(path.join(source, "region", "r.0.0.mca"), "region");
     await zipDirectory(source, archive);
     await mkdir(restored);
     await safeExtract(archive, restored);
-    assert.equal(await readFile(path.join(restored, "level.dat"), "utf8"), "level");
-    assert.equal(await readFile(path.join(restored, "region", "r.0.0.mca"), "utf8"), "region");
+    assert.equal(
+      await readFile(path.join(restored, "level.dat"), "utf8"),
+      "level",
+    );
+    assert.equal(
+      await readFile(path.join(restored, "region", "r.0.0.mca"), "utf8"),
+      "region",
+    );
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }

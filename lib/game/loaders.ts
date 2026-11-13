@@ -141,12 +141,29 @@ export async function installLoader(
 ) {
   if (instance.loader === "Vanilla") return base;
   if (instance.loader === "Fabric") {
-    const cache = safePath(root, "loaders/Fabric-" + instance.version + "-" + instance.loaderVersion + ".json");
-    const profileId = "fabric-loader-" + instance.loaderVersion + "-" + instance.version;
+    const cache = safePath(
+      root,
+      "loaders/Fabric-" +
+        instance.version +
+        "-" +
+        instance.loaderVersion +
+        ".json",
+    );
+    const profileId =
+      "fabric-loader-" + instance.loaderVersion + "-" + instance.version;
     try {
       const cached = await readJson<Version>(cache);
-      if (cached.id === profileId && cached.inheritsFrom === base.id && Array.isArray(cached.libraries) && cached.mainClass && cached.libraries.every((library) => library.downloads?.artifact?.sha1)) return mergeVersion(base, cached);
-    } catch { /* Download an absent or malformed cached profile. */ }
+      if (
+        cached.id === profileId &&
+        cached.inheritsFrom === base.id &&
+        Array.isArray(cached.libraries) &&
+        cached.mainClass &&
+        cached.libraries.every((library) => library.downloads?.artifact?.sha1)
+      )
+        return mergeVersion(base, cached);
+    } catch {
+      /* Download an absent or malformed cached profile. */
+    }
     const child = await json<Version>(
       "https://meta.fabricmc.net/v2/versions/loader/" +
         instance.version +
@@ -156,7 +173,8 @@ export async function installLoader(
       signal,
     );
     await normalizeLibraries(child, signal);
-    if (child.id !== profileId || child.inheritsFrom !== base.id) throw new Error("Fabric profile không đúng phiên bản đã chọn.");
+    if (child.id !== profileId || child.inheritsFrom !== base.id)
+      throw new Error("Fabric profile không đúng phiên bản đã chọn.");
     await mkdir(path.dirname(cache), { recursive: true });
     await writeFile(cache + ".tmp", JSON.stringify(child));
     await rename(cache + ".tmp", cache);
@@ -190,6 +208,7 @@ export async function installLoader(
     "Kiểm tra installer " + instance.loader + " " + instance.loaderVersion,
   );
   const checksums: Record<string, string> = {
+    "Forge-1.20.1-47.4.28": "585dd6071897becaed3b09bff4c3d9559e0cbc75",
     "Forge-1.20.1-47.4.10": "66bfea9963bfa60d88bab6b2750e74a958392715",
     "Forge-1.20.1-47.4.0": "b73203963ea70aee0c38dc58de1f6d16a766605b",
     "Forge-1.19.2-43.5.0": "0a45a1d96388403c5f16556df81165ba4d96987a",

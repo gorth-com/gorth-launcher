@@ -37,8 +37,9 @@ describe("singular table migration", () => {
         expect(tables).not.toContain(oldName);
         expect(tables).toContain(newName);
         const row = client.prepare(`SELECT * FROM "${newName}"`).get();
-        expect(row?.id).toBe("existing");
-        expect([...(row?.payload as Uint8Array)]).toEqual([0, 1, 255]);
+        if (!row) throw new Error(`Missing migrated row in ${newName}`);
+        expect(row.id).toBe("existing");
+        expect([...(row.payload as Uint8Array)]).toEqual([0, 1, 255]);
         expect(() =>
           client
             .prepare(`INSERT INTO "${newName}" VALUES (?, ?)`)

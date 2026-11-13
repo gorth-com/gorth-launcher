@@ -321,9 +321,12 @@ export function launchArguments(
       String(settings.resolutionHeight),
     );
   if (settings.joinServer) {
-    const quickPlay = game.version.arguments?.game.some((argument) =>
-      typeof argument !== "string" &&
-      argument.rules?.some((rule) => rule.features?.is_quick_play_multiplayer === true),
+    const quickPlay = game.version.arguments?.game.some(
+      (argument) =>
+        typeof argument !== "string" &&
+        argument.rules?.some(
+          (rule) => rule.features?.is_quick_play_multiplayer === true,
+        ),
     );
     if (quickPlay) {
       gameArguments.push("--quickPlayMultiplayer", settings.joinServer);
@@ -340,12 +343,17 @@ export function launchArguments(
         gameArguments.push("--port", settings.joinServer.slice(separator + 1));
     }
   } else if (settings.joinWorld) {
-    const quickPlay = game.version.arguments?.game.some((argument) =>
-      typeof argument !== "string" &&
-      argument.rules?.some((rule) => rule.features?.is_quick_play_singleplayer === true),
+    const quickPlay = game.version.arguments?.game.some(
+      (argument) =>
+        typeof argument !== "string" &&
+        argument.rules?.some(
+          (rule) => rule.features?.is_quick_play_singleplayer === true,
+        ),
     );
     if (!quickPlay)
-      throw new Error("Phiên bản Minecraft này chưa hỗ trợ tự vào world qua Quick Play.");
+      throw new Error(
+        "Phiên bản Minecraft này chưa hỗ trợ tự vào world qua Quick Play.",
+      );
     gameArguments.push("--quickPlaySingleplayer", settings.joinWorld);
   }
   return [...args, game.version.mainClass, ...gameArguments];

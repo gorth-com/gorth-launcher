@@ -229,9 +229,7 @@ void (async () => {
         )),
     );
     result.layoutRadio = true;
-    await run(
-      "document.querySelector('[aria-label=\"Java\"]').click()",
-    );
+    await run("document.querySelector('[aria-label=\"Java\"]').click()");
     await wait(
       async () =>
         !!(await run(
@@ -250,48 +248,129 @@ void (async () => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'1536');
       input.dispatchEvent(new Event('input',{bubbles:true}));
     })()`);
-    await run("Array.from(document.querySelectorAll('label')).find(el=>el.textContent.trim()==='ZGC').click()");
+    await run(
+      "Array.from(document.querySelectorAll('label')).find(el=>el.textContent.trim()==='ZGC').click()",
+    );
     phase = "java-save";
-    await run("Array.from(document.querySelectorAll('button')).find(el=>el.textContent.trim()==='Save Java settings').click()");
-    await wait(async () => !!(await run("window.fixturePreferences.java?.memoryMinMiB===1536 && window.fixturePreferences.java?.garbageCollector==='zgc'")));
-    result.javaSaved = await run("window.fixturePreferences.java.autoDownloadMojang===true");
+    await run(
+      "Array.from(document.querySelectorAll('button')).find(el=>el.textContent.trim()==='Save Java settings').click()",
+    );
+    await wait(
+      async () =>
+        !!(await run(
+          "window.fixturePreferences.java?.memoryMinMiB===1536 && window.fixturePreferences.java?.garbageCollector==='zgc'",
+        )),
+    );
+    result.javaSaved = await run(
+      "window.fixturePreferences.java.autoDownloadMojang===true",
+    );
     await delay(500);
-    result.permGenDisabled = await run("document.querySelector('[aria-label=\"PermGen size (MiB)\"]').disabled");
+    result.permGenDisabled = await run(
+      "document.querySelector('[aria-label=\"PermGen size (MiB)\"]').disabled",
+    );
     phase = "java-tabs";
-    await run("Array.from(document.querySelectorAll('[role=tab]')).find(el=>el.textContent==='Installations').click()");
-    await wait(async () => !!(await run("document.body.textContent.includes('Installed Java runtimes')")));
+    await run(
+      "Array.from(document.querySelectorAll('[role=tab]')).find(el=>el.textContent==='Installations').click()",
+    );
+    await wait(
+      async () =>
+        !!(await run(
+          "document.body.textContent.includes('Installed Java runtimes')",
+        )),
+    );
     phase = "minecraft-open";
     await run("document.querySelector('[aria-label=\"Minecraft\"]').click()");
-    await wait(async () => !!(await run("document.querySelector('[data-settings-section=instance] [role=tab]')")));
+    await wait(
+      async () =>
+        !!(await run(
+          "document.querySelector('[data-settings-section=instance] [role=tab]')",
+        )),
+    );
     await delay(500);
     phase = "minecraft-controls";
-    await run("document.querySelector('[aria-label=\"When the game window opens, hide the launcher\"]').click()");
-    await run("document.querySelector('[aria-label=\"Always show durations in hours\"]').click()");
+    await run(
+      "document.querySelector('[aria-label=\"When the game window opens, hide the launcher\"]').click()",
+    );
+    await run(
+      "document.querySelector('[aria-label=\"Always show durations in hours\"]').click()",
+    );
     phase = "minecraft-save";
-    await run("Array.from(document.querySelectorAll('button')).find(el=>el.textContent.trim()==='Save Minecraft settings').click()");
-    await wait(async () => !!(await run("window.fixturePreferences.minecraft?.hideLauncher===true && window.fixturePreferences.minecraft?.durationsInHours===true")));
+    await run(
+      "Array.from(document.querySelectorAll('button')).find(el=>el.textContent.trim()==='Save Minecraft settings').click()",
+    );
+    await wait(
+      async () =>
+        !!(await run(
+          "window.fixturePreferences.minecraft?.hideLauncher===true && window.fixturePreferences.minecraft?.durationsInHours===true",
+        )),
+    );
     result.minecraftSaved = true;
     await delay(500);
-    result.minecraftTabs = await run("Array.from(document.querySelectorAll('[data-settings-section=instance] [role=tab]')).map(el=>el.textContent)");
+    result.minecraftTabs = await run(
+      "Array.from(document.querySelectorAll('[data-settings-section=instance] [role=tab]')).map(el=>el.textContent)",
+    );
     phase = "other-settings";
     result.additionalSettings = [];
-    for (const [label, section] of [["General", "general"], ["Language", "language"], ["Services", "services"], ["Tools", "tools"], ["Proxy", "proxy"]]) {
+    for (const [label, section] of [
+      ["General", "general"],
+      ["Language", "language"],
+      ["Services", "services"],
+      ["Tools", "tools"],
+      ["Proxy", "proxy"],
+    ]) {
       await run(`document.querySelector('[aria-label="${label}"]').click()`);
-      await wait(async () => !!(await run(`document.querySelector('[data-settings-section="${section}"] [data-slot=card]')`)));
-      (result.additionalSettings as string[]).push(await run(`document.querySelector('[data-settings-section="${section}"] header').textContent`));
+      await wait(
+        async () =>
+          !!(await run(
+            `document.querySelector('[data-settings-section="${section}"] [data-slot=card]')`,
+          )),
+      );
+      (result.additionalSettings as string[]).push(
+        await run(
+          `document.querySelector('[data-settings-section="${section}"] header').textContent`,
+        ),
+      );
       if (section === "general") {
-        await run("Array.from(document.querySelectorAll('label')).find(el => el.textContent.trim()==='By last launched').click()");
-        await wait(async () => !!(await run("window.fixturePreferences.instanceSort==='last-played'")));
+        await run(
+          "Array.from(document.querySelectorAll('label')).find(el => el.textContent.trim()==='By last launched').click()",
+        );
+        await wait(
+          async () =>
+            !!(await run(
+              "window.fixturePreferences.instanceSort==='last-played'",
+            )),
+        );
       }
       if (section === "tools") {
-        await run("Array.from(document.querySelectorAll('button')).find(el => el.textContent.trim()==='Browse').click()");
-        await wait(async () => !!(await run("document.querySelector('[aria-label=\"Text editor path\"]').value==='/fixture/tools/editor'")));
+        await run(
+          "Array.from(document.querySelectorAll('button')).find(el => el.textContent.trim()==='Browse').click()",
+        );
+        await wait(
+          async () =>
+            !!(await run(
+              "document.querySelector('[aria-label=\"Text editor path\"]').value==='/fixture/tools/editor'",
+            )),
+        );
       }
       if (section === "proxy") {
-        await wait(async () => !!(await run("document.querySelector('button[type=submit]:not(:disabled)')")));
-        result.proxySystemDisabled = await run("document.querySelector('[aria-label=\"Proxy address\"]').disabled");
-        await run("Array.from(document.querySelectorAll('label')).find(el => el.textContent.trim()==='HTTP').click()");
-        await wait(async () => !!(await run("!document.querySelector('[aria-label=\"Proxy address\"]').disabled && !document.querySelector('[aria-label=\"Proxy password\"]').disabled")));
+        await wait(
+          async () =>
+            !!(await run(
+              "document.querySelector('button[type=submit]:not(:disabled)')",
+            )),
+        );
+        result.proxySystemDisabled = await run(
+          "document.querySelector('[aria-label=\"Proxy address\"]').disabled",
+        );
+        await run(
+          "Array.from(document.querySelectorAll('label')).find(el => el.textContent.trim()==='HTTP').click()",
+        );
+        await wait(
+          async () =>
+            !!(await run(
+              "!document.querySelector('[aria-label=\"Proxy address\"]').disabled && !document.querySelector('[aria-label=\"Proxy password\"]').disabled",
+            )),
+        );
         result.proxyHttpEnabled = true;
       }
     }

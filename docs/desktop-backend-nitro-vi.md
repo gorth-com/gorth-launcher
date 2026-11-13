@@ -4,14 +4,14 @@ Backend HTTP đã chuyển từ Hono sang Nitro 3. Renderer vẫn là React + Vi
 
 ## Endpoint giữ nguyên
 
-| URL | Trách nhiệm |
-| --- | --- |
-| GET/HEAD /health | Kiểm tra server |
-| GET/HEAD /auth/callback | Nhận callback qua registry trong main |
-| GET/HEAD /user/profile | Profile cache, yêu cầu capability và identity đang hoạt động |
-| GET/HEAD / | Redirect /public/index.html trong production |
-| GET/HEAD /public/* | Tài nguyên renderer production |
-| GET/HEAD /assets/* | JS/CSS/assets production |
+| URL                     | Trách nhiệm                                                  |
+| ----------------------- | ------------------------------------------------------------ |
+| GET/HEAD /health        | Kiểm tra server                                              |
+| GET/HEAD /auth/callback | Nhận callback qua registry trong main                        |
+| GET/HEAD /user/profile  | Profile cache, yêu cầu capability và identity đang hoạt động |
+| GET/HEAD /              | Redirect /public/index.html trong production                 |
+| GET/HEAD /public/*      | Tài nguyên renderer production                               |
+| GET/HEAD /assets/*      | JS/CSS/assets production                                     |
 
 Middleware dùng chung nằm trong middlewares/http.ts, đăng ký tường minh qua handlers trong nitro.config.ts; middlewares/desktop.ts giữ factory bảo vệ route profile. Không có thư mục middleware/ riêng.
 

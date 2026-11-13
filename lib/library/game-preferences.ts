@@ -61,6 +61,7 @@ export const minecraftPreferencesSchema = z.object({
 export type JavaPreferences = z.infer<typeof javaPreferencesSchema>;
 export type MinecraftPreferences = z.infer<typeof minecraftPreferencesSchema>;
 export interface JavaInstallation {
+  systemDefault?: boolean;
   path: string;
   version: string;
   major: number;
@@ -77,7 +78,9 @@ export function minecraftPreferences(settings: Settings): MinecraftPreferences {
 }
 export function presetArguments(preferences: JavaPreferences): string[] {
   return [
-    ...(preferences.optimizedDefaults && preferences.garbageCollector === "none" ? ["-XX:+UseG1GC"] : []),
+    ...(preferences.optimizedDefaults && preferences.garbageCollector === "none"
+      ? ["-XX:+UseG1GC"]
+      : []),
     ...(preferences.optimizedDefaults
       ? [
           "-XX:+UnlockExperimentalVMOptions",
@@ -110,22 +113,28 @@ export function effectiveGameSettings(
     const effectiveMinecraft = {
       ...minecraft,
       ...(override.elyPatch ? { elyPatch: customMinecraft.elyPatch } : {}),
-      ...(override.gameWindow ? {
-        maximized: customMinecraft.maximized,
-        windowWidth: instance.resolutionWidth,
-        windowHeight: instance.resolutionHeight,
-        hideLauncher: customMinecraft.hideLauncher,
-        quitLauncher: customMinecraft.quitLauncher,
-      } : {}),
-      ...(override.consoleWindow ? {
-        consoleOnLaunch: customMinecraft.consoleOnLaunch,
-        consoleOnCrash: customMinecraft.consoleOnCrash,
-        hideConsoleOnExit: customMinecraft.hideConsoleOnExit,
-      } : {}),
-      ...(override.gameTime ? {
-        showGameTime: customMinecraft.showGameTime,
-        recordGameTime: customMinecraft.recordGameTime,
-      } : {}),
+      ...(override.gameWindow
+        ? {
+            maximized: customMinecraft.maximized,
+            windowWidth: instance.resolutionWidth,
+            windowHeight: instance.resolutionHeight,
+            hideLauncher: customMinecraft.hideLauncher,
+            quitLauncher: customMinecraft.quitLauncher,
+          }
+        : {}),
+      ...(override.consoleWindow
+        ? {
+            consoleOnLaunch: customMinecraft.consoleOnLaunch,
+            consoleOnCrash: customMinecraft.consoleOnCrash,
+            hideConsoleOnExit: customMinecraft.hideConsoleOnExit,
+          }
+        : {}),
+      ...(override.gameTime
+        ? {
+            showGameTime: customMinecraft.showGameTime,
+            recordGameTime: customMinecraft.recordGameTime,
+          }
+        : {}),
     };
     return {
       ...instance,
@@ -133,37 +142,71 @@ export function effectiveGameSettings(
       javaPath: override.javaInstallation ? instance.javaPath : "",
       javaOptions: {
         ...java,
-        ...(override.javaInstallation ? { skipCompatibilityChecks: customJava.skipCompatibilityChecks } : {}),
-        ...(override.memory ? {
-          memoryMinMiB: instance.memoryMin * 1024,
-          memoryMaxMiB: instance.memoryMax * 1024,
-          permGenMiB: customJava.permGenMiB,
-          warnFreeMemory: customJava.warnFreeMemory,
-        } : {}),
-        ...(override.javaArguments ? {
-          optimizedDefaults: customJava.optimizedDefaults,
-          garbageCollector: customJava.garbageCollector,
-          customArguments: [], // Per-instance arguments are passed once through jvmArguments.
-        } : {}),
+        ...(override.javaInstallation
+          ? { skipCompatibilityChecks: customJava.skipCompatibilityChecks }
+          : {}),
+        ...(override.memory
+          ? {
+              memoryMinMiB: instance.memoryMin * 1024,
+              memoryMaxMiB: instance.memoryMax * 1024,
+              permGenMiB: customJava.permGenMiB,
+              warnFreeMemory: customJava.warnFreeMemory,
+            }
+          : {}),
+        ...(override.javaArguments
+          ? {
+              optimizedDefaults: customJava.optimizedDefaults,
+              garbageCollector: customJava.garbageCollector,
+              customArguments: [], // Per-instance arguments are passed once through jvmArguments.
+            }
+          : {}),
       },
-      memoryMin: override.memory ? instance.memoryMin : java.memoryMinMiB / 1024,
-      memoryMax: override.memory ? instance.memoryMax : java.memoryMaxMiB / 1024,
+      memoryMin: override.memory
+        ? instance.memoryMin
+        : java.memoryMinMiB / 1024,
+      memoryMax: override.memory
+        ? instance.memoryMax
+        : java.memoryMaxMiB / 1024,
       jvmArguments: override.javaArguments ? instance.jvmArguments : [],
       minecraftOptions: effectiveMinecraft,
-      resolutionWidth: override.gameWindow ? instance.resolutionWidth : minecraft.windowWidth,
-      resolutionHeight: override.gameWindow ? instance.resolutionHeight : minecraft.windowHeight,
+      resolutionWidth: override.gameWindow
+        ? instance.resolutionWidth
+        : minecraft.windowWidth,
+      resolutionHeight: override.gameWindow
+        ? instance.resolutionHeight
+        : minecraft.windowHeight,
       fullscreen: override.gameWindow && instance.fullscreen,
       accountId: override.account ? instance.accountId : null,
       joinServer: override.autoJoin ? instance.joinServer : "",
       joinWorld: override.autoJoin ? instance.joinWorld : "",
-      preLaunchCommand: override.commands ? instance.preLaunchCommand : minecraft.preLaunchCommand,
-      postExitCommand: override.commands ? instance.postExitCommand : minecraft.postExitCommand,
-      wrapperCommand: override.commands ? instance.wrapperCommand ?? "" : "",
-      environment: override.environment ? { ...instance.environment } : { ...minecraft.environment },
-      gpuPreference: override.nativeLibraries ? instance.gpuPreference : minecraft.gpuPreference,
-      glfwPath: override.nativeLibraries ? (instance.nativeLibraries?.glfw === false ? "" : instance.glfwPath) : minecraft.glfwPath,
-      openAlPath: override.nativeLibraries ? (instance.nativeLibraries?.openAl === false ? "" : instance.openAlPath) : minecraft.openAlPath,
-      openGlPath: override.nativeLibraries ? (instance.nativeLibraries?.openGl === false ? "" : instance.openGlPath) : minecraft.openGlPath,
+      preLaunchCommand: override.commands
+        ? instance.preLaunchCommand
+        : minecraft.preLaunchCommand,
+      postExitCommand: override.commands
+        ? instance.postExitCommand
+        : minecraft.postExitCommand,
+      wrapperCommand: override.commands ? (instance.wrapperCommand ?? "") : "",
+      environment: override.environment
+        ? { ...instance.environment }
+        : { ...minecraft.environment },
+      gpuPreference: override.nativeLibraries
+        ? instance.gpuPreference
+        : minecraft.gpuPreference,
+      glfwPath: override.nativeLibraries
+        ? instance.nativeLibraries?.glfw === false
+          ? ""
+          : instance.glfwPath
+        : minecraft.glfwPath,
+      openAlPath: override.nativeLibraries
+        ? instance.nativeLibraries?.openAl === false
+          ? ""
+          : instance.openAlPath
+        : minecraft.openAlPath,
+      openGlPath: override.nativeLibraries
+        ? instance.nativeLibraries?.openGl === false
+          ? ""
+          : instance.openGlPath
+        : minecraft.openGlPath,
     };
   }
   return {

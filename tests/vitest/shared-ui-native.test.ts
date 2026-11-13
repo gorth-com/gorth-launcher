@@ -128,16 +128,35 @@ it.each(["production", "development"])(
       expect(result.javaSaved).toBe(true);
       expect(result.permGenDisabled).toBe(true);
       expect(result.minecraftSaved).toBe(true);
-      expect(result.minecraftTabs).toEqual(["General", "Tweaks", "Custom Commands", "Environment Variables"]);
-      expect(result.additionalSettings).toEqual(["General", "Language", "Services", "Tools", "Proxy"]);
+      expect(result.minecraftTabs).toEqual([
+        "General",
+        "Tweaks",
+        "Custom Commands",
+        "Environment Variables",
+      ]);
+      expect(result.additionalSettings).toEqual([
+        "General",
+        "Language",
+        "Services",
+        "Tools",
+        "Proxy",
+      ]);
       expect(result.proxySystemDisabled).toBe(true);
       expect(result.proxyHttpEnabled).toBe(true);
       expect(result.mainReturn).toBe(true);
       expect(result.createRoute).toBe("/instances/create");
-      expect(result.editRoute).toBe("/instances/edit/6f60ed3d-84f9-4dd2-b77a-c3f037d0306e");
+      expect(result.editRoute).toBe(
+        "/instances/edit/6f60ed3d-84f9-4dd2-b77a-c3f037d0306e",
+      );
       expect(result.dataRoute).toBe("/instances/data");
       expect(result.createState).toBe("Native fixture");
-      expect(result.createdInstance).toMatchObject({name:"Native fixture",group:"Friends",iconData:"lucide:star",version:"1.20.1",loader:"Vanilla"});
+      expect(result.createdInstance).toMatchObject({
+        name: "Native fixture",
+        group: "Friends",
+        iconData: "lucide:star",
+        version: "1.20.1",
+        loader: "Vanilla",
+      });
       expect(result.editData).toBe("6f60ed3d-84f9-4dd2-b77a-c3f037d0306e");
       expect(result.editSectionOnly).toBe(true);
       expect(result.workspaceBack).toBe(true);

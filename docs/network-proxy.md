@@ -17,12 +17,13 @@ Settings → Proxy is available in both desktop applications.
 IPC only accepts the trusted main renderer frame. Proxy host/port inputs are validated and no arbitrary diagnostic destination is accepted. Existing download redirect/checksum safeguards remain enabled.
 
 Verification:
+
 - tests/vitest/proxy.test.ts: schema and proxy rule validation.
 - tests/vitest/proxy-native.test.ts: actual Electron/local proxy, persistence, future session preparation, loopback bypass, cookie isolation and Axios redirect rejection.
 - The native test uses a temporary profile and no public network destinations. System proxy/PAC behavior and password-protected proxies are not covered by that fixture.
 
 Platform references:
+
 - https://www.electronjs.org/docs/latest/api/session
 - https://www.electronjs.org/docs/latest/api/safe-storage
 - https://chromium.googlesource.com/chromium/src/+/main/net/docs/proxy.md
-

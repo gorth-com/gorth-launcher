@@ -55,7 +55,7 @@ it("applies global defaults without replacing instance overrides or account bind
     resolutionWidth: 1600,
     resolutionHeight: 900,
     gpuPreference: "high-performance",
-      preLaunchCommand: "/global/start",
+    preLaunchCommand: "/global/start",
   });
   const instance = {
     ...defaults,
@@ -73,7 +73,10 @@ it("applies global defaults without replacing instance overrides or account bind
     javaOptions: { memoryMinMiB: 1536 },
   });
   expect(instance.environment).toEqual({ SHARED: "instance" });
-    expect(effectiveGameSettings(global, { ...instance, preLaunchCommand: "" }).preLaunchCommand).toBe("");
+  expect(
+    effectiveGameSettings(global, { ...instance, preLaunchCommand: "" })
+      .preLaunchCommand,
+  ).toBe("");
 });
 it("validates Minecraft policies and formats durations", () => {
   const value = minecraftPreferencesSchema.parse({

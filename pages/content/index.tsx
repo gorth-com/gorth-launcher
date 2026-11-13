@@ -1,4 +1,5 @@
 import { PageHeading } from "@/components/heading";
+import { Progress } from "@gorth-io/primitive/default/progress";
 import { contentIcons } from "@/utils/constant";
 import { useFeedbackToast } from "@/hooks/use-feedback-toast";
 import {
@@ -34,6 +35,8 @@ import { PageBanner } from "@/components/element/page-banner";
 import modsBackground from "@/public/dawn/mod.png";
 import shaderBackground from "@/public/dawn/shader.png";
 import resourceBackground from "@/public/dawn/background2.png";
+import { ContentInstallDialog } from "@/components/element/content-install-dialog";
+import { mergeContentProgress } from "@/utils/content-progress";
 import { ProjectDetail } from "./project-detail";
 
 import { ContentProjectCard } from "@/components/element/content-project-card";
@@ -100,17 +103,21 @@ export function ContentPage({
   const [versions, setVersions] = useState<ContentVersion[]>([]);
   const [versionId, setVersionId] = useState("");
   useEffect(() => {
-    onDetailChange(Boolean(selected));
+    onDetailChange(Boolean(selected) && !installRequested);
     return () => onDetailChange(false);
-  }, [selected, onDetailChange]);
+  }, [selected, installRequested, onDetailChange]);
   useEffect(() => {
     let live = true;
-    const unsubscribe = window.electronAPI.content.onChanged(setStatus);
+    let observed = false;
+    const unsubscribe = window.electronAPI.content.onChanged((next) => {
+      observed = true;
+      setStatus((previous) => mergeContentProgress(previous, next));
+    });
     void window.electronAPI.content
       .status()
       .then((value) => {
         if (live) {
-          setStatus(value.status);
+          if (!observed) setStatus(value.status);
           setConfigured(value.curseforgeConfigured);
         }
       })
@@ -237,8 +244,28 @@ export function ContentPage({
       active = false;
     };
   }, [selectedInstanceId]);
+  async function installSelected() {
+    if (!selected || !searched) return false;
+    setStatus({
+      busy: true,
+      message: "Đang chuẩn bị…",
+      completed: 0,
+      total: 0,
+      logs: [],
+    });
+    const result = await execute(() =>
+      window.electronAPI.content.install({
+        query: searched,
+        projectId: selected.id,
+        versionId,
+        ...(searched.kind !== "modpack" ? { instanceId: target } : {}),
+        ...(searched.kind === "datapack" ? { worldName: targetWorld } : {}),
+      }),
+    );
+    return result === null;
+  }
   const busy = pending || status.busy || gameBusy;
-  if (selected && searched)
+  if (selected && searched && !installRequested)
     return (
       <ProjectDetail
         key={searched.provider + selected.id}
@@ -260,20 +287,7 @@ export function ContentPage({
             .cancel()
             .catch(() => setError("Không hủy được tác vụ."))
         }
-        onInstall={async () => {
-          const result = await execute(() =>
-            window.electronAPI.content.install({
-              query: searched,
-              projectId: selected.id,
-              versionId,
-              ...(searched.kind !== "modpack" ? { instanceId: target } : {}),
-              ...(searched.kind === "datapack"
-                ? { worldName: targetWorld }
-                : {}),
-            }),
-          );
-          return result === null;
-        }}
+        onInstall={installSelected}
       />
     );
   const sidebarFilters = catalogMode || fixedKind === "modpack";
@@ -420,11 +434,13 @@ export function ContentPage({
                 {sidebarFilters && (
                   <div className="flex flex-col gap-1">
                     <CardTitle>Filters</CardTitle>
-                    <CardDescription>
-                      {searched
-                        ? `Kết quả: ${searched.provider} · ${searched.kind} · ${searched.loader || "Mọi mod loader"} ${searched.version || "· Mọi phiên bản"}`
-                        : "Chọn nguồn và instance đích để tìm kiếm nội dung."}
-                    </CardDescription>
+                    {catalogMode && (
+                      <CardDescription>
+                        {searched
+                          ? `Kết quả: ${searched.provider} · ${searched.kind} · ${searched.loader || "Mọi mod loader"} ${searched.version || "· Mọi phiên bản"}`
+                          : "Chọn nguồn và instance đích để tìm kiếm nội dung."}
+                      </CardDescription>
+                    )}
                   </div>
                 )}
                 <form.Field name="provider">
@@ -1004,7 +1020,8 @@ export function ContentPage({
                 {status.total > 0 && `${status.completed}/${status.total}`}
               </p>
               {status.total > 0 && (
-                <progress
+                <Progress
+                  aria-label="Tiến độ cài đặt nội dung"
                   className="w-full"
                   max={status.total}
                   value={status.completed}
@@ -1028,14 +1045,6 @@ export function ContentPage({
           {pending && (
             <p role="status" className="text-sm">
               Đang xử lý…
-            </p>
-          )}
-          {searched && !catalogMode && (
-            <p className="text-xs text-muted-foreground">
-              Kết quả: {searched.provider} · {searched.kind} · {searched.loader}{" "}
-              {searched.version}
-              {target &&
-                ` · ${instances.find((item) => item.id === target)?.name ?? "Instance đã xóa"}`}
             </p>
           )}
           {results && (
@@ -1114,6 +1123,32 @@ export function ContentPage({
           )}
         </div>
       </div>
+      {selected && searched && installRequested && (
+        <ContentInstallDialog
+          key={searched.provider + selected.id}
+          open
+          onClose={() => {
+            setSelected(null);
+            setInstallRequested(false);
+          }}
+          project={selected}
+          pack={searched.kind === "modpack"}
+          targetName={instances.find((item) => item.id === target)?.name}
+          versions={versions}
+          versionId={versionId}
+          setVersionId={setVersionId}
+          busy={busy}
+          pending={pending}
+          status={status}
+          onInstall={installSelected}
+          onCancel={() =>
+            void window.electronAPI.content
+              .cancel()
+              .catch(() => setError("Không hủy được tác vụ."))
+          }
+          onDone={onLibrary}
+        />
+      )}
     </PageShell>
   );
 }

@@ -29,10 +29,7 @@ const toolNames = {
   jprofiler: "JProfiler",
   visualvm: "VisualVM",
 } as const;
-export function GeneralSettings({
-  settings,
-  setSettings,
-}: SettingsProps) {
+export function GeneralSettings({ settings, setSettings }: SettingsProps) {
   return (
     <Card className="gap-0 overflow-hidden py-0">
       <div className="flex flex-col gap-4 p-4">

@@ -2,9 +2,7 @@
   "version": "7",
   "dialect": "sqlite",
   "id": "2df02e22-1cbb-418b-9da7-7fd478a50fae",
-  "prevIds": [
-    "9117430f-958c-43ab-a347-88a1352ee149"
-  ],
+  "prevIds": ["9117430f-958c-43ab-a347-88a1352ee149"],
   "ddl": [
     {
       "name": "game_accounts",
@@ -213,36 +211,28 @@
       "table": "settings"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "game_accounts_pk",
       "table": "game_accounts",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "instances_pk",
       "table": "instances",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "launcher_session_pk",
       "table": "launcher_session",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "key"
-      ],
+      "columns": ["key"],
       "nameExplicit": false,
       "name": "settings_pk",
       "table": "settings",

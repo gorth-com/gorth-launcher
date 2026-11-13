@@ -1,5 +1,8 @@
 import { CreateInstancePage } from "@/pages/instances/create";
-import { QueryClient, QueryClientProvider } from "@gorth-io/primitive/cores/tanstack/query";
+import {
+  QueryClient,
+  QueryClientProvider,
+} from "@gorth-io/primitive/cores/tanstack/query";
 import { EditInstancePage } from "@/pages/instances/edit/[uuid]";
 import { InstanceDataPage } from "@/pages/instances/data";
 import type { useLibrary } from "@/hooks/use-library";
@@ -50,14 +53,28 @@ Object.assign(window, {
     settings: {
       javaInstallations: async () => [],
       chooseJava: async () => "/fixture/java/bin/java",
-      testJava: async () => ({ path: "/fixture/java/bin/java", major: 17, version: "17.0.1", vendor: "Fixture", architecture: "aarch64" }),
+      testJava: async () => ({
+        path: "/fixture/java/bin/java",
+        major: 17,
+        version: "17.0.1",
+        vendor: "Fixture",
+        architecture: "aarch64",
+      }),
       openFolder: async () => {},
       chooseTool: async () => "/fixture/tools/editor",
       checkTool: async () => true,
     },
     networkProxy: {
-      get: async () => ({ mode: "system", host: "", port: 8080, hasCredentials: false }),
-      save: async (input: { settings: object }) => ({ ...input.settings, hasCredentials: false }),
+      get: async () => ({
+        mode: "system",
+        host: "",
+        port: 8080,
+        hasCredentials: false,
+      }),
+      save: async (input: { settings: object }) => ({
+        ...input.settings,
+        hasCredentials: false,
+      }),
       route: async () => "DIRECT",
     },
     auth: {
@@ -255,5 +272,7 @@ Object.assign(window, {
   routePath: () => router.state.location.pathname,
 });
 createRoot(document.getElementById("root")!).render(
-  <QueryClientProvider client={new QueryClient()}><RouterProvider router={router} /></QueryClientProvider>,
+  <QueryClientProvider client={new QueryClient()}>
+    <RouterProvider router={router} />
+  </QueryClientProvider>,
 );

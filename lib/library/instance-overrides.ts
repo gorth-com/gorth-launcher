@@ -19,15 +19,18 @@ export type InstanceOverrides = z.infer<typeof instanceOverridesSchema>;
 
 // Missing flags identify the old format. Preserve its explicit values on edit.
 export function instanceOverrides(value: InstanceSettings): InstanceOverrides {
-  return value.overrides ?? instanceOverridesSchema.parse({
-    gameWindow: true,
-    account: value.accountId !== null,
-    autoJoin: !!(value.joinServer || value.joinWorld),
-    javaInstallation: !!value.javaPath,
-    memory: true,
-    javaArguments: true,
-    nativeLibraries: true,
-    commands: true,
-    environment: true,
-  });
+  return (
+    value.overrides ??
+    instanceOverridesSchema.parse({
+      gameWindow: true,
+      account: value.accountId !== null,
+      autoJoin: !!(value.joinServer || value.joinWorld),
+      javaInstallation: !!value.javaPath,
+      memory: true,
+      javaArguments: true,
+      nativeLibraries: true,
+      commands: true,
+      environment: true,
+    })
+  );
 }

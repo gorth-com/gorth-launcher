@@ -56,7 +56,9 @@ export function formatDuration(milliseconds: number): string {
   return hours ? `${hours} giờ ${minutes % 60} phút` : `${minutes} phút`;
 }
 export function formatPlayTime(milliseconds: number, hours = false): string {
-  return hours ? (milliseconds / 3600000).toFixed(1) + " h" : formatDuration(milliseconds);
+  return hours
+    ? (milliseconds / 3600000).toFixed(1) + " h"
+    : formatDuration(milliseconds);
 }
 
 /** Total minutes; unlike formatDuration, does not convert minutes to hours. */

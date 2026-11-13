@@ -13,6 +13,7 @@ import {
 } from "node:fs/promises";
 import { eq, asc, like } from "drizzle-orm";
 import { z } from "@gorth-io/structure/cores/zod";
+import { validStartupLocation } from "@/lib/startup";
 import { openDatabase } from "@/database/client";
 import { instanceTable, settingTable } from "@/database/schema";
 import type { Instance, LibrarySnapshot, PlaySession } from "@/utils/interface";
@@ -41,6 +42,10 @@ const trashEntry = instance.extend({
   deletedAt: z.number().int().nonnegative(),
 });
 const commandSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("navigation.save"),
+    location: z.string().max(300).refine(validStartupLocation),
+  }),
   createInstanceSchema,
   z.object({ action: z.literal("rename"), id, name }),
   z.object({ action: z.literal("copy"), id, name }),
@@ -113,9 +118,10 @@ export async function createLibraryStore(
   const folders = getLauncherFolders(dataPath);
   const root = folders.instances;
   // Keep rename-to-trash on the same volume when instances live on another disk.
-  const trashRoot = root === path.join(folders.root, "instances")
-    ? path.join(folders.root, ".trash")
-    : path.join(root, ".trash");
+  const trashRoot =
+    root === path.join(folders.root, "instances")
+      ? path.join(folders.root, ".trash")
+      : path.join(root, ".trash");
   await mkdir(root, { recursive: true });
   await mkdir(trashRoot, { recursive: true });
   for (const directory of [path.dirname(root), root, trashRoot]) {
@@ -167,6 +173,7 @@ export async function createLibraryStore(
       .all();
     return {
       instances: currentInstances,
+      lastLocation: JSON.parse(getValue("last-location") ?? '"/home"'),
       settings: launcherSettings,
       instanceSettings: Object.fromEntries(
         currentInstances.map((item) => {
@@ -230,7 +237,9 @@ export async function createLibraryStore(
         await regularTree(saves);
         const recovered = path.join(
           path.dirname(trashRoot),
-          root === path.join(folders.root, "instances") ? "recovered-saves" : ".recovered-saves",
+          root === path.join(folders.root, "instances")
+            ? "recovered-saves"
+            : ".recovered-saves",
           parsed.id + "-" + parsed.deletedAt,
         );
         await mkdir(path.dirname(recovered), { recursive: true });
@@ -312,7 +321,9 @@ export async function createLibraryStore(
             if (!getValue("launcher")) putValue("launcher", c.settings);
             putValue("legacy-imported", true);
           });
-      } else if (c.action === "settings") putValue("launcher", c.settings);
+      } else if (c.action === "navigation.save")
+        putValue("last-location", c.location);
+      else if (c.action === "settings") putValue("launcher", c.settings);
       else if (c.action === "instance.settings") {
         getInstance(c.id);
         putValue("instance-settings:" + c.id, c.settings);

@@ -10,6 +10,7 @@ export function installDevelopmentLifecycle(rendererUrl: string) {
   const parentPid = process.ppid;
   let disposed = false;
   let failures = 0;
+  let lastReachable = Date.now();
   let pending: ClientRequest | undefined;
   const dispose = () => {
     if (disposed) return;
@@ -20,8 +21,9 @@ export function installDevelopmentLifecycle(rendererUrl: string) {
     process.off("SIGTERM", quit);
     app.off("will-quit", dispose);
   };
-  const quit = () => {
+  const quit = (reason = "Dev server unavailable") => {
     if (disposed) return;
+    console.info(`[dev lifecycle] Stopping Electron: ${reason}`);
     dispose();
     // Wait for AppKit initialization if the dev process stops during startup.
     void app.whenReady().then(() => app.quit());
@@ -32,7 +34,7 @@ export function installDevelopmentLifecycle(rendererUrl: string) {
       process.kill(parentPid, 0);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ESRCH") {
-        quit();
+        quit("Parent process exited");
         return;
       }
     }
@@ -40,15 +42,24 @@ export function installDevelopmentLifecycle(rendererUrl: string) {
     const probe = request(url, { method: "HEAD", agent: false }, (response) => {
       response.resume();
       failures = 0;
+      lastReachable = Date.now();
       pending = undefined;
     });
     pending = probe;
-    probe.setTimeout(1000, () =>
+    probe.setTimeout(5000, () =>
       probe.destroy(new Error("Vite probe timed out")),
     );
-    probe.once("error", () => {
+    probe.once("error", (error: NodeJS.ErrnoException) => {
       pending = undefined;
-      if (!disposed && ++failures >= 2) quit();
+      // A slow transform is not proof that Vite died. Allow startup/restarts to recover.
+      if (
+        !["ECONNREFUSED", "ECONNRESET", "EHOSTUNREACH"].includes(
+          error.code ?? "",
+        )
+      )
+        return;
+      if (!disposed && ++failures >= 2 && Date.now() - lastReachable >= 10_000)
+        quit(`Dev server disconnected (${error.code})`);
     });
   };
   const timer = setInterval(check, 1000);

@@ -228,17 +228,13 @@ async function launch(
     launchArguments(game, session, settings, agent),
     settings.wrapperCommand,
   );
-  const child = spawn(
-    command.executable,
-    command.arguments,
-    {
-      cwd: game.gameDir,
-      env: environment,
-      shell: false,
-      windowsHide: true,
-      stdio: ["ignore", "pipe", "pipe"],
-    },
-  );
+  const child = spawn(command.executable, command.arguments, {
+    cwd: game.gameDir,
+    env: environment,
+    shell: false,
+    windowsHide: true,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
   task.child = child;
   task.state = "running";
   const redact = (value: string) =>
@@ -588,7 +584,11 @@ export async function registerGameIpc(
         if (typeof value !== "string" || !/^[a-zA-Z0-9-]{1,80}$/.test(value))
           throw new Error();
         library.getInstance(value);
-        directory = path.join(gameFolder(directory, "instances"), value, "game");
+        directory = path.join(
+          gameFolder(directory, "instances"),
+          value,
+          "game",
+        );
         if (!(await stat(directory)).isDirectory()) throw new Error();
       } else await mkdir(directory, { recursive: true });
       const error = await shell.openPath(directory);
@@ -612,7 +612,13 @@ export async function registerGameIpc(
       const selected = await dialog.showSaveDialog(
         BrowserWindow.fromWebContents(event.sender)!,
         {
-          defaultPath: path.join(getLauncherFolders(app.getPath("userData"), app.getPath("downloads")).downloads, `${id}-console.log`),
+          defaultPath: path.join(
+            getLauncherFolders(
+              app.getPath("userData"),
+              app.getPath("downloads"),
+            ).downloads,
+            `${id}-console.log`,
+          ),
           filters: [{ name: "Log", extensions: ["log"] }],
         },
       );
