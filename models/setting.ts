@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { openDatabase } from "@/database/client";
 import { settingTable } from "@/database/schema";
 
-export function readShortcutOverrides(): Record<string, string> {
+export function rawReadShortcutOverrides(): Record<string, string> {
   const { client, db } = openDatabase(
     path.join(app.getPath("userData"), "gorth-launcher.db"),
   );
@@ -19,7 +19,7 @@ export function readShortcutOverrides(): Record<string, string> {
     client.close();
   }
 }
-export function writeShortcutOverrides(value: Record<string, string>) {
+export function rawWriteShortcutOverrides(value: Record<string, string>) {
   const { client, db } = openDatabase(
     path.join(app.getPath("userData"), "gorth-launcher.db"),
   );

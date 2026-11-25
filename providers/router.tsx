@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { startupLocation, validStartupLocation } from "@/lib/startup";
 import { toast } from "@/providers/toaster";
-import { RouterProvider } from "@gorth-io/primitive/cores/tanstack/router";
+import { RouterProvider } from "@gorth-com/primitive/cores/tanstack/router";
 import Application from "@/app";
 import { createLauncherRouter } from "@/lib/navigation";
 

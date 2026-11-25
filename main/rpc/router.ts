@@ -1,5 +1,5 @@
 import { initTRPC } from "@trpc/server";
-import { z } from "@gorth-io/structure/cores/zod";
+import { z } from "@gorth-com/structure/cores/zod";
 import type {
   LibraryResult,
   LibrarySnapshot,

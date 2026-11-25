@@ -1,4 +1,4 @@
-import type { ShortcutDefinition } from "@gorth-io/structure/modules/desktop";
+import type { ShortcutDefinition } from "@gorth-com/structure/modules/desktop";
 import {
   Palette,
   PanelsTopLeft,
@@ -25,7 +25,7 @@ import {
   Languages,
   Wrench,
   Plug,
-} from "@gorth-io/primitive/cores/lucide";
+} from "@gorth-com/primitive/cores/lucide";
 import type { Settings } from "@/utils/interface";
 import type { Page } from "@/utils/interface";
 import type { Theme } from "@/lib/theme";
@@ -256,7 +256,7 @@ import {
   Flame as FlameIcon,
   FileText as NotesIcon,
   Server as ServerIcon,
-} from "@gorth-io/primitive/cores/lucide";
+} from "@gorth-com/primitive/cores/lucide";
 
 export const instanceCreateSections = [
   { id: "custom", title: "Custom", icon: Box },

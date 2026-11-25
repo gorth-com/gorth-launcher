@@ -1,5 +1,5 @@
 import { createRoot } from "react-dom/client";
-import { Button } from "@gorth-io/primitive/custom/button";
+import { Button } from "@gorth-com/primitive/custom/button";
 import {
   AlertDialog,
   AlertDialogContent,

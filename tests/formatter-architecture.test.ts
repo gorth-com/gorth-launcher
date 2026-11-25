@@ -18,7 +18,7 @@ const roots = [
   "preload",
   "providers",
   "routes",
-  "services",
+  "models",
 ];
 function sourceFiles(directory: string): string[] {
   if (directory === "components/ui" || directory === "components/ui copy")

@@ -1,4 +1,4 @@
-import { z } from "@gorth-io/structure/cores/zod";
+import { z } from "@gorth-com/structure/cores/zod";
 
 export const urlSchema = z.url();
 export const httpUrlSchema = z.url({ protocol: /^https?$/i });

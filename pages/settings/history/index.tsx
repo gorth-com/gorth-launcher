@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { ColumnDef } from "@gorth-io/primitive/cores/tanstack/table";
+import type { ColumnDef } from "@gorth-com/primitive/cores/tanstack/table";
 import { DataTable, dataTableFeatures } from "@/components/custom/data-table";
 import type { PlaySession } from "@/utils/interface";
 import {

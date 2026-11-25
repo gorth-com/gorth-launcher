@@ -147,7 +147,32 @@ gh auth login -h github.com
 gh workflow run release.yml --repo gorth-io/gorth-launcher -f tag=v0.0.0-alpha.1 -F publish=true
 ```
 
-Không chạy `deno task publish` để làm việc này: script đó vẫn là Forge publish và không có Forge publisher; workflow upload bằng GitHub CLI.
+`forge.config.ts` đã cấu hình `@electron-forge/publisher-github`.
+Workflow dùng chính publisher này để tạo draft và upload toàn bộ artifact đã xác minh
+từ bốn build, gồm checksum và các file auto-update. GitHub CLI chỉ kiểm tra tag,
+chặn ghi đè release công khai, cập nhật ghi chú và công khai draft khi được yêu cầu.
+Job release dùng `GITHUB_TOKEN` của Actions với quyền `contents: write`; không cần PAT
+để upload vào cùng repository.
+
+`deno task publish` cũng dùng publisher đã cấu hình, nhưng chỉ build/publish các target
+của máy đang chạy và cần `GITHUB_TOKEN` trong môi trường. Lệnh này không áp dụng hàng rào
+đủ bốn build/checksum của workflow; ưu tiên workflow cho release phân phối đầy đủ.
+Repository mặc định là `gorth-io/gorth-launcher`; Actions dùng `GITHUB_REPOSITORY`.
+Publisher tạo release mới ở trạng thái draft và tự đánh dấu prerelease theo version.
+Mặc định Forge CLI dùng `force: false`: asset trùng tên sẽ không bị xóa/ghi đè,
+kể cả khi tag đã công khai. `draft: true` không đổi trạng thái release đã tồn tại.
+Chỉ workflow tổng hợp bật thay asset sau khi GitHub xác nhận release vẫn là draft;
+release đã công khai bị từ chối. Không công khai draft thủ công trong lúc job upload đang chạy.
+
+Để kiểm tra build trước khi upload bằng Forge CLI:
+
+```sh
+deno task publish --dry-run
+# Sau khi kiểm tra artifact, lệnh sau thực sự upload lên GitHub:
+deno task publish --from-dry-run
+```
+
+Không commit token vào Forge config, source hoặc file môi trường mẫu.
 Không dùng PAT trong website để người dùng tải file private.
 
 Tag có `-alpha/-beta/-rc` được đánh dấu prerelease. Updater hiện chỉ chấp nhận stable.

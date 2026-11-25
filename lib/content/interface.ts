@@ -31,6 +31,14 @@ export interface ContentVersion {
   gameVersions?: string[];
   loaders?: string[];
 }
+export interface ModpackOverview {
+  name: string;
+  currentVersion: string;
+  source: { provider: ContentProvider; projectId: string; versionId: string } | null;
+  website?: string;
+  versions: ContentVersion[];
+  onlineError?: string;
+}
 export interface ContentStatus {
   optionalMods?: { requestId: string; items: OptionalMod[] };
   logs?: string[];
@@ -62,6 +70,13 @@ export interface ContentFile {
   conflicts?: string[];
 }
 export interface InstalledContent {
+  origin?: {
+    provider: ContentProvider;
+    projectId?: string;
+    versionId?: string;
+  };
+  checksum?: string;
+  metadata?: InstalledModMetadata;
   id: string;
   provider: ContentProvider | null;
   kind: ContentKind;
@@ -75,7 +90,15 @@ export interface InstalledContent {
   modified: boolean;
   update?: ContentVersion;
 }
+export interface InstalledModMetadata {
+  provider?: ContentProvider;
+  projectId?: string;
+  versionId?: string;
+  versionName?: string;
+  project: ContentProject;
+}
 export interface ContentInventory {
+  metadataError?: string;
   instanceId: string;
   worlds: string[];
   items: InstalledContent[];

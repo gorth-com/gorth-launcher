@@ -2,7 +2,7 @@ import { createRoot } from "react-dom/client";
 import {
   QueryClient,
   QueryClientProvider,
-} from "@gorth-io/primitive/cores/tanstack/query";
+} from "@gorth-com/primitive/cores/tanstack/query";
 import { FoldersCard } from "@/components/element/folders-card";
 import { ToasterProvider } from "@/providers/toaster";
 import type { FolderSnapshot } from "@/utils/folder-interface";

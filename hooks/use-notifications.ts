@@ -8,6 +8,7 @@ export interface LauncherNotification {
   body: string;
   time: number;
   read: boolean;
+  kind?: "info" | "success" | "error" | "running";
 }
 
 export function useNotifications(message: string, jobs: GameStatus[]) {
@@ -22,6 +23,7 @@ export function useNotifications(message: string, jobs: GameStatus[]) {
           {
             id: crypto.randomUUID(),
             title: "Launcher",
+            kind: "info" as const,
             body: message,
             time: Date.now(),
             read: false,
@@ -39,13 +41,22 @@ export function useNotifications(message: string, jobs: GameStatus[]) {
         const message =
           job.crashHint || job.message || "Không chạy được Minecraft.";
         nextFailures.set(job.instanceId, message);
-        if (failures.current.get(job.instanceId) !== message)
+        if (failures.current.get(job.instanceId) !== message) {
           toast.add({
             id: "game-error:" + job.instanceId,
             title: `Minecraft ${job.version}`,
             description: message,
             type: "error",
           });
+          additions.push({
+            id: crypto.randomUUID(),
+            title: `Minecraft ${job.version}`,
+            body: message,
+            time: Date.now(),
+            read: false,
+            kind: "error",
+          });
+        }
       }
       if (
         phases.current.get(job.instanceId) !== job.phase &&
@@ -55,6 +66,7 @@ export function useNotifications(message: string, jobs: GameStatus[]) {
           id: crypto.randomUUID(),
           title: `Minecraft ${job.version}`,
           body: job.message || job.phase,
+          kind: job.phase === "ready" ? "success" : "running",
           time: Date.now(),
           read: false,
         });

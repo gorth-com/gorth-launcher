@@ -7,8 +7,8 @@ import {
   type ReactNode,
 } from "react";
 
-import { Button } from "@gorth-io/primitive/custom/button";
-import { cn } from "@gorth-io/primitive/cores/cn";
+import { Button } from "@gorth-com/primitive/custom/button";
+import { cn } from "@gorth-com/primitive/cores/cn";
 
 interface PopoverMenuProps {
   ariaLabel: string;

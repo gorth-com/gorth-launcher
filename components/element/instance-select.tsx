@@ -5,7 +5,7 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
-} from "@gorth-io/primitive/custom/select";
+} from "@gorth-com/primitive/custom/select";
 export function InstanceSelect({
   items,
   value,

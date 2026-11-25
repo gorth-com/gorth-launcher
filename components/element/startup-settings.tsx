@@ -4,8 +4,8 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-} from "@gorth-io/primitive/default/card";
-import { RadioGroup, RadioGroupItem } from "@gorth-io/primitive/custom/radio";
+} from "@gorth-com/primitive/default/card";
+import { RadioGroup, RadioGroupItem } from "@gorth-com/primitive/custom/radio";
 import type { Settings } from "@/utils/interface";
 
 export function StartupSettings({

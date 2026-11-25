@@ -3,10 +3,10 @@ import {
   AxiosError,
   AxiosHeaders,
   type AxiosAdapter,
-} from "@gorth-io/structure/cores/axios";
+} from "@gorth-com/structure/cores/axios";
 const fixture = vi.hoisted(() => ({ refresh: vi.fn(), notice: vi.fn() }));
 
-vi.mock("@gorth-io/primitive/custom/toast", () => ({
+vi.mock("@gorth-com/primitive/custom/toast", () => ({
   toast: { add: fixture.notice },
 }));
 import { caller, CallerError } from "@/utils/caller";

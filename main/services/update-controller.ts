@@ -4,7 +4,7 @@ import {
   isNewerRelease,
   parseRelease,
   releaseVersion,
-} from "@/lib/update/release";
+} from "@gorth-com/structure/modules/desktop";
 
 interface UpdateOptions {
   version: string;

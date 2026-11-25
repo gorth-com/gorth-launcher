@@ -312,8 +312,18 @@ export function launchArguments(
       legacyArguments(game.version.minecraftArguments ?? ""),
     variables,
   );
-  if (settings.fullscreen) gameArguments.push("--fullscreen");
-  else
+  // Loader metadata may already provide resolution. Forge rejects duplicates.
+  for (let index = gameArguments.length - 1; index >= 0; index--) {
+    const argument = gameArguments[index];
+    if (argument === "--width" || argument === "--height")
+      gameArguments.splice(index, 2);
+    else if (/^--(?:width|height)=/.test(argument))
+      gameArguments.splice(index, 1);
+  }
+  if (settings.fullscreen) {
+    if (!gameArguments.includes("--fullscreen"))
+      gameArguments.push("--fullscreen");
+  } else
     gameArguments.push(
       "--width",
       String(settings.resolutionWidth),

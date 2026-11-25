@@ -1,7 +1,7 @@
 "use client";
 
-import axios from "@gorth-io/structure/cores/axios";
-import { createAuthRetry } from "@gorth-io/structure/modules/auth/client";
+import axios from "@gorth-com/structure/cores/axios";
+import { createAuthRetry } from "@gorth-com/structure/modules/auth/client";
 
 const retry = createAuthRetry({
   refresh: refreshAuthentication,

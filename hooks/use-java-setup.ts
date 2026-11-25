@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useQuery } from "@gorth-io/primitive/cores/tanstack/query";
+import { useQuery } from "@gorth-com/primitive/cores/tanstack/query";
 import type { Settings } from "@/utils/interface";
 import { javaPreferences } from "@/lib/library/game-preferences";
 import { confirmAction } from "@/lib/confirmation";

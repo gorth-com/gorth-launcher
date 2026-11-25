@@ -2,22 +2,22 @@ import {
   ContentInstallDialog,
   ContentVersionPicker,
 } from "@/components/element/content-install-dialog";
-import { Progress } from "@gorth-io/primitive/default/progress";
+import { Progress } from "@gorth-com/primitive/default/progress";
 import { contentLabels } from "@/utils/constant";
 import { useState, type CSSProperties } from "react";
-import { Copy, Download, Layers } from "@gorth-io/primitive/cores/lucide";
-import { Badge } from "@gorth-io/primitive/custom/badge";
-import { Separator } from "@gorth-io/primitive/default/separator";
-import { CardTitle } from "@gorth-io/primitive/default/card";
+import { Copy, Download, Layers } from "@gorth-com/primitive/cores/lucide";
+import { Badge } from "@gorth-com/primitive/custom/badge";
+import { Separator } from "@gorth-com/primitive/default/separator";
+import { CardTitle } from "@gorth-com/primitive/default/card";
 import {
   SidebarProvider,
   Sidebar,
   SidebarHeader,
   SidebarContent,
   SidebarFooter,
-} from "@gorth-io/primitive/custom/sidebar";
+} from "@gorth-com/primitive/custom/sidebar";
 import { toast } from "@/providers/toaster";
-import { Button } from "@gorth-io/primitive/custom/button";
+import { Button } from "@gorth-com/primitive/custom/button";
 
 import type {
   ContentProject,

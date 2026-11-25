@@ -2,22 +2,22 @@ import { CreateInstancePage } from "@/pages/instances/create";
 import {
   QueryClient,
   QueryClientProvider,
-} from "@gorth-io/primitive/cores/tanstack/query";
+} from "@gorth-com/primitive/cores/tanstack/query";
 import { EditInstancePage } from "@/pages/instances/edit/[uuid]";
 import { InstanceDataPage } from "@/pages/instances/data";
 import type { useLibrary } from "@/hooks/use-library";
 import type { useGame } from "@/hooks/use-game";
 import { defaultInstanceSettings } from "@/lib/library/instance-settings";
 import { ConfirmationProvider } from "@/providers/confirmation";
-import { RouterProvider } from "@gorth-io/primitive/cores/tanstack/router";
+import { RouterProvider } from "@gorth-com/primitive/cores/tanstack/router";
 import { createLauncherRouter } from "@/lib/navigation";
 import { confirmAction } from "@/lib/confirmation";
 import { useState, type CSSProperties } from "react";
 import { createRoot } from "react-dom/client";
 import { PageHeading } from "@/components/heading";
-import { Settings } from "@gorth-io/primitive/cores/lucide";
-import { SidebarProvider } from "@gorth-io/primitive/custom/sidebar";
-import { Button } from "@gorth-io/primitive/custom/button";
+import { Settings } from "@gorth-com/primitive/cores/lucide";
+import { SidebarProvider } from "@gorth-com/primitive/custom/sidebar";
+import { Button } from "@gorth-com/primitive/custom/button";
 import { Dashboard } from "@/layouts/dashboard";
 import { SettingsLayout } from "@/layouts/settings";
 import { SettingsPage } from "@/pages/settings";

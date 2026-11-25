@@ -17,6 +17,79 @@ import { legacyArguments } from "../lib/game/install";
 import { defaultInstanceSettings } from "../lib/library/instance-settings";
 import { diagnoseCrash } from "../lib/game/service";
 
+test.each(["modern", "legacy", "equals", "missing"])(
+  "passes exactly one resolution to the game with %s metadata",
+  (mode) => {
+    const version = {
+      id: "1.20.1-forge-47.4.28",
+      type: "release",
+      mainClass: "cpw.mods.bootstraplauncher.BootstrapLauncher",
+      assetIndex: { id: "5" },
+      arguments: {
+        jvm: ["-cp", "${classpath}"],
+        game:
+          mode === "modern"
+            ? [
+                {
+                  rules: [
+                    {
+                      action: "allow",
+                      features: { has_custom_resolution: true },
+                    },
+                  ],
+                  value: [
+                    "--width",
+                    "${resolution_width}",
+                    "--height",
+                    "${resolution_height}",
+                  ],
+                },
+                "--launchTarget",
+                "forgeclient",
+              ]
+            : mode === "equals"
+              ? ["--width=800", "--height=600"]
+              : [],
+      },
+      ...(mode === "legacy"
+        ? {
+            arguments: undefined,
+            minecraftArguments: "--width 800 --height 600",
+          }
+        : {}),
+    } as unknown as Version;
+    const game = {
+      version,
+      java: "/java",
+      gameDir: "/game",
+      natives: "/natives",
+      classpath: ["/client.jar"],
+      root: "/root",
+    };
+    const session = {
+      username: "Fixture",
+      uuid: "0".repeat(32),
+      accessToken: "0",
+      authlibRoot: null,
+    };
+    const settings = defaultInstanceSettings({ memory: 1, javaPath: "" });
+    settings.resolutionWidth = 1600;
+    settings.resolutionHeight = 900;
+    const args = launchArguments(game, session, settings);
+    assert.equal(args.filter((arg) => arg === "--width").length, 1);
+    assert.equal(args.filter((arg) => arg === "--height").length, 1);
+    assert.equal(args[args.indexOf("--width") + 1], "1600");
+    assert.equal(args[args.indexOf("--height") + 1], "900");
+    assert(!args.some((arg) => /^--(?:width|height)=/.test(arg)));
+    settings.fullscreen = true;
+    const fullscreen = launchArguments(game, session, settings);
+    assert(fullscreen.includes("--fullscreen"));
+    assert(!fullscreen.includes("--width"));
+    assert(!fullscreen.includes("--height"));
+    if (mode === "modern") assert(args.includes("forgeclient"));
+  },
+);
+
 test("curated loader pairs reject Quilt, arbitrary versions and missing pins; Vanilla requires releases from 1.7.10", () => {
   for (const entry of loaderCatalog)
     assert(

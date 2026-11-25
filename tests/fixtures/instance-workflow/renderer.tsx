@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { RouterProvider } from "@gorth-io/primitive/cores/tanstack/router";
+import { RouterProvider } from "@gorth-com/primitive/cores/tanstack/router";
 import {
   QueryClient,
   QueryClientProvider,
-} from "@gorth-io/primitive/cores/tanstack/query";
-import { SidebarProvider } from "@gorth-io/primitive/custom/sidebar";
+} from "@gorth-com/primitive/cores/tanstack/query";
+import { SidebarProvider } from "@gorth-com/primitive/custom/sidebar";
 import {
   createLauncherRouter,
   instanceToolDestination,
@@ -15,10 +15,14 @@ import { useInstanceSelection } from "@/hooks/use-instance-selection";
 import { AuthContext, type useAuth } from "@/hooks/use-auth";
 import { TooltipProvider } from "@/providers/tooltip";
 import { ToasterProvider } from "@/providers/toaster";
+import { useToastManager } from "@gorth-com/primitive/custom/toast";
 import { Dashboard } from "@/layouts/dashboard";
 import { HomePage } from "@/pages/home";
 import { LibraryPage } from "@/pages/instances";
 import { DownloadsPage } from "@/pages/downloads";
+import { NotificationsPage } from "@/pages/notifications";
+import { useNotifications } from "@/hooks/use-notifications";
+import type { ContentStatus } from "@/lib/content/interface";
 import { ConsolePage } from "@/pages/console";
 import { ContentPage } from "@/pages/content";
 import { PackPage } from "@/pages/pack";
@@ -48,6 +52,11 @@ const initialInstances: Instance[] = [
   },
 ];
 const calls: unknown[] = [];
+let identifyMods = false;
+let modEnabled = true;
+const contentListeners = new Set<(status: ContentStatus) => void>();
+let holdSearch = false;
+let resolveSearch: (() => void) | undefined;
 const noop = () => {};
 function snapshot(id: string) {
   return {
@@ -56,11 +65,21 @@ function snapshot(id: string) {
     worlds: [],
     servers: [],
     screenshots: [{ name: "shot.png", modifiedAt: 1, size: 1 }],
-    logs: [{ name: "latest.log", kind: "log", modifiedAt: 1, size: 1 }],
+    logs: [
+      { name: "latest.log", kind: "log", modifiedAt: 1, size: 1 },
+      { name: "archived.log.gz", kind: "log", modifiedAt: 1, size: 1 },
+      { name: "extra.txt", kind: "log", modifiedAt: 1, size: 1 },
+    ],
   };
 }
 Object.assign(window, {
   electronAPI: {
+    game: {
+      components: async () => [
+        { id: "lwjgl", name: "LWJGL", version: "3.3.1" },
+        { id: "minecraft", name: "Minecraft", version: "1.20.1" },
+      ],
+    },
     windowState: {
       isMacOS: true,
       getIsFullScreen: async () => false,
@@ -72,7 +91,11 @@ Object.assign(window, {
     },
     instanceData: {
       snapshot: async (id: string) => ({ ok: true, data: snapshot(id) }),
-      command: async (command: { action: string; instanceId: string }) => {
+      command: async (command: {
+        action: string;
+        instanceId: string;
+        name?: string;
+      }) => {
         calls.push(command);
         return {
           ok: true,
@@ -81,23 +104,119 @@ Object.assign(window, {
             content:
               command.action === "screenshot.preview"
                 ? "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aRZ8AAAAASUVORK5CYII="
-                : "archived log for " + command.instanceId,
+                : "archived log for " +
+                  command.instanceId +
+                  "\n" +
+                  command.name +
+                  "\n<unsafe>\n" +
+                  "fixture log line\n".repeat(2000),
           },
         };
       },
     },
     content: {
-      onChanged: () => noop,
+      preparePreview: async () => ({ ok: true, data: null }),
+      packOverview: async () => ({
+        ok: true,
+        data: identifyMods
+          ? {
+              name: "Master of Cipher",
+              currentVersion: "2.0.0",
+              source: {
+                provider: "curseforge",
+                projectId: "1526695",
+                versionId: "9418600",
+              },
+              website: "https://www.curseforge.com/minecraft/modpacks/fixture",
+              versions: [
+                {
+                  id: "next",
+                  name: "Master of Cipher-2.1.1.zip",
+                  filename: "pack.zip",
+                },
+              ],
+            }
+          : null,
+      }),
+      packChangelog: async () => ({
+        ok: true,
+        data: {
+          text: "<h2>Major Updates</h2><ul><li>Updated mods</li></ul><script>window.unsafeChangelog = true</script>",
+          format: "html",
+        },
+      }),
+      onChanged: (callback: (status: ContentStatus) => void) => {
+        contentListeners.add(callback);
+        return () => {
+          contentListeners.delete(callback);
+        };
+      },
       status: async () => ({
         status: { busy: false, message: "", completed: 0, total: 0 },
         curseforgeConfigured: true,
       }),
       inventory: async (id: string) => ({
         ok: true,
-        data: { instanceId: id, items: [], worlds: [] },
+        data: {
+          instanceId: id,
+          items: identifyMods
+            ? [
+                {
+                  id: "file:mods::renamed.jar",
+                  kind: "mod",
+                  filename: "renamed.jar",
+                  directory: "mods",
+                  enabled: modEnabled,
+                  managed: false,
+                  modified: false,
+                  provider: null,
+                  projectId: null,
+                  versionId: null,
+                  checksum: "abc",
+                },
+              ]
+            : [],
+          worlds: [],
+        },
       }),
+      metadata: async (id: string) => ({
+        ok: true,
+        data: {
+          instanceId: id,
+          worlds: [],
+          items: [
+            {
+              id: "file:mods::renamed.jar",
+              checksum: "abc",
+              metadata: {
+                provider: "curseforge",
+                versionName: "1.2.3",
+                project: {
+                  id: "123",
+                  name: "Identified Fixture Mod",
+                  description: "Online description",
+                  author: "Fixture author",
+                  downloads: 2,
+                  url: "https://www.curseforge.com/minecraft/mc-mods/fixture",
+                },
+              },
+            },
+          ],
+        },
+      }),
+      manage: async (command: { action: string; instanceId: string }) => {
+        calls.push(command);
+        modEnabled = command.action !== "disable";
+        return window.electronAPI.content.inventory(command.instanceId);
+      },
       search: async (query: unknown) => {
         calls.push(query);
+        if (holdSearch) {
+          holdSearch = false;
+          await new Promise<void>((resolve) => {
+            resolveSearch = resolve;
+          });
+        }
         return { ok: true, data: { projects: [], more: false } };
       },
     },
@@ -146,11 +265,20 @@ const auth = {
   auth: { accounts: [] },
 } as unknown as ReturnType<typeof useAuth>;
 
+function ToastProbe() {
+  const { toasts } = useToastManager();
+  useEffect(() => {
+    Object.assign(window, { fixtureToasts: toasts.map((item) => item.title) });
+  }, [toasts]);
+  return null;
+}
 function Fixture() {
   const nav = useLauncherNavigation();
   const [instances, setInstances] = useState(initialInstances);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
+  const [notificationJobs, setNotificationJobs] = useState(game.jobs);
+  const notifications = useNotifications("", notificationJobs);
   const selection = useInstanceSelection(instances, nav.page);
   useEffect(() => {
     const target = instanceToolDestination(
@@ -172,7 +300,10 @@ function Fixture() {
       return true;
     },
     openDirectory: async () => {},
-    exportLog: async () => true,
+    exportLog: async (id: string) => {
+      calls.push({ action: "export.log", id });
+      return true;
+    },
   } as ReturnType<typeof useGame>;
   const library = {
     instances,
@@ -192,6 +323,39 @@ function Fixture() {
   };
   Object.assign(window, {
     flow: {
+      holdSearch: () => {
+        holdSearch = true;
+      },
+      resolveSearch: () => resolveSearch?.(),
+      finishContent: () => {
+        for (const listener of contentListeners)
+          listener({
+            busy: true,
+            message: "Đang cài đặt…",
+            completed: 0,
+            total: 1,
+          });
+        for (const listener of contentListeners)
+          listener({
+            busy: false,
+            message: "Đã cài đặt. Mở Thư viện để tải/chạy game.",
+            completed: 1,
+            total: 1,
+          });
+      },
+      failNotification: () =>
+        setNotificationJobs(
+          game.jobs.map((job) => ({
+            ...job,
+            phase: "error",
+            message: "Fixture failure",
+          })),
+        ),
+      enableModMetadata: () => {
+        identifyMods = true;
+        game.activeId = null;
+        game.activeIds = [];
+      },
       page: nav.page,
       selected: selection.selectedInstanceId,
       calls,
@@ -205,6 +369,7 @@ function Fixture() {
     <AuthContext.Provider value={auth}>
       <TooltipProvider>
         <ToasterProvider>
+          <ToastProbe />
           <nav data-test-toolbar>
             {(
               [
@@ -318,6 +483,9 @@ function Fixture() {
                     instances={instances}
                     {...selection}
                   />
+                )}
+                {nav.page === "notifications" && (
+                  <NotificationsPage {...notifications} />
                 )}
                 {nav.page === "mods" && (
                   <ContentPage

@@ -6,8 +6,8 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@gorth-io/primitive/default/dialog";
-import { Field, FieldLabel } from "@gorth-io/primitive/default/field";
+} from "@gorth-com/primitive/default/dialog";
+import { Field, FieldLabel } from "@gorth-com/primitive/default/field";
 import {
   Select,
   SelectTrigger,
@@ -15,11 +15,11 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
-} from "@gorth-io/primitive/custom/select";
-import { Progress } from "@gorth-io/primitive/default/progress";
-import { Separator } from "@gorth-io/primitive/default/separator";
-import { Button } from "@gorth-io/primitive/custom/button";
-import { cn } from "@gorth-io/primitive/cores/cn";
+} from "@gorth-com/primitive/custom/select";
+import { Progress } from "@gorth-com/primitive/default/progress";
+import { Separator } from "@gorth-com/primitive/default/separator";
+import { Button } from "@gorth-com/primitive/custom/button";
+import { cn } from "@gorth-com/primitive/cores/cn";
 import { LogViewer } from "./log-viewer";
 import { OptionalModsTable } from "./optional-mods-table";
 import type {

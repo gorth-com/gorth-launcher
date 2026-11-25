@@ -1,7 +1,7 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { receiveAuthCallback } from "@/services/auth-callback";
-import { getUserProfile } from "@/services/user-profile";
+import { rawGetUserProfile } from "@/models/user-profile";
 import type {
   DesktopRequestContext,
   DesktopServerOptions,
@@ -21,7 +21,7 @@ export function createDesktopHandler(options: DesktopServerOptions) {
   const context: DesktopRequestContext = {
     ...options,
     receiveAuthCallback,
-    getUserProfile,
+    getUserProfile: rawGetUserProfile,
   };
   const fetch = async (request: Request) => {
     backend ??= import(/* @vite-ignore */ entry) as Promise<BackendModule>;

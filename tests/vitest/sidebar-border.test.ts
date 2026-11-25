@@ -7,7 +7,7 @@ describe("application sidebar border contract", () => {
       new URL("../../layouts/dashboard.tsx", import.meta.url),
       "utf8",
     );
-    expect(source).toContain('"@gorth-io/primitive/custom/sidebar"');
+    expect(source).toContain('"@gorth-com/primitive/custom/sidebar"');
     expect(source).not.toContain("@/components/dashboard/app-sidebar");
     expect(source).toContain("<SidebarHeader");
     expect(source).toContain('size="lg"');
@@ -30,12 +30,12 @@ describe("application sidebar border contract", () => {
       "utf8",
     );
     expect(nav).toContain('"@/components/dashboard/nav-identity"');
-    expect(nav).not.toContain('"@gorth-io/primitive/dashboard/');
+    expect(nav).not.toContain('"@gorth-com/primitive/dashboard/');
     expect(nav).toContain("<NavAccount");
     expect(nav).toContain("<NavIdentity");
     expect(nav).toContain("<DashboardMenu");
     expect(nav).not.toContain("AvatarFallback");
     expect(menu).toContain("<PortalPanel");
-    expect(menu).toContain('"@gorth-io/primitive/default/button"');
+    expect(menu).toContain('"@gorth-com/primitive/default/button"');
   });
 });

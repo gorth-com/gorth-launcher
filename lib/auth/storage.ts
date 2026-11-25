@@ -16,19 +16,37 @@ const filename = () =>
 export function nativeVaultExists() {
   return existsSync(filename());
 }
-export function requireSecureStorage() {
+let secureStorageReady = false;
+export async function requireSecureStorage() {
+  let available = false;
+  try {
+    // Electron SDK 1.7.21 encrypts sessions synchronously. On macOS, checking
+    // the async provider as well can request the same Keychain item twice.
+    // Keep this compatibility preflight with the SDK's provider until the SDK
+    // supports async encryption; vault/proxy storage remains asynchronous.
+    available =
+      process.platform === "darwin"
+        ? safeStorage.isEncryptionAvailable()
+        : await safeStorage.isAsyncEncryptionAvailable();
+  } catch (error) {
+    secureStorageReady = false;
+    throw error;
+  }
   if (
-    !safeStorage.isEncryptionAvailable() ||
+    !available ||
     (process.platform === "linux" &&
       safeStorage.getSelectedStorageBackend() === "basic_text")
-  )
+  ) {
+    secureStorageReady = false;
     throw new Error("Unlock your system keychain before signing in.");
+  }
+  secureStorageReady = true;
 }
-export function initializeSecureStorage() {
-  requireSecureStorage();
-  // Availability alone does not access the key. Warm the same synchronous
-  // encryptor used by the SDK after app readiness, without persisting a value.
-  safeStorage.encryptString("gorth-keychain-startup");
+function assertSecureStorageReady() {
+  // Better Auth's Storage contract is synchronous; readiness is checked before
+  // entering its actions. The SDK still owns encryption of these opaque values.
+  if (!secureStorageReady)
+    throw new Error("Unlock your system keychain before signing in.");
 }
 function entries(): Record<string, string> {
   if (!nativeVaultExists()) return {};
@@ -57,11 +75,11 @@ export function clearNativeSessionStorage() {
 }
 export const nativeStorage = {
   getItem(key: string) {
-    requireSecureStorage();
+    assertSecureStorageReady();
     return entries()[key] ?? null;
   },
   setItem(key: string, value: unknown) {
-    requireSecureStorage();
+    assertSecureStorageReady();
     if (typeof value !== "string" || !key.startsWith("gorth-native."))
       throw new Error("Invalid auth storage key");
     const data = { ...entries(), [key]: value };

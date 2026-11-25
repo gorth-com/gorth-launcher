@@ -54,6 +54,233 @@ void (async () => {
     };
     await window.loadFile(path.join(directory, "renderer/index.html"));
     await wait("!!window.flow && !!document.querySelector('main')");
+    if (process.argv.includes("--page-cards")) {
+      await run("window.flow.navigate('downloads')");
+      await wait("!!document.querySelector('[data-download-item]')");
+      result.downloadCards = await run(`(() => {
+        const layout = document.querySelector('[data-downloads-layout]');
+        const card = layout.querySelector('[data-download-item]');
+        const directory = layout.querySelector('[data-download-directory]');
+        const actions = card.querySelector('[data-download-actions]');
+        return {
+          columns: getComputedStyle(layout).gridTemplateColumns.split(' ').length,
+          ratio: layout.firstElementChild.getBoundingClientRect().width / layout.querySelector('aside').getBoundingClientRect().width,
+          padding: getComputedStyle(card).padding,
+          directoryCard: directory.getAttribute('data-slot') === 'card',
+          below: card.getBoundingClientRect().top > directory.getBoundingClientRect().bottom,
+          topRight: Math.abs(actions.getBoundingClientRect().top - card.getBoundingClientRect().top - 16) < 2 && Math.abs(actions.getBoundingClientRect().right - card.getBoundingClientRect().right + 16) < 2,
+        };
+      })()`);
+      await run(
+        "window.flow.navigate('notifications'); window.flow.failNotification()",
+      );
+      await wait(
+        "document.querySelector('[data-notifications-layout]')?.textContent.includes('Lỗi')",
+      );
+      result.notificationCards = await run(`(() => {
+        const layout = document.querySelector('[data-notifications-layout]');
+        const card = layout.querySelector('[data-notification-item]');
+        return {
+          columns: getComputedStyle(layout).gridTemplateColumns.split(' ').length,
+          padding: getComputedStyle(card).padding,
+          title: !card.querySelector('[data-slot="card-title"]').textContent.includes('Mới'),
+          badges: Array.from(layout.querySelectorAll('[data-slot="badge"]')).some(badge => badge.textContent === 'Lỗi'),
+          heading: document.querySelector('main header').textContent.includes('Notifications'),
+          unread: document.querySelector('main header [aria-label="Thông báo mới"]').textContent === '2',
+          removed: !document.querySelector('main').textContent.includes('thông báo chưa đọc ·'),
+        };
+      })()`);
+      await run(
+        "Array.from(document.querySelectorAll('main header button')).find(button => button.textContent.includes('Đánh dấu đã đọc')).click()",
+      );
+      await wait(
+        "document.querySelector('main header [aria-label=\"Thông báo mới\"]').textContent === '0'",
+      );
+      await run("window.flow.navigate('console')");
+      await wait(
+        "!!document.querySelector('[data-game-console] header [aria-label=\"Instance console\"]')",
+      );
+      result.consolePicker = true;
+      await run("window.flow.navigate('pack')");
+      await wait("!!document.querySelector('main form[role=search]')");
+      await run(
+        "window.flow.holdSearch(); document.querySelector('main form[role=search] button[type=submit]').click()",
+      );
+      await wait("!!document.querySelector('main [data-slot=spinner]')");
+      result.searchSpinner = await run(
+        "!document.querySelector('main').textContent.includes('Đang xử lý')",
+      );
+      await run("window.flow.resolveSearch()");
+      await wait("!document.querySelector('main [data-slot=spinner]')");
+      await run("window.flow.finishContent()");
+      await wait("window.fixtureToasts?.includes('Cài đặt hoàn tất.')");
+      result.completionToast = await run(
+        "!document.querySelector('main').textContent.includes('Đã cài đặt. Mở Thư viện')",
+      );
+      window.destroy();
+      return;
+    }
+    if (process.argv.includes("--logs")) {
+      await run(
+        "window.flow.navigate('instances/edit/b', { section: 'console' })",
+      );
+      await wait(
+        "document.querySelector('[data-game-console] pre')?.textContent.includes('Beta log')",
+      );
+      result.consoleLayout = await run(`(() => {
+        const page = document.querySelector('[data-game-console]');
+        const toolbar = page.querySelector('[data-console-toolbar]');
+        const block = page.querySelector('[data-slot="code-block"]');
+        const stop = Array.from(toolbar.querySelectorAll('button')).find(button => button.textContent.trim() === 'Stop');
+        return {
+          toolbar: toolbar.getBoundingClientRect().height,
+          fills: Math.abs(block.getBoundingClientRect().bottom - page.getBoundingClientRect().bottom) < 2,
+          tall: block.getBoundingClientRect().height > 400,
+          scrollArea: !!block.querySelector('[data-slot="scroll-area"]'),
+          destructive: stop.className.includes('destructive'),
+          text: page.textContent.includes('Game logs, launch output') && page.textContent.includes('Export xuất buffer gốc'),
+        };
+      })()`);
+      await run(
+        "Array.from(document.querySelectorAll('[data-game-console] button')).find(button => button.textContent.trim() === 'Clear').click()",
+      );
+      await wait(
+        "document.querySelector('[data-game-console] pre')?.textContent.includes('Chưa có log')",
+      );
+      await run(
+        "Array.from(document.querySelectorAll('[data-game-console] button')).find(button => button.textContent.trim() === 'Export').click()",
+      );
+      result.consoleExport = await run(
+        "window.flow.calls.some(call => call.action === 'export.log' && call.id === 'b')",
+      );
+      await run(
+        "window.flow.navigate('instances/edit/b', { section: 'logs' })",
+      );
+      await wait(
+        "document.querySelector('[data-other-logs] pre')?.textContent.includes('latest.log')",
+      );
+      await run(
+        "document.querySelector('[aria-label=\"Other log file\"]').click()",
+      );
+      await wait(
+        "Array.from(document.querySelectorAll('[role=option]')).some(option => option.textContent.includes('archived.log.gz'))",
+      );
+      await run(
+        "Array.from(document.querySelectorAll('[role=option]')).find(option => option.textContent.includes('archived.log.gz')).click()",
+      );
+      await wait(
+        "document.querySelector('[data-other-logs] pre')?.textContent.includes('archived.log.gz')",
+      );
+      result.otherLogs = await run(`(() => {
+        const page = document.querySelector('[data-other-logs]');
+        const block = page.querySelector('[data-slot="code-block"]');
+        return {
+          gzip: block.textContent.includes('archived.log.gz'),
+          literal: block.textContent.includes('<unsafe>') && !block.querySelector('unsafe'),
+          scrollArea: !!block.querySelector('[data-slot="scroll-area"]'),
+          height: block.getBoundingClientRect().height,
+          export: Array.from(page.querySelectorAll('button')).some(button => button.textContent.trim() === 'Export'),
+          fits: page.getBoundingClientRect().bottom <= window.innerHeight,
+        };
+      })()`);
+      await run(
+        "Array.from(document.querySelectorAll('[data-other-logs] button')).find(button => button.textContent.trim() === 'Bottom').click()",
+      );
+      await wait(
+        "document.querySelector('[data-other-logs] [data-slot=\"scroll-area-viewport\"]').scrollTop > 0",
+      );
+      result.otherLogsBottom = true;
+      await run(`(() => {
+        const input = document.querySelector('[aria-label="Search other logs"]');
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, 'archived log');
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      })()`);
+      await run(
+        "document.querySelector('[data-other-logs] form button[type=submit]').click()",
+      );
+      await wait("!!document.querySelector('[data-log-line=\"0\"].bg-accent')");
+      result.otherLogsFind = true;
+      await run("window.flow.navigate('console')");
+      await wait(
+        "document.querySelector('[data-game-console] header')?.textContent.includes('Console')",
+      );
+      result.consoleHeading = true;
+      window.destroy();
+      return;
+    }
+    if (process.argv.includes("--installed-mods")) {
+      await run(
+        "window.flow.enableModMetadata(); window.flow.navigate('instances/edit/a', { section: 'overview' })",
+      );
+      await wait(
+        "document.querySelector('[data-modpack-overview]')?.textContent.includes('Updated mods')",
+      );
+      result.modpackOverview = await run(`(() => {
+        const card = document.querySelector('[data-modpack-overview]');
+        return {
+          info: ['Master of Cipher', '2.0.0', '1526695', '9418600', 'CurseForge'].every(text => card.textContent.includes(text)),
+          actions: Array.from(card.querySelectorAll('button')).filter(button => ['Update Pack', 'Update From File'].includes(button.textContent.trim())).length,
+          changelog: card.textContent.includes('Major Updates') && !window.unsafeChangelog && !card.querySelector('script'),
+        };
+      })()`);
+      await run(
+        "window.flow.navigate('instances/edit/a', { section: 'version' })",
+      );
+      await wait(
+        "document.querySelector('[data-runtime-components]')?.textContent.includes('3.3.1')",
+      );
+      result.runtimeComponents = await run(`(() => {
+        const container = document.querySelector('[data-runtime-components]');
+        const card = container.querySelector('[data-slot="card"]');
+        return {
+          table: !!container.querySelector('table'),
+          minecraft: container.textContent.includes('1.20.1'),
+          padding: getComputedStyle(card).padding,
+          gap: getComputedStyle(card).gap,
+          ratio: container.firstElementChild.getBoundingClientRect().width / card.getBoundingClientRect().width,
+        };
+      })()`);
+      await run(
+        "window.flow.enableModMetadata(); window.flow.navigate('instances/edit/a', { section: 'mod' })",
+      );
+      await wait(
+        "document.querySelector('main')?.textContent.includes('Identified Fixture Mod')",
+      );
+      result.installedMods = await run(`(() => {
+        const container = document.querySelector('[data-installed-content]');
+        const sidebar = container.querySelector('aside');
+        const toggle = container.querySelector('[role="switch"]');
+        const card = toggle.closest('[data-slot="card"]');
+        return {
+          columns: getComputedStyle(container).gridTemplateColumns.split(' ').length,
+          ratio: container.firstElementChild.getBoundingClientRect().width / sidebar.getBoundingClientRect().width,
+          online: card.textContent.includes('CurseForge') && card.textContent.includes('1.2.3') && card.textContent.includes('Fixture author'),
+          checked: toggle.getAttribute('aria-checked'),
+          footerJustify: getComputedStyle(toggle.parentElement).justifyContent,
+          search: !!sidebar.querySelector('input'),
+          searchOutside: !sidebar.querySelector('[data-slot="card"] input') && !!sidebar.querySelector('form button[type="submit"]'),
+          padding: getComputedStyle(sidebar.querySelector('[data-slot="card"]')).padding,
+          gap: getComputedStyle(sidebar.querySelector('[data-slot="card"]')).gap,
+        };
+      })()`);
+      await run(
+        "document.querySelector('[data-installed-content] [role=switch]').click()",
+      );
+      await wait(
+        "document.querySelector('[data-installed-content] [role=switch]')?.getAttribute('aria-checked') === 'false'",
+      );
+      await run(
+        "document.querySelector('[data-installed-content] [role=switch]').click()",
+      );
+      await wait(
+        "document.querySelector('[data-installed-content] [role=switch]')?.getAttribute('aria-checked') === 'true'",
+      );
+      result.installedMods.toggled = await run(
+        "window.flow.calls.some(call => call.action === 'disable') && window.flow.calls.some(call => call.action === 'enable')",
+      );
+      window.destroy();
+      return;
+    }
     result.badges = await run(
       `Array.from(document.querySelectorAll('[data-slot="sidebar-menu-badge"]')).map(el => ({ text: el.textContent, width: el.getBoundingClientRect().width, height: el.getBoundingClientRect().height }))`,
     );
@@ -178,9 +405,6 @@ void (async () => {
     );
     await run("document.querySelector('[aria-label=\"Other logs\"]').click()");
     await wait("document.body.innerText.includes('latest.log')");
-    await run(
-      `Array.from(document.querySelectorAll('button')).find(el=>el.textContent.includes('latest.log')).click()`,
-    );
     await wait(
       "document.querySelector('[data-slot=\"code-block-content\"]')?.textContent.includes('archived log for b')",
     );

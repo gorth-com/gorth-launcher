@@ -1,14 +1,14 @@
 import type { ComponentProps, ReactNode } from "react";
-import type { LucideIcon } from "@gorth-io/primitive/cores/lucide";
+import type { LucideIcon } from "@gorth-com/primitive/cores/lucide";
 import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-} from "@gorth-io/primitive/custom/avatar";
-import { SidebarMenuButton } from "@gorth-io/primitive/custom/sidebar";
-import { cn } from "@gorth-io/primitive/cores/cn";
-import { formatUserInitials } from "@gorth-io/primitive/utils/formatter";
-import type { UserProps } from "@gorth-io/primitive/utils/interface";
+} from "@gorth-com/primitive/custom/avatar";
+import { SidebarMenuButton } from "@gorth-com/primitive/custom/sidebar";
+import { cn } from "@gorth-com/primitive/cores/cn";
+import { formatUserInitials } from "@gorth-com/primitive/utils/formatter";
+import type { UserProps } from "@gorth-com/primitive/utils/interface";
 
 // Mirror Primitive's identity presentation without importing its Next.js module.
 export function NavAvatar({

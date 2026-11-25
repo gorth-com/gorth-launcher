@@ -3,7 +3,7 @@ import { access, stat } from "node:fs/promises";
 import { constants } from "node:fs";
 import { BrowserWindow, dialog, ipcMain, nativeTheme } from "electron";
 import { openLauncherFolder } from "@/main/services/folders";
-import { z } from "@gorth-io/structure/cores/zod";
+import { z } from "@gorth-com/structure/cores/zod";
 import { getRpcRendererUrl, isRpcRendererUrl } from "@/main/rpc/sender";
 import { registerJavaSettingsIpc } from "@/main/services/java-settings";
 

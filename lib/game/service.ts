@@ -3,10 +3,7 @@ import os from "node:os";
 import { effectiveGameSettings } from "@/lib/library/game-preferences";
 import { launchProcess } from "./launch-process";
 import { requestConfirmation } from "@/main/services/confirmation";
-import {
-  showGameConsole,
-  hideGameConsole,
-} from "@/main/services/game-presentation";
+import { showGameConsole } from "@/main/services/game-presentation";
 import { spawn, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
@@ -35,9 +32,10 @@ import { getJavaEnvironment } from "@/utils/environment";
 import { readJson } from "./files";
 import { manifest } from "./metadata";
 import { supportedRelease } from "./catalog";
-import type { createLibraryStore } from "@/services/library-store";
+import type { rawCreateLibraryStore } from "@/models/instance";
 import { contentIsBusy } from "@/lib/content/state";
 import { transferProgress } from "./transfer";
+import { runtimeComponents } from "./runtime-components";
 
 interface WorkCommand {
   action: "install" | "play";
@@ -266,7 +264,7 @@ async function launch(
     )
       owner.hide();
     if (settings.minecraftOptions?.consoleOnLaunch)
-      void showGameConsole(instance.id).catch(() => {
+      void showGameConsole(instance.id, owner).catch(() => {
         update(
           instance.id,
           { message: "Minecraft is running; its console could not be opened." },
@@ -306,9 +304,7 @@ async function launch(
   if (settings.minecraftOptions?.hideLauncher && owner && !owner.isDestroyed())
     owner.show();
   if (crashed && settings.minecraftOptions?.consoleOnCrash)
-    await showGameConsole(instance.id);
-  else if (settings.minecraftOptions?.hideConsoleOnExit)
-    hideGameConsole(instance.id);
+    await showGameConsole(instance.id, owner);
   if (settings.postExitCommand && !task.controller.signal.aborted)
     await lifecycle(
       settings.postExitCommand,
@@ -559,7 +555,7 @@ export function cancelGame() {
     }
 }
 export async function registerGameIpc(
-  library: Awaited<ReturnType<typeof createLibraryStore>>,
+  library: Awaited<ReturnType<typeof rawCreateLibraryStore>>,
 ) {
   historyProvider = library.playHistory;
   consoleLogLimit = () => library.snapshot().settings.consoleLogLimit ?? 1000;
@@ -602,6 +598,12 @@ export async function registerGameIpc(
     return (await manifest(root(), AbortSignal.timeout(20_000))).versions
       .filter(supportedRelease)
       .map((version) => ({ id: version.id, type: version.type }));
+  });
+  ipcMain.handle("game:components", async (event, id: unknown) => {
+    trusted(event);
+    if (typeof id !== "string" || !/^[a-zA-Z0-9-]{1,80}$/.test(id))
+      throw new Error("Instance không hợp lệ.");
+    return runtimeComponents(root(), library.getInstance(id));
   });
   ipcMain.handle("game:export-log", async (event, raw) => {
     trusted(event);

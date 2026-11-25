@@ -2,7 +2,7 @@ import path from "node:path";
 import { getLauncherFolders } from "@/utils/launcher-folders";
 import os from "node:os";
 import { app, ipcMain, dialog, type BrowserWindow } from "electron";
-import { z } from "@gorth-io/structure/cores/zod";
+import { z } from "@gorth-com/structure/cores/zod";
 import { discoverJava, inspectJava, checkJava } from "@/lib/game/java";
 import {
   javaPreferencesSchema,

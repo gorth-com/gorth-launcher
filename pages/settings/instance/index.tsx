@@ -1,4 +1,4 @@
-import { Box } from "@gorth-io/primitive/cores/lucide";
+import { Box } from "@gorth-com/primitive/cores/lucide";
 import { InstanceSelect } from "@/components/element/instance-select";
 import { useState } from "react";
 import { PageHeading } from "@/components/heading";
@@ -7,8 +7,8 @@ import {
   CardHeader,
   CardTitle,
   CardContent,
-} from "@gorth-io/primitive/default/card";
-import { Button } from "@gorth-io/primitive/custom/button";
+} from "@gorth-com/primitive/default/card";
+import { Button } from "@gorth-com/primitive/custom/button";
 import { PageShell } from "@/layouts/page-shell";
 import { InstanceSettingsForm } from "@/components/form/instance-settings-form";
 import type {

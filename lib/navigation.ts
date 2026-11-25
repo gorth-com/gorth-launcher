@@ -7,7 +7,7 @@ import {
   createRouter,
   redirect,
   type RouteComponent,
-} from "@gorth-io/primitive/cores/tanstack/router";
+} from "@gorth-com/primitive/cores/tanstack/router";
 
 function createLauncherRouter(
   component: RouteComponent,

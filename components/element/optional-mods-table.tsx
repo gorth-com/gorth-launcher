@@ -1,11 +1,14 @@
-import { ScrollArea, ScrollBar } from "@gorth-io/primitive/default/scroll-area";
+import {
+  ScrollArea,
+  ScrollBar,
+} from "@gorth-com/primitive/default/scroll-area";
 import { useState } from "react";
 import {
   useTable,
   tableFeatures,
   rowSelectionFeature,
   type RowSelectionState,
-} from "@gorth-io/primitive/cores/tanstack/table";
+} from "@gorth-com/primitive/cores/tanstack/table";
 import {
   Table,
   TableHeader,
@@ -13,11 +16,11 @@ import {
   TableHead,
   TableRow,
   TableCell,
-} from "@gorth-io/primitive/default/table";
-import { Checkbox } from "@gorth-io/primitive/default/checkbox";
-import { Button } from "@gorth-io/primitive/custom/button";
-import { DialogFooter } from "@gorth-io/primitive/default/dialog";
-import { Separator } from "@gorth-io/primitive/default/separator";
+} from "@gorth-com/primitive/default/table";
+import { Checkbox } from "@gorth-com/primitive/default/checkbox";
+import { Button } from "@gorth-com/primitive/custom/button";
+import { DialogFooter } from "@gorth-com/primitive/default/dialog";
+import { Separator } from "@gorth-com/primitive/default/separator";
 import { toast } from "@/providers/toaster";
 import type { OptionalMod } from "@/lib/content/interface";
 

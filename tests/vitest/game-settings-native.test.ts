@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { build } from "esbuild";
 import { expect, it } from "vitest";
-it("opens, reuses, hides and restores a real isolated game console window", async () => {
+it("opens the instance log through the existing launcher window without creating another window", async () => {
   if (process.platform === "darwin" && process.env.CODEX_SANDBOX === "seatbelt")
     throw new Error("Electron needs GUI permission outside the sandbox.");
   const root = fileURLToPath(new URL("../../", import.meta.url));
@@ -38,7 +38,10 @@ it("opens, reuses, hides and restores a real isolated game console window", asyn
       path.join(directory, "renderer/main_window/public/index.html"),
       "<!doctype html><title>Isolated console fixture</title>",
     );
-    await writeFile(path.join(directory, "main/preload.cjs"), "");
+    await writeFile(
+      path.join(directory, "main/preload.cjs"),
+      'const { ipcRenderer } = require("electron"); ipcRenderer.on("game:open-console", (_event, id) => ipcRenderer.send("fixture:console", id));',
+    );
     await build({
       absWorkingDir: root,
       entryPoints: ["tests/fixtures/game-settings/main.ts"],

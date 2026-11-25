@@ -1,4 +1,4 @@
-import { createDesktopRpcHandler } from "@gorth-io/structure/modules/desktop";
+import { createDesktopRpcHandler } from "@gorth-com/structure/modules/desktop";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import type { AnyRouter } from "@trpc/server";
 import type { RpcResponse } from "@/lib/rpc/interface";

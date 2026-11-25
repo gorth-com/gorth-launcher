@@ -8,8 +8,32 @@ import type {
   ContentResult,
   ContentStatus,
   ContentVersion,
+  ModpackOverview,
 } from "@/lib/content/interface";
 export const contentApi = {
+  preparePreview: (): Promise<ContentResult<null>> =>
+    ipcRenderer.invoke("content:prepare-preview"),
+  packOverview: (
+    instanceId: string,
+  ): Promise<ContentResult<ModpackOverview | null>> =>
+    ipcRenderer.invoke("content:pack-overview", { instanceId }),
+  packChangelog: (
+    instanceId: string,
+    versionId: string,
+  ): Promise<ContentResult<{ text: string; format: "html" | "text" }>> =>
+    ipcRenderer.invoke("content:pack-changelog", { instanceId, versionId }),
+  packWebsite: (instanceId: string): Promise<ContentResult<null>> =>
+    ipcRenderer.invoke("content:pack-website", { instanceId }),
+  updatePack: (
+    instanceId: string,
+    versionId: string,
+    fromFile = false,
+  ): Promise<ContentResult<{ cancelled: boolean }>> =>
+    ipcRenderer.invoke("content:pack-update", {
+      instanceId,
+      versionId,
+      fromFile,
+    }),
   status: (): Promise<{
     status: ContentStatus;
     curseforgeConfigured: boolean;
@@ -27,6 +51,8 @@ export const contentApi = {
     ipcRenderer.invoke("content:install", input),
   inventory: (instanceId: string): Promise<ContentResult<ContentInventory>> =>
     ipcRenderer.invoke("content:inventory", { instanceId }),
+  metadata: (instanceId: string): Promise<ContentResult<ContentInventory>> =>
+    ipcRenderer.invoke("content:metadata", { instanceId }),
   updates: (instanceId: string): Promise<ContentResult<ContentInventory>> =>
     ipcRenderer.invoke("content:updates", { instanceId }),
   manage: (input: ContentManage): Promise<ContentResult<ContentInventory>> =>

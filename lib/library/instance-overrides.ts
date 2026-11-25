@@ -1,4 +1,4 @@
-import { z } from "@gorth-io/structure/cores/zod";
+import { z } from "@gorth-com/structure/cores/zod";
 import type { InstanceSettings } from "@/utils/interface";
 
 export const instanceOverridesSchema = z.object({

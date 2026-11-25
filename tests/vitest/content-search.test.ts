@@ -1,12 +1,31 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { loaderCatalog } from "@/utils/constant";
 import { querySchema } from "@/lib/content/schema";
-import { searchContent } from "@/lib/content/providers";
+import { searchContent, contentVersions } from "@/lib/content/providers";
 import { fetcher } from "@/utils/fetcher";
 
 vi.mock("@/utils/fetcher", () => ({ fetcher: vi.fn() }));
 vi.mock("@/utils/environment", () => ({ curseforgeApiKey: "test-key" }));
 beforeEach(() => vi.mocked(fetcher).mockReset());
+
+it("filters release choices by both target Minecraft version and loader, and restores unrestricted browsing", async () => {
+  const file = (id: number, gameVersions: string[]) => ({
+    id, modId: 123, displayName: String(id), fileName: `${id}.jar`,
+    downloadUrl: "https://edge.forgecdn.net/file.jar",
+    fileLength: 12, isAvailable: true, releaseType: 1,
+    gameVersions, hashes: [], dependencies: [],
+  });
+  const data = [file(1, ["1.20.1", "Forge"]), file(2, ["1.20.1", "Fabric"]), file(3, ["1.21.1", "Forge"])];
+  vi.mocked(fetcher).mockResolvedValue({ data: { data } } as never);
+  const target = { provider: "curseforge" as const, kind: "mod" as const, query: "test", version: "1.20.1", loader: "Forge", offset: 0 };
+  const filtered = await contentVersions(target, "123", new AbortController().signal);
+  expect(filtered.map((v) => v.id)).toEqual(["1"]);
+  const url = new URL(vi.mocked(fetcher).mock.calls[0][0].url!);
+  expect(url.searchParams.get("gameVersion")).toBe("1.20.1");
+  expect(url.searchParams.get("modLoaderType")).toBe("1");
+  const all = await contentVersions({ ...target, version: "", loader: "" }, "123", new AbortController().signal);
+  expect(all).toHaveLength(3);
+});
 
 const query = {
   provider: "modrinth" as const,

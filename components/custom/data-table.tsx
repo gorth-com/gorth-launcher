@@ -6,15 +6,15 @@ import {
   sortFns,
   tableFeatures,
   useTable,
-} from "@gorth-io/primitive/cores/tanstack/table";
-import { useVirtualizer } from "@gorth-io/primitive/cores/tanstack/virtual";
+} from "@gorth-com/primitive/cores/tanstack/table";
+import { useVirtualizer } from "@gorth-com/primitive/cores/tanstack/virtual";
 import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
-} from "@gorth-io/primitive/cores/lucide";
-import { Button } from "@gorth-io/primitive/custom/button";
-import { Input } from "@gorth-io/primitive/default/input";
+} from "@gorth-com/primitive/cores/lucide";
+import { Button } from "@gorth-com/primitive/custom/button";
+import { Input } from "@gorth-com/primitive/default/input";
 import {
   Table,
   TableBody,
@@ -22,7 +22,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@gorth-io/primitive/default/table";
+} from "@gorth-com/primitive/default/table";
 
 const dataTableFeatures = tableFeatures({
   rowSortingFeature,
@@ -80,7 +80,7 @@ function DataTable<T extends { id: string }>({
     : rows.map((row, index) => ({ row, index }));
 
   return (
-    <div className="space-y-2">
+    <div className="flex min-w-0 flex-col gap-2">
       <Input
         className="h-9"
         aria-label={searchLabel}

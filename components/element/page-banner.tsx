@@ -4,7 +4,7 @@ interface PageBannerProps {
   image: string;
   children?: ReactNode;
 }
-import { Card, CardContent } from "@gorth-io/primitive/default/card";
+import { Card, CardContent } from "@gorth-com/primitive/default/card";
 
 export function PageBanner({ image, children }: PageBannerProps) {
   return (

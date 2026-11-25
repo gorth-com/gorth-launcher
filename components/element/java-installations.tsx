@@ -1,23 +1,26 @@
-import { ScrollArea, ScrollBar } from "@gorth-io/primitive/default/scroll-area";
+import {
+  ScrollArea,
+  ScrollBar,
+} from "@gorth-com/primitive/default/scroll-area";
 import { useState } from "react";
-import { Input } from "@gorth-io/primitive/default/input";
-import { Button } from "@gorth-io/primitive/custom/button";
-import { RotateCw } from "@gorth-io/primitive/cores/lucide";
-import { RadioGroup, RadioGroupItem } from "@gorth-io/primitive/custom/radio";
+import { Input } from "@gorth-com/primitive/default/input";
+import { Button } from "@gorth-com/primitive/custom/button";
+import { RotateCw } from "@gorth-com/primitive/cores/lucide";
+import { RadioGroup, RadioGroupItem } from "@gorth-com/primitive/custom/radio";
 import {
   Card,
   CardHeader,
   CardTitle,
   CardContent,
   CardFooter,
-} from "@gorth-io/primitive/default/card";
+} from "@gorth-com/primitive/default/card";
 import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@gorth-io/primitive/default/dialog";
-import { Separator } from "@gorth-io/primitive/default/separator";
+} from "@gorth-com/primitive/default/dialog";
+import { Separator } from "@gorth-com/primitive/default/separator";
 import {
   Table,
   TableHeader,
@@ -25,7 +28,7 @@ import {
   TableRow,
   TableHead,
   TableCell,
-} from "@gorth-io/primitive/default/table";
+} from "@gorth-com/primitive/default/table";
 import type { JavaInstallation } from "@/lib/library/game-preferences";
 
 interface JavaInstallationsProps {

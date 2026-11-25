@@ -2,7 +2,7 @@ import { expect, it, vi } from "vitest";
 import {
   AxiosHeaders,
   type InternalAxiosRequestConfig,
-} from "@gorth-io/structure/cores/axios";
+} from "@gorth-com/structure/cores/axios";
 
 const fixture = vi.hoisted(() => ({ install: vi.fn() }));
 vi.mock("@/utils/caller", () => ({

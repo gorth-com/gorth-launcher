@@ -4,8 +4,9 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { emptyAuthData } from "./model";
+import { requireSecureStorage } from "./storage";
 import type { AuthData } from "@/utils/interface";
-import { z } from "@gorth-io/structure/cores/zod";
+import { z } from "@gorth-com/structure/cores/zod";
 
 const tokensSchema = z.object({
   nonce: z
@@ -52,9 +53,12 @@ function file() {
 export function vaultExists() {
   return existsSync(file());
 }
-function ensureEncryption() {
+async function ensureEncryption() {
+  // Until @better-auth/electron supports async storage, use its macOS provider
+  // for both account stores instead of requesting the same Keychain item twice.
+  if (process.platform === "darwin") return requireSecureStorage();
   if (
-    !safeStorage.isEncryptionAvailable() ||
+    !(await safeStorage.isAsyncEncryptionAvailable()) ||
     (process.platform === "linux" &&
       safeStorage.getSelectedStorageBackend() === "basic_text")
   )
@@ -71,19 +75,30 @@ export async function readVault(): Promise<AuthData> {
       return emptyAuthData();
     throw error;
   }
-  ensureEncryption();
-  const data = JSON.parse(safeStorage.decryptString(bytes));
+  await ensureEncryption();
+  const legacyMac =
+    process.platform === "darwin" &&
+    bytes.subarray(0, 3).toString("ascii") === "v10";
+  // Keep async-format vaults readable. Subsequent successful writes use the
+  // SDK-compatible provider; never discard/rewrite data after a failed unlock.
+  const result = legacyMac
+    ? safeStorage.decryptString(bytes)
+    : (await safeStorage.decryptStringAsync(bytes)).result;
+  const data = JSON.parse(result);
   if (!authSchema.safeParse(data).success)
     throw new Error("Kho tài khoản không hợp lệ; dữ liệu được giữ nguyên.");
   return data as AuthData;
 }
 export async function writeVault(data: AuthData) {
   authSchema.parse(data);
-  ensureEncryption();
+  await ensureEncryption();
   await mkdir(app.getPath("userData"), { recursive: true });
   const temp = file() + "." + randomUUID() + ".tmp";
-  await writeFile(temp, safeStorage.encryptString(JSON.stringify(data)), {
-    mode: 0o600,
-  });
+  const plaintext = JSON.stringify(data);
+  const encrypted =
+    process.platform === "darwin"
+      ? safeStorage.encryptString(plaintext)
+      : await safeStorage.encryptStringAsync(plaintext);
+  await writeFile(temp, encrypted, { mode: 0o600 });
   await rename(temp, file());
 }

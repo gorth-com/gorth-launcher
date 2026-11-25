@@ -9,7 +9,7 @@ import {
   rename,
   rm,
 } from "node:fs/promises";
-import { z } from "@gorth-io/structure/cores/zod";
+import { z } from "@gorth-com/structure/cores/zod";
 import extract from "extract-zip";
 import { safePath, readJson, download, digest } from "@/lib/game/files";
 import { supportedLoader } from "@/lib/game/catalog";
@@ -23,8 +23,18 @@ import type {
 } from "./interface";
 
 export interface ModpackReceipt {
+  origins?: Record<
+    string,
+    {
+      provider: ContentProvider;
+      projectId?: string;
+      versionId?: string;
+      sha1: string;
+    }
+  >;
   version: 1;
   name?: string;
+  packVersion?: string;
   source: {
     provider: ContentProvider;
     projectId: string;
@@ -33,6 +43,15 @@ export interface ModpackReceipt {
   files: Record<string, string>;
 }
 const packReceiptName = ".gorth-modpack.json";
+export async function verifyModpackArchive(file: string, artifact: Artifact) {
+  const info = await stat(file);
+  if (!info.isFile() || info.size > 1024 ** 3)
+    throw new Error("Archive modpack vượt giới hạn hoặc không phải file.");
+  const algorithm = artifact.sha512 ? "sha512" : "sha1";
+  const expected = artifact.sha512 ?? artifact.sha1;
+  if (!expected || (await digest(file, algorithm)) !== expected)
+    throw new Error("Checksum archive không khớp phiên bản đã chọn.");
+}
 
 async function treeHashes(
   root: string,
@@ -200,6 +219,7 @@ const mrSchema = z.object({
   formatVersion: z.literal(1),
   game: z.literal("minecraft"),
   name: z.string().trim().min(1).max(200),
+  versionId: z.string().max(200).optional(),
   dependencies: z.record(z.string(), z.string()),
   files: z
     .array(
@@ -226,6 +246,7 @@ const cfSchema = z.object({
   manifestType: z.literal("minecraftModpack"),
   manifestVersion: z.literal(1),
   name: z.string().trim().min(1).max(200),
+  version: z.string().max(200).optional(),
   minecraft: z.object({
     version: z.string(),
     modLoaders: z
@@ -314,12 +335,18 @@ export async function unpackPack(
   });
   signal.throwIfAborted();
   let files: {
+    origin?: {
+      provider: ContentProvider;
+      projectId?: string;
+      versionId?: string;
+    };
     relative: string;
     artifact: Artifact;
     blocked?: ContentFile;
     optionalId?: string;
   }[] = [];
   let name: string;
+  let packVersion: string | undefined;
   let runtime: ReturnType<typeof packRuntime>;
   let overrides: string[];
   const mr = path.join(unpacked, "modrinth.index.json");
@@ -335,6 +362,7 @@ export async function unpackPack(
   if (isModrinth) {
     const pack = mrSchema.parse(await readJson(manifest));
     name = pack.name;
+    packVersion = pack.versionId;
     runtime = packRuntime(pack.dependencies);
     overrides = ["overrides", "client-overrides"];
     for (const file of pack.files) {
@@ -345,6 +373,7 @@ export async function unpackPack(
         continue;
       files.push({
         relative: file.path,
+        origin: { provider: "modrinth" },
         optionalId:
           file.env?.client === "optional" ? `file:${file.path}` : undefined,
         artifact: {
@@ -365,6 +394,7 @@ export async function unpackPack(
     const match = /^(forge|neoforge|fabric)-(.+)$/.exec(primary[0].id);
     if (!match) throw new Error("Loader pack không hỗ trợ (không dùng Quilt).");
     name = pack.name;
+    packVersion = pack.version;
     runtime = packRuntime({
       minecraft: pack.minecraft.version,
       [match[1] === "fabric" ? "fabric-loader" : match[1]]: match[2],
@@ -400,6 +430,11 @@ export async function unpackPack(
         throw new Error("Tên file mod không hợp lệ.");
       files.push({
         relative: (resolved.directory ?? "mods") + "/" + resolved.filename,
+        origin: {
+          provider: "curseforge",
+          projectId: resolved.projectId,
+          versionId: resolved.versionId,
+        },
         artifact: resolved.artifact,
         optionalId: !file.required
           ? `file:${file.projectID}:${file.fileID}`
@@ -508,13 +543,29 @@ export async function unpackPack(
     await rename(contentPath(game, relative), target);
   }
   signal.throwIfAborted();
+  const hashes = await treeHashes(game);
   await writeFile(
     path.join(staging, "payload", packReceiptName),
     JSON.stringify({
       version: 1,
       name: name.slice(0, 200),
+      packVersion,
       source: null,
-      files: await treeHashes(game),
+      files: hashes,
+      origins: Object.fromEntries(
+        files
+          .filter(
+            (file) =>
+              file.origin &&
+              hashes[file.relative] &&
+              (!file.artifact.sha1 ||
+                hashes[file.relative] === file.artifact.sha1),
+          )
+          .map((file) => [
+            file.relative,
+            { ...file.origin!, sha1: hashes[file.relative] },
+          ]),
+      ),
     } satisfies ModpackReceipt),
   );
   return { name: name.slice(0, 60), ...runtime };

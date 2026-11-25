@@ -10,7 +10,7 @@ import {
   realpath,
 } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import { z } from "@gorth-io/structure/cores/zod";
+import { z } from "@gorth-com/structure/cores/zod";
 import { download, json, readJson, safePath } from "./files";
 import { checkJava } from "./java";
 const artifact = z.object({

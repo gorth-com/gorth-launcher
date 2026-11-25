@@ -5,15 +5,15 @@ import axios, {
   AxiosHeaders,
   type AxiosAdapter,
   type InternalAxiosRequestConfig,
-} from "@gorth-io/structure/cores/axios";
-import { z } from "@gorth-io/structure/cores/zod";
+} from "@gorth-com/structure/cores/axios";
+import { z } from "@gorth-com/structure/cores/zod";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { caller, useCallerQuery, useCallerMutation } from "@/utils/caller";
 import { fetcher, toWebResponse } from "@/utils/fetcher";
 import { getAccountProfile } from "@/services/account";
 import { QueryProvider } from "@/providers/query";
-import { toast } from "@gorth-io/primitive/custom/toast";
+import { toast } from "@gorth-com/primitive/custom/toast";
 
 function result(
   config: InternalAxiosRequestConfig,

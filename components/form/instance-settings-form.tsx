@@ -1,26 +1,29 @@
-import { ScrollArea, ScrollBar } from "@gorth-io/primitive/default/scroll-area";
+import {
+  ScrollArea,
+  ScrollBar,
+} from "@gorth-com/primitive/default/scroll-area";
 import { useState, type ReactNode } from "react";
-import { useForm } from "@gorth-io/primitive/cores/tanstack/form";
+import { useForm } from "@gorth-com/primitive/cores/tanstack/form";
 import {
   useMutation,
   useQuery,
-} from "@gorth-io/primitive/cores/tanstack/query";
-import { Button } from "@gorth-io/primitive/custom/button";
+} from "@gorth-com/primitive/cores/tanstack/query";
+import { Button } from "@gorth-com/primitive/custom/button";
 import {
   Tabs,
   TabsList,
   TabsTrigger,
   TabsContent,
-} from "@gorth-io/primitive/custom/tabs";
-import { RadioGroup, RadioGroupItem } from "@gorth-io/primitive/custom/radio";
+} from "@gorth-com/primitive/custom/tabs";
+import { RadioGroup, RadioGroupItem } from "@gorth-com/primitive/custom/radio";
 import {
   Field,
   FieldLabel,
   FieldDescription,
-} from "@gorth-io/primitive/default/field";
-import { Input } from "@gorth-io/primitive/default/input";
-import { Textarea } from "@gorth-io/primitive/default/textarea";
-import { Dialog, DialogContent } from "@gorth-io/primitive/default/dialog";
+} from "@gorth-com/primitive/default/field";
+import { Input } from "@gorth-com/primitive/default/input";
+import { Textarea } from "@gorth-com/primitive/default/textarea";
+import { Dialog, DialogContent } from "@gorth-com/primitive/default/dialog";
 import {
   Table,
   TableHeader,
@@ -28,7 +31,7 @@ import {
   TableRow,
   TableHead,
   TableCell,
-} from "@gorth-io/primitive/default/table";
+} from "@gorth-com/primitive/default/table";
 import { InstanceSelect } from "@/components/element/instance-select";
 import { JavaInstallations } from "@/components/element/java-installations";
 import {

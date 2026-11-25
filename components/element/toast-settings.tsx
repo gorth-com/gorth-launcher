@@ -1,5 +1,5 @@
-import { CardTitle, CardDescription } from "@gorth-io/primitive/default/card";
-import { Button } from "@gorth-io/primitive/custom/button";
+import { CardTitle, CardDescription } from "@gorth-com/primitive/default/card";
+import { Button } from "@gorth-com/primitive/custom/button";
 import {
   Select,
   SelectContent,
@@ -7,7 +7,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@gorth-io/primitive/custom/select";
+} from "@gorth-com/primitive/custom/select";
 import {
   toast,
   useToasterSettings,

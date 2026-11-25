@@ -1,6 +1,6 @@
 import { themeLabels } from "@/utils/constant";
 import { useEffect, useState } from "react";
-import { Monitor, Moon, Sun } from "@gorth-io/primitive/cores/lucide";
+import { Monitor, Moon, Sun } from "@gorth-com/primitive/cores/lucide";
 
 import {
   PopoverMenu,

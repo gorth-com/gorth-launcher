@@ -1,5 +1,7 @@
 import { PageHeading } from "@/components/heading";
-import { Progress } from "@gorth-io/primitive/default/progress";
+import { Progress } from "@gorth-com/primitive/default/progress";
+import { Spinner } from "@gorth-com/primitive/default/spinner";
+import { toast } from "@/providers/toaster";
 import { contentIcons } from "@/utils/constant";
 import { useFeedbackToast } from "@/hooks/use-feedback-toast";
 import {
@@ -9,10 +11,19 @@ import {
   SelectContent,
   SelectItem,
   SelectGroup,
-} from "@gorth-io/primitive/default/select";
+} from "@gorth-com/primitive/default/select";
 import { contentLabels, loaderCatalog } from "@/utils/constant";
 import { useEffect, useId, useState, type ReactNode } from "react";
-import { useForm } from "@gorth-io/primitive/cores/tanstack/form";
+import { useForm } from "@gorth-com/primitive/cores/tanstack/form";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@gorth-com/primitive/cores/tanstack/query";
+import {
+  contentSearchOptions,
+  contentVersionsOptions,
+} from "@/lib/content/queries";
 import {
   Search,
   Upload,
@@ -21,15 +32,15 @@ import {
   Package,
   ChevronLeft,
   ChevronRight,
-} from "@gorth-io/primitive/cores/lucide";
-import { Button } from "@gorth-io/primitive/custom/button";
-import { Input } from "@gorth-io/primitive/default/input";
+} from "@gorth-com/primitive/cores/lucide";
+import { Button } from "@gorth-com/primitive/custom/button";
+import { Input } from "@gorth-com/primitive/default/input";
 import {
   Card,
   CardTitle,
   CardDescription,
-} from "@gorth-io/primitive/default/card";
-import { Field, FieldLabel } from "@gorth-io/primitive/default/field";
+} from "@gorth-com/primitive/default/card";
+import { Field, FieldLabel } from "@gorth-com/primitive/default/field";
 import { PageShell } from "@/layouts/page-shell";
 import { PageBanner } from "@/components/element/page-banner";
 import modsBackground from "@/public/dawn/mod.png";
@@ -48,7 +59,6 @@ import type {
   ContentProject,
   ContentQuery,
   ContentStatus,
-  ContentVersion,
   ContentResult,
 } from "@/lib/content/interface";
 
@@ -87,21 +97,46 @@ export function ContentPage({
   const [sort, setSort] =
     useState<NonNullable<ContentQuery["sort"]>>("relevance");
   const [configured, setConfigured] = useState(false);
-  const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
-  useFeedbackToast(error || status.error);
-  const [results, setResults] = useState<{
-    projects: ContentProject[];
-    more: boolean;
-  } | null>(null);
+  const queryClient = useQueryClient();
   const [searched, setSearched] = useState<ContentQuery | null>(null);
   const [target, setTarget] = useState("");
   const [targetWorld, setTargetWorld] = useState("");
   const [worlds, setWorlds] = useState<string[]>([]);
   const [selected, setSelected] = useState<ContentProject | null>(null);
   const [installRequested, setInstallRequested] = useState(false);
-  const [versions, setVersions] = useState<ContentVersion[]>([]);
-  const [versionId, setVersionId] = useState("");
+  const [chosenVersionId, setVersionId] = useState("");
+  const searchQuery = useQuery(contentSearchOptions(searched, target));
+  const versionsQuery = useQuery(
+    contentVersionsOptions(searched, selected?.id, target),
+  );
+  const results = searchQuery.data ?? null;
+  const versions = versionsQuery.data ?? [];
+  const versionId = chosenVersionId || versions[0]?.id || "";
+  const action = useMutation({
+    mutationFn: async (operation: () => Promise<ContentResult<unknown>>) => {
+      const result = await operation();
+      if (!result.ok) throw new Error(result.error);
+      return result.data;
+    },
+    networkMode: "always",
+    retry: false,
+    onError: (error) =>
+      setError(
+        error instanceof Error ? error.message : "Không xử lý được yêu cầu.",
+      ),
+  });
+  const pending =
+    action.isPending || searchQuery.isFetching || versionsQuery.isFetching;
+  useFeedbackToast(
+    error ||
+      status.error ||
+      searchQuery.error?.message ||
+      versionsQuery.error?.message,
+  );
+  const targetInstance = instances.find(
+    (item) => item.id === selectedInstanceId,
+  );
   useEffect(() => {
     onDetailChange(Boolean(selected) && !installRequested);
     return () => onDetailChange(false);
@@ -109,15 +144,27 @@ export function ContentPage({
   useEffect(() => {
     let live = true;
     let observed = false;
+    let wasBusy = false;
     const unsubscribe = window.electronAPI.content.onChanged((next) => {
       observed = true;
+      if (wasBusy && !next.busy && !next.error)
+        toast.add({
+          id: "content-install-completed",
+          title: "Cài đặt hoàn tất.",
+          description: next.message,
+          type: "success",
+        });
+      wasBusy = next.busy;
       setStatus((previous) => mergeContentProgress(previous, next));
     });
     void window.electronAPI.content
       .status()
       .then((value) => {
         if (live) {
-          if (!observed) setStatus(value.status);
+          if (!observed) {
+            setStatus(value.status);
+            wasBusy = value.status.busy;
+          }
           setConfigured(value.curseforgeConfigured);
         }
       })
@@ -132,18 +179,11 @@ export function ContentPage({
   async function execute<T>(
     operation: () => Promise<ContentResult<T>>,
   ): Promise<T | undefined> {
-    setPending(true);
     setError("");
     try {
-      const result = await operation();
-      if (!result.ok) throw new Error(result.error);
-      return result.data;
-    } catch (error) {
-      setError(
-        error instanceof Error ? error.message : "Không xử lý được yêu cầu.",
-      );
-    } finally {
-      setPending(false);
+      return (await action.mutateAsync(operation)) as T;
+    } catch {
+      return undefined;
     }
   }
   async function search(
@@ -152,29 +192,20 @@ export function ContentPage({
     worldName = "",
   ) {
     setSelected(null);
-    setVersions([]);
-    setResults(null);
+    setVersionId("");
     setSearched(query);
     setTarget(instanceId);
     setTargetWorld(worldName);
-    const result = await execute(() =>
-      window.electronAPI.content.search(query),
-    );
-    if (result) setResults(result);
+    setError("");
+    await queryClient.invalidateQueries({
+      queryKey: contentSearchOptions(query, instanceId).queryKey,
+    });
   }
   async function openProject(project: ContentProject, install = false) {
     if (!searched) return;
     setSelected(project);
     setInstallRequested(install);
-    setVersions([]);
     setVersionId("");
-    const items = await execute(() =>
-      window.electronAPI.content.versions(searched, project.id),
-    );
-    if (items) {
-      setVersions(items);
-      setVersionId(items[0]?.id ?? "");
-    }
   }
   const form = useForm({
     defaultValues: {
@@ -230,6 +261,27 @@ export function ContentPage({
     form.setFieldValue("instanceId", selectedInstanceId);
     form.setFieldValue("worldName", "");
     setWorlds([]);
+    // Re-run the current search when the target/runtime changes; previews and
+    // release dialogs then use the same compatibility query as the results.
+    if (
+      catalogMode &&
+      searched &&
+      searched.kind !== "modpack" &&
+      (target !== selectedInstanceId ||
+        searched.version !== (targetInstance?.version ?? "") ||
+        searched.loader !== (targetInstance?.loader ?? ""))
+    ) {
+      setVersionId("");
+      void search(
+        {
+          ...searched,
+          version: targetInstance?.version ?? "",
+          loader: targetInstance?.loader ?? "",
+          offset: 0,
+        },
+        selectedInstanceId,
+      );
+    }
     if (!selectedInstanceId) return;
     let active = true;
     void window.electronAPI.content
@@ -243,7 +295,7 @@ export function ContentPage({
     return () => {
       active = false;
     };
-  }, [selectedInstanceId]);
+  }, [selectedInstanceId, targetInstance?.version, targetInstance?.loader]);
   async function installSelected() {
     if (!selected || !searched) return false;
     setStatus({
@@ -1010,7 +1062,7 @@ export function ContentPage({
               Chọn bộ lọc và tìm kiếm nội dung để cài vào instance.
             </p>
           )}
-          {!status.error && status.message && (
+          {status.busy && !status.error && status.message && (
             <div
               role="status"
               className="flex flex-col gap-4 rounded-md border p-3"
@@ -1043,9 +1095,12 @@ export function ContentPage({
             </div>
           )}
           {pending && (
-            <p role="status" className="text-sm">
-              Đang xử lý…
-            </p>
+            <div className="flex justify-center py-4">
+              <Spinner
+                className="size-6"
+                aria-label="Đang tải kết quả tìm kiếm"
+              />
+            </div>
           )}
           {results && (
             <>

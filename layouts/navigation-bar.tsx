@@ -4,9 +4,9 @@ import {
   PanelLeft,
   RefreshCw,
   Undo2,
-} from "@gorth-io/primitive/cores/lucide";
-import { Button } from "@gorth-io/primitive/custom/button";
-import { Input } from "@gorth-io/primitive/default/input";
+} from "@gorth-com/primitive/cores/lucide";
+import { Button } from "@gorth-com/primitive/custom/button";
+import { Input } from "@gorth-com/primitive/default/input";
 
 export interface NavigationBarProps {
   sidebarOpen?: boolean;

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import type { NavSubItem } from "@gorth-io/primitive/utils/interface";
-import type { LucideIcon } from "@gorth-io/primitive/cores/lucide";
-import { CardTitle, CardDescription } from "@gorth-io/primitive/default/card";
+import type { NavSubItem } from "@gorth-com/primitive/utils/interface";
+import type { LucideIcon } from "@gorth-com/primitive/cores/lucide";
+import { CardTitle, CardDescription } from "@gorth-com/primitive/default/card";
 
 export interface PageHeadingProps extends Pick<
   NavSubItem,

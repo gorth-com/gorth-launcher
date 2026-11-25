@@ -9,7 +9,7 @@ import {
   readFolderPreferences,
 } from "@/utils/launcher-folders";
 import { safePath } from "@/lib/game/files";
-import { createLibraryStore } from "@/services/library-store";
+import { rawCreateLibraryStore } from "@/models/instance";
 import { launcherSettingsSections } from "@/utils/constant";
 import { createLauncherRouter } from "@/lib/navigation";
 const roots: string[] = [];
@@ -74,7 +74,7 @@ it("uses the chosen instance folder for library creation, trash and restore", as
   const data = await fixture();
   const instances = path.join(data, "instances-outside-workspace");
   await writeFile(folderPreferencesFile(data), JSON.stringify({ instances }));
-  const library = await createLibraryStore(data, () => false);
+  const library = await rawCreateLibraryStore(data, () => false);
   try {
     let snapshot = await library.command({
       action: "create",

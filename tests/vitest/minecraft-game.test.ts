@@ -5,8 +5,10 @@ const fixture = vi.hoisted(() => ({
   owner: "central-owner" as string | null,
 }));
 vi.mock("@/utils/environment", () => ({ authUrl: "https://launcher.test" }));
+vi.mock("@/lib/auth/client/index", () => ({
+  authClient: { getCookie: fixture.cookie },
+}));
 vi.mock("@/lib/auth/gorth", () => ({
-  getGorthClient: () => ({ getCookie: fixture.cookie }),
   getGorthUserId: () => fixture.owner,
 }));
 vi.mock("@/lib/auth/http", async (original) => ({

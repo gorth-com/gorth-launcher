@@ -1,4 +1,4 @@
-import axios, { AxiosError } from "@gorth-io/structure/cores/axios";
+import axios, { AxiosError } from "@gorth-com/structure/cores/axios";
 const nativeFetch = globalThis.fetch;
 
 // Reuse existing synthetic Response fixtures; never allow an actual remote fetch.

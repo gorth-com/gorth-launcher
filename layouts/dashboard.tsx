@@ -16,7 +16,7 @@ import {
   Rocket,
   Star,
   User,
-} from "@gorth-io/primitive/cores/lucide";
+} from "@gorth-com/primitive/cores/lucide";
 import {
   Sidebar,
   SidebarContent,
@@ -27,14 +27,14 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
-} from "@gorth-io/primitive/custom/sidebar";
+} from "@gorth-com/primitive/custom/sidebar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/providers/tooltip";
 import { NavUser } from "@/components/dashboard/nav-user";
 import { useAuth } from "@/hooks/use-auth";
-import { SidebarMenuBadge } from "@gorth-io/primitive/custom/sidebar";
+import { SidebarMenuBadge } from "@gorth-com/primitive/custom/sidebar";
 
 import type { Page } from "@/utils/interface";
-import { cn } from "@gorth-io/primitive/cores/cn";
+import { cn } from "@gorth-com/primitive/cores/cn";
 interface DashboardProps {
   profileName?: string;
   profileIcon?: "globe" | "user" | "rocket" | "star";

@@ -78,7 +78,7 @@ tRPC mới bao phủ library snapshot/settings; game/content/auth/dialogs/events
 
 Nguồn: [app/main.ts](../app/main.ts), [RPC client](../lib/rpc/client.ts), [RPC router](../main/rpc/router.ts), [Hono server](../services/desktop-server.ts), [Vite proxy](../lib/server/vite.ts), [navigation](../lib/navigation.ts), [desktop packages](desktop-packages.md).
 
-Điểm cần cải thiện là ownership và độ lớn module: `app/index.tsx`, `services/library-store.ts`, `lib/game/service.ts`, `lib/content/service.ts`, `lib/instance/service.ts` vẫn gánh nhiều trách nhiệm. Không nên đổi stack chỉ để giống Dawn/Prism; nên tách các domain operations/test seams khi thực sự sửa tính năng.
+Điểm cần cải thiện là ownership và độ lớn module: `app/index.tsx`, `models/instance.ts`, `lib/game/service.ts`, `lib/content/service.ts`, `lib/instance/service.ts` vẫn gánh nhiều trách nhiệm. Không nên đổi stack chỉ để giống Dawn/Prism; nên tách các domain operations/test seams khi thực sự sửa tính năng.
 
 ### 4.2. Gorth không lưu tất cả dữ liệu vào SQLite
 
@@ -90,7 +90,7 @@ SQLite hiện dùng **Node `DatabaseSync` + Drizzle**, không phải `better-sql
 - `game_account`/`launcher_session`: có trong schema nhưng auth service hiện vẫn đọc/ghi vault `auth.v1.enc`; không được tính là auth đã chuyển hoàn toàn vào hai bảng này.
 - Theme/UI preferences và `window-state.json` vẫn ngoài DB; receipts nội dung/game vẫn là JSON cạnh instance.
 
-Nguồn: [database/client.ts](../database/client.ts), [schema](../database/schema.ts), [library store](../services/library-store.ts), [user profile](../services/user-profile.ts), [vault](../lib/auth/vault.ts), [window state](../main/windows/state.ts).
+Nguồn: [database/client.ts](../database/client.ts), [schema](../database/schema.ts), [library store](../models/instance.ts), [user profile](../models/user-profile.ts), [vault](../lib/auth/vault.ts), [window state](../main/windows/state.ts).
 
 Thư mục mặc định:
 
@@ -173,7 +173,7 @@ Phải phân biệt **SSO launcher** và **account Minecraft**:
 2. Game hiện chỉ chạy bằng offline identity. `snapshot().providers.ely = false`, `gorthGame = false`; `resolveGameSession()` từ chối provider online. Có `ely.ts`, `gorth-game.ts` và đường authlib-injector không đồng nghĩa người dùng đã dùng được chúng.
 3. SSO login thành công không tự tạo một Minecraft online identity hay entitlement.
 
-Nguồn: [auth service](../lib/auth/service.ts), [Gorth OIDC](../lib/auth/gorth.ts), [auth view](../main/services/auth-view.ts), [auth provider](../providers/auth.tsx), [use-auth](../hooks/use-auth.ts), [user profiles](../services/user-profile.ts).
+Nguồn: [auth service](../lib/auth/service.ts), [Gorth OIDC](../lib/auth/gorth.ts), [auth view](../main/services/auth-view.ts), [auth provider](../providers/auth.tsx), [use-auth](../hooks/use-auth.ts), [user profiles](../models/user-profile.ts).
 
 Vault dùng OS `safeStorage`, từ chối plaintext backend `basic_text`; có thể cần quyền Keychain/unlock. SQLite public profile cache không thay thế token vault. Không nên bỏ mã hóa để tránh prompt.
 
@@ -201,7 +201,7 @@ Gorth có create/rename/copy/delete-to-Trash/restore, icon, nhóm, shortcut, đ�
 
 Settings riêng đã có đầy đủ trường P1-3: RAM min/max, JVM args, Java, resolution/fullscreen, env, account mặc định, join server/world, pre-launch/post-exit, GPU/OpenGL/OpenAL/GLFW. Main đọc lại từ SQLite, không tin settings launch gửi từ renderer. Commands chạy không shell; toán tử shell như pipe/redirect không tự hoạt động. GPU hints chủ yếu áp dụng Linux, không cưỡng chế GPU của Windows/macOS.
 
-Nguồn: [library store](../services/library-store.ts), [library IPC/shortcut](../lib/library/service.ts), [instance settings](../lib/library/instance-settings.ts), [settings form](../components/form/instance-settings-form.tsx), [launch](../lib/game/service.ts), [Java environment](../utils/environment.ts).
+Nguồn: [library store](../models/instance.ts), [library IPC/shortcut](../lib/library/service.ts), [instance settings](../lib/library/instance-settings.ts), [settings form](../components/form/instance-settings-form.tsx), [launch](../lib/game/service.ts), [Java environment](../utils/environment.ts).
 
 Giới hạn còn lại:
 
@@ -280,7 +280,7 @@ P1-7 **đã có implementation**, không nên tiếp tục mô tả Gorth chỉ 
 - Console riêng, tìm kiếm, lọc mức log, copy/clear/export; crash detection dựa exit/log và crash hints heuristic.
 - Play history lưu SQLite, có UI search/sort/virtualization ở Settings.
 
-Nguồn: [game service](../lib/game/service.ts), [Console](../pages/console/index.tsx), [Downloads](../pages/downloads/index.tsx), [Launch History](../pages/settings/history/index.tsx), [store history](../services/library-store.ts).
+Nguồn: [game service](../lib/game/service.ts), [Console](../pages/console/index.tsx), [Downloads](../pages/downloads/index.tsx), [Launch History](../pages/settings/history/index.tsx), [store history](../models/instance.ts).
 
 Giới hạn cần nghiệm thu tiếp:
 

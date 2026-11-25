@@ -1,3 +1,3 @@
 import { defineHandler } from "nitro";
-import { receiveAuthCallback } from "@/controllers/auth";
-export default defineHandler(receiveAuthCallback);
+import { actReceiveAuthCallback } from "@/controllers/auth";
+export default defineHandler(actReceiveAuthCallback);

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { CardDescription, CardTitle } from "@gorth-io/primitive/default/card";
-import { Switch } from "@gorth-io/primitive/default/switch";
+import { CardDescription, CardTitle } from "@gorth-com/primitive/default/card";
+import { Switch } from "@gorth-com/primitive/default/switch";
 export function GameOption({
   title,
   description,

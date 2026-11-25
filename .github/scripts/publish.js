@@ -9,6 +9,8 @@ import {
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
+import { validateReleaseTag } from "./release-artifacts.js";
+import { draftPublisherConfig, githubPublisherConfig, uploadReleaseArtifacts } from "./github-publisher.js";
 
 async function sha256(file) {
   const hash = createHash("sha256");
@@ -101,6 +103,12 @@ if (import.meta.main) {
   } = process.env;
   if (!/^v\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(tag || ""))
     throw new Error("Invalid release tag");
+  const metadata = JSON.parse(await readFile("package.json", "utf8"));
+  validateReleaseTag(tag, metadata.version);
+  const publisherConfig = githubPublisherConfig(slug, metadata.version, repository);
+  if (!process.env.GITHUB_TOKEN) throw new Error("Missing GITHUB_TOKEN");
+  // The publisher may create tags implicitly; require the requested tag first.
+  gh(["api", `repos/${repository}/git/ref/tags/${tag}`], true);
   const directory = path.resolve("release-assets");
   const files = await verifyRelease(directory, slug);
   const notes = path.join(temporary, "release-notes.md");
@@ -108,34 +116,22 @@ if (import.meta.main) {
     notes,
     `Installers for macOS Intel/Apple Silicon, Windows x64 and Linux x64.\n\nmacOS signing/notarization enabled: ${process.env.MAC_SIGNED}. Windows binaries are unsigned in this workflow. Verify signatures before installing.\n\nWindows MSI is the Squirrel bootstrapper, not a standalone enterprise WiX MSI. Use either EXE or MSI, not both.\n\nChecksums: SHA256SUMS.txt. ZIP/NUPKG/RELEASES are retained for auto-update.\n`,
   );
-  const existing = spawnSync(
-    "gh",
-    ["release", "view", tag, "--json", "isDraft"],
-    { encoding: "utf8" },
-  );
-  if (existing.status === 0) {
-    if (!JSON.parse(existing.stdout).isDraft)
-      throw new Error("Refusing to overwrite a public release");
-  } else {
-    gh([
-      "release",
-      "create",
-      tag,
-      "--verify-tag",
-      "--draft",
-      "--title",
-      `${slug} ${tag}`,
-      "--notes-file",
-      notes,
-      ...(tag.includes("-") ? ["--prerelease"] : []),
-    ]);
-  }
+  // Fail closed on API/auth errors instead of treating every failure as 404.
+  const releases = JSON.parse(gh([
+    "api", "--paginate", "--slurp", `repos/${repository}/releases?per_page=100`,
+  ], true)).flat();
+  const existing = releases.find((release) => release.tag_name === tag);
+  await uploadReleaseArtifacts(directory, files, metadata,
+    draftPublisherConfig(publisherConfig, existing));
   gh([
     "release",
-    "upload",
+    "edit",
     tag,
-    ...files.map((name) => path.join(directory, name)),
-    "--clobber",
+    "--title",
+    `${slug} ${tag}`,
+    "--notes-file",
+    notes,
+    `--prerelease=${tag.includes("-")}`,
   ]);
   if (process.env.PUBLISH === "true")
     gh([

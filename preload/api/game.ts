@@ -4,8 +4,23 @@ import type {
   GameResult,
   GameSnapshot,
   GameVersion,
+  RuntimeComponent,
 } from "@/utils/interface";
 export const gameApi = {
+  components: (id: string): Promise<RuntimeComponent[]> =>
+    ipcRenderer.invoke("game:components", id),
+  onOpenConsole: (callback: (instanceId: string) => void) => {
+    const listener = (
+      _event: Electron.IpcRendererEvent,
+      instanceId: unknown,
+    ) => {
+      if (typeof instanceId === "string") callback(instanceId);
+    };
+    ipcRenderer.on("game:open-console", listener);
+    return () => {
+      ipcRenderer.removeListener("game:open-console", listener);
+    };
+  },
   openDirectory: (id?: string): Promise<{ ok: boolean; error?: string }> =>
     ipcRenderer.invoke("game:open-directory", id),
   snapshot: (): Promise<GameSnapshot> => ipcRenderer.invoke("game:snapshot"),

@@ -1,9 +1,9 @@
 import { useFeedbackToast } from "@/hooks/use-feedback-toast";
 import { useEffect, useRef, useState } from "react";
-import { Keyboard, RotateCcw } from "@gorth-io/primitive/cores/lucide";
-import { Button } from "@gorth-io/primitive/custom/button";
-import { Badge } from "@gorth-io/primitive/custom/badge";
-import { Card } from "@gorth-io/primitive/default/card";
+import { Keyboard, RotateCcw } from "@gorth-com/primitive/cores/lucide";
+import { Button } from "@gorth-com/primitive/custom/button";
+import { Badge } from "@gorth-com/primitive/custom/badge";
+import { Card } from "@gorth-com/primitive/default/card";
 import { PageHeading, PageDescription } from "@/components/heading";
 import type { Shortcut } from "@/lib/shortcuts";
 import { shortcutDefinitions } from "@/utils/constant";

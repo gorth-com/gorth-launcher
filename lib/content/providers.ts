@@ -3,9 +3,9 @@ import {
   curseforgeClasses,
   curseforgePaths,
 } from "@/utils/constant";
-import { z } from "@gorth-io/structure/cores/zod";
+import { z } from "@gorth-com/structure/cores/zod";
 import { fetcher } from "@/utils/fetcher";
-import axios from "@gorth-io/structure/cores/axios";
+import axios from "@gorth-com/structure/cores/axios";
 import { projectWebsite } from "./website";
 import { curseforgeApiKey } from "@/utils/environment";
 import type {
@@ -26,6 +26,7 @@ export async function providerJson<T>(
   provider: ContentProvider,
   route: string,
   signal: AbortSignal,
+  body?: unknown,
 ): Promise<T> {
   if (provider === "curseforge" && !curseforgeApiKey)
     throw new Error(
@@ -33,7 +34,8 @@ export async function providerJson<T>(
     );
   try {
     const result = await fetcher<T>({
-      method: "GET",
+      method: body === undefined ? "GET" : "POST",
+      body,
       url:
         (provider === "modrinth"
           ? "https://api.modrinth.com/v2"

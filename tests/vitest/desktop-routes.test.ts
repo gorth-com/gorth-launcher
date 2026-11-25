@@ -4,7 +4,7 @@ import { buildDesktopBackend } from "@/lib/server/build";
 beforeAll(() => buildDesktopBackend(process.cwd()), 60000);
 
 // These tests exercise HTTP policies only; never open a live SQLite profile.
-vi.mock("@/services/user-profile", () => ({ getUserProfile: () => null }));
+vi.mock("@/models/user-profile", () => ({ rawGetUserProfile: () => null }));
 const origin = "http://127.0.0.1:5500";
 const capability = "synthetic-desktop-capability";
 function request(path: string, options: RequestInit = {}) {

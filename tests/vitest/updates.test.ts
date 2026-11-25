@@ -5,7 +5,7 @@ import {
   isNewerRelease,
   parseRelease,
   releaseVersion,
-} from "@/lib/update/release";
+} from "@gorth-com/structure/modules/desktop";
 const release = (version = "1.1.0") => ({
   tag_name: "v" + version,
   draft: false,

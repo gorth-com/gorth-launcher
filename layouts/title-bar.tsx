@@ -1,6 +1,6 @@
-import { Box } from "@gorth-io/primitive/cores/lucide";
+import { Box } from "@gorth-com/primitive/cores/lucide";
 import { useFullScreen } from "@/hooks/use-full-screen";
-import { cn } from "@gorth-io/primitive/cores/cn";
+import { cn } from "@gorth-com/primitive/cores/cn";
 import {
   NavigationControls,
   type NavigationBarProps,

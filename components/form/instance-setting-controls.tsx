@@ -5,11 +5,11 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
-} from "@gorth-io/primitive/default/card";
-import { Field, FieldLabel } from "@gorth-io/primitive/default/field";
-import { Switch } from "@gorth-io/primitive/default/switch";
-import { Separator } from "@gorth-io/primitive/default/separator";
-import { Input } from "@gorth-io/primitive/default/input";
+} from "@gorth-com/primitive/default/card";
+import { Field, FieldLabel } from "@gorth-com/primitive/default/field";
+import { Switch } from "@gorth-com/primitive/default/switch";
+import { Separator } from "@gorth-com/primitive/default/separator";
+import { Input } from "@gorth-com/primitive/default/input";
 
 export function OverrideCard({
   title,

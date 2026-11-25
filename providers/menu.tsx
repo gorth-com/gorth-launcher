@@ -9,7 +9,7 @@ import {
   ScanSearch,
   Settings,
   X,
-} from "@gorth-io/primitive/cores/lucide";
+} from "@gorth-com/primitive/cores/lucide";
 import {
   PopoverMenuItem,
   PopoverMenuLabel,

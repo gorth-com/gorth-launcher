@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { proxyUpdateSchema } from "@/lib/network/proxy";
 import {
   electronProxyConfig,
   proxySettingsSchema,
-  proxyUpdateSchema,
-} from "@/lib/network/proxy";
+} from "@gorth-com/structure/modules/desktop";
 describe("proxy settings", () => {
   it("rejects URL credentials, rule injection and invalid ports", () => {
     for (const host of [

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Button } from "@gorth-io/primitive/custom/button";
+import { Button } from "@gorth-com/primitive/custom/button";
 import { useAuth } from "@/hooks/use-auth";
 import type { AuthViewState } from "@/lib/auth/view-types";
-import { cn } from "@gorth-io/primitive/cores/cn";
+import { cn } from "@gorth-com/primitive/cores/cn";
 
 export function AuthScreen({
   onReturn,

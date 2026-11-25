@@ -1,13 +1,13 @@
-import { useForm } from "@gorth-io/primitive/cores/tanstack/form";
+import { useForm } from "@gorth-com/primitive/cores/tanstack/form";
 import {
   Globe2,
   UserRound,
   Rocket,
   Star,
-} from "@gorth-io/primitive/cores/lucide";
-import { CardTitle } from "@gorth-io/primitive/default/card";
-import { Input } from "@gorth-io/primitive/default/input";
-import { Button } from "@gorth-io/primitive/custom/button";
+} from "@gorth-com/primitive/cores/lucide";
+import { CardTitle } from "@gorth-com/primitive/default/card";
+import { Input } from "@gorth-com/primitive/default/input";
+import { Button } from "@gorth-com/primitive/custom/button";
 import type { Settings } from "@/utils/interface";
 import type { Dispatch, SetStateAction } from "react";
 const icons = { globe: Globe2, user: UserRound, rocket: Rocket, star: Star };

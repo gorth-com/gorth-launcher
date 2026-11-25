@@ -1,20 +1,20 @@
 import { Fragment, type Dispatch, type SetStateAction } from "react";
-import { useForm } from "@gorth-io/primitive/cores/tanstack/form";
+import { useForm } from "@gorth-com/primitive/cores/tanstack/form";
 import {
   Card,
   CardTitle,
   CardDescription,
-} from "@gorth-io/primitive/default/card";
-import { Separator } from "@gorth-io/primitive/default/separator";
-import { Input } from "@gorth-io/primitive/default/input";
-import { Textarea } from "@gorth-io/primitive/default/textarea";
+} from "@gorth-com/primitive/default/card";
+import { Separator } from "@gorth-com/primitive/default/separator";
+import { Input } from "@gorth-com/primitive/default/input";
+import { Textarea } from "@gorth-com/primitive/default/textarea";
 import {
   Tabs,
   TabsList,
   TabsTrigger,
   TabsContent,
-} from "@gorth-io/primitive/custom/tabs";
-import { Button } from "@gorth-io/primitive/custom/button";
+} from "@gorth-com/primitive/custom/tabs";
+import { Button } from "@gorth-com/primitive/custom/button";
 import { InstanceSelect } from "@/components/element/instance-select";
 import { GameOption, GameToggle } from "../game-options";
 import {

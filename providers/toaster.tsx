@@ -10,7 +10,7 @@ import {
 import { createPortal } from "react-dom";
 // Native toast content lives in another document; avoid the custom button's
 // same-document ResizeObserver/press animation in this one close control.
-import { Button as ToastCloseButton } from "@gorth-io/primitive/default/button";
+import { Button as ToastCloseButton } from "@gorth-com/primitive/default/button";
 import { PoolContext } from "@/providers/portal";
 import {
   Toast,
@@ -22,7 +22,7 @@ import {
   ToastViewport,
   toast,
   useToastManager,
-} from "@gorth-io/primitive/custom/toast";
+} from "@gorth-com/primitive/custom/toast";
 
 export type ToastPosition =
   "top-left" | "top-right" | "bottom-left" | "bottom-right";

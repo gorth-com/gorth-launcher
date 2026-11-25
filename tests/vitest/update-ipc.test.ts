@@ -19,7 +19,7 @@ const mocks = vi.hoisted(() => {
     exists: true,
     fetch: vi.fn(),
     openExternal: vi.fn(),
-    dialog: vi.fn(),
+    confirm: vi.fn(),
     cancelAuth: vi.fn(),
     busy: false,
     nativeListeners,
@@ -51,7 +51,6 @@ vi.mock("electron", () => ({
       sender === mocks.sender ? mocks.window : null,
     getAllWindows: () => [mocks.window],
   },
-  dialog: { showMessageBox: mocks.dialog },
   shell: { openExternal: mocks.openExternal },
   ipcMain: {
     handle: (name: string, handler: (event: unknown) => unknown) =>
@@ -62,6 +61,9 @@ vi.mock("node:fs", () => ({ existsSync: () => mocks.exists }));
 vi.mock("@/main/rpc/sender", () => ({
   getRpcRendererUrl: () => "https://renderer.test/public/index.html",
   isRpcRendererUrl: (actual: string, expected: string) => actual === expected,
+}));
+vi.mock("@/main/services/confirmation", () => ({
+  requestConfirmation: mocks.confirm,
 }));
 vi.mock("@/lib/auth/service", () => ({ cancelAuth: mocks.cancelAuth }));
 vi.mock("@/lib/game/service", () => ({ gameIsBusy: () => mocks.busy }));
@@ -170,19 +172,19 @@ it("uses the native download event, confirms restart and cancels pending authent
   );
   registerUpdateIpc();
   await invoke("install");
-  expect(mocks.dialog).not.toHaveBeenCalled();
+  expect(mocks.confirm).not.toHaveBeenCalled();
   await invoke("check");
   await invoke("download");
   mocks.nativeListeners.get("update-downloaded")!({}, "", "1.1.0");
   mocks.busy = true;
   expect(await invoke("install")).toMatchObject({ status: "downloaded" });
-  expect(mocks.dialog).not.toHaveBeenCalled();
+  expect(mocks.confirm).not.toHaveBeenCalled();
   mocks.busy = false;
-  mocks.dialog.mockResolvedValueOnce({ response: 1 });
+  mocks.confirm.mockResolvedValueOnce(false);
   await invoke("install");
   expect(mocks.cancelAuth).not.toHaveBeenCalled();
   expect(mocks.native.quitAndInstall).not.toHaveBeenCalled();
-  mocks.dialog.mockResolvedValueOnce({ response: 0 });
+  mocks.confirm.mockResolvedValueOnce(true);
   await invoke("install");
   expect(mocks.cancelAuth).toHaveBeenCalledOnce();
   expect(mocks.native.quitAndInstall).toHaveBeenCalledOnce();

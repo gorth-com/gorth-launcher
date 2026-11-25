@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { authUrl } from "@/utils/environment";
-import { getGorthClient, getGorthUserId } from "@/lib/auth/gorth";
+import { authClient } from "@/lib/auth/client/index";
+import { getGorthUserId } from "@/lib/auth/gorth";
 import { profile, trustedUrl } from "./model";
 import type { GameAccount } from "@/utils/interface";
 import { requestJson, AuthHttpError } from "./http";
@@ -8,7 +9,6 @@ export function gameBinding() {
   return authUrl ? new URL("/minecraft", trustedUrl(authUrl, true)).href : "";
 }
 async function nativeRequest(path: string, signal: AbortSignal, body?: object) {
-  const client = getGorthClient();
   // The official SDK owns cookie decryption. Only main sends this credential.
   return requestJson(
     new URL(path, trustedUrl(authUrl, true)),
@@ -16,7 +16,7 @@ async function nativeRequest(path: string, signal: AbortSignal, body?: object) {
       method: body ? "POST" : "GET",
       headers: {
         Origin: "com.gorth.launcher:/",
-        Cookie: client.getCookie(),
+        Cookie: authClient.getCookie(),
         ...(body ? { "Content-Type": "application/json" } : {}),
       },
       body: body ? JSON.stringify(body) : undefined,

@@ -21,7 +21,7 @@ export function onGorthChanged() {
   return () => {};
 }
 export async function loginGorth() {
-  requireSecureStorage();
+  await requireSecureStorage();
   user = {
     id: "verified-subject",
     name: "Before",
@@ -33,7 +33,7 @@ export async function loginGorth() {
   };
 }
 export async function restoreGorthSession() {
-  requireSecureStorage();
+  await requireSecureStorage();
   if (user)
     user = {
       ...user,

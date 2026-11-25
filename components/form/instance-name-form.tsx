@@ -1,6 +1,6 @@
-import { useForm } from "@gorth-io/primitive/cores/tanstack/form";
-import { Button } from "@gorth-io/primitive/custom/button";
-import { Input } from "@gorth-io/primitive/default/input";
+import { useForm } from "@gorth-com/primitive/cores/tanstack/form";
+import { Button } from "@gorth-com/primitive/custom/button";
+import { Input } from "@gorth-com/primitive/default/input";
 
 export function InstanceNameForm({
   initialName,

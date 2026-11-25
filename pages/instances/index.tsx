@@ -6,17 +6,17 @@ import {
   List,
   Plus,
   Search,
-} from "@gorth-io/primitive/cores/lucide";
+} from "@gorth-com/primitive/cores/lucide";
 import { useState } from "react";
 import { PageHeading } from "@/components/heading";
-import { Button } from "@gorth-io/primitive/custom/button";
-import { Input } from "@gorth-io/primitive/default/input";
+import { Button } from "@gorth-com/primitive/custom/button";
+import { Input } from "@gorth-com/primitive/default/input";
 import {
   InstanceCards,
   type InstanceCardsProps,
 } from "@/components/element/instance-cards";
 import type { Instance } from "@/lib/launcher";
-import { Card } from "@gorth-io/primitive/default/card";
+import { Card } from "@gorth-com/primitive/default/card";
 interface LibraryPageProps extends Pick<
   InstanceCardsProps,
   "onSelect" | "onPlay" | "playDisabled" | "statusLabel" | "playTimeLabel"

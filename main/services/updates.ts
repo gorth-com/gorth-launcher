@@ -13,7 +13,7 @@ import path from "node:path";
 import { createUpdateController } from "@/main/services/update-controller";
 import { getRpcRendererUrl, isRpcRendererUrl } from "@/main/rpc/sender";
 
-import { releaseVersion } from "@/lib/update/release";
+import { releaseVersion } from "@gorth-com/structure/modules/desktop";
 import { cancelAuth } from "@/lib/auth/service";
 import { gameIsBusy } from "@/lib/game/service";
 

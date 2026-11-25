@@ -1,4 +1,7 @@
 import type { ForgeConfig } from "@electron-forge/shared-types";
+import { PublisherGitHub } from "@electron-forge/publisher-github";
+import { githubPublisherConfig } from "./.github/scripts/github-publisher.js";
+import packageJSON from "./package.json" with { type: "json" };
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -12,13 +15,6 @@ import { MakerRpm } from "@electron-forge/maker-rpm";
 import { VitePlugin } from "@electron-forge/plugin-vite";
 import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import { FuseV1Options, FuseVersion } from "@electron/fuses";
-
-const appIcon =
-  process.platform === "darwin"
-    ? "public/favicon.icns"
-    : process.platform === "win32"
-      ? "public/favicon.ico"
-      : "public/favicon.png";
 
 const config: ForgeConfig = {
   hooks: {
@@ -44,7 +40,11 @@ const config: ForgeConfig = {
       { name: "Gorth authentication", schemes: ["com.gorth.launcher"] },
     ],
     executableName: "Gorth Launcher",
-    icon: appIcon,
+    icon: process.platform === "darwin"
+      ? "public/favicon.icns"
+      : process.platform === "win32"
+        ? "public/favicon.ico"
+        : "public/favicon.png",
     // Vite bundles JS, but better-sqlite3 remains external and icons load at runtime.
     ignore: (filePath) => {
       if (!filePath) return false;
@@ -77,6 +77,9 @@ const config: ForgeConfig = {
     new MakerDeb({
       options: { name: "gorth-launcher", productName: "Gorth Launcher" },
     }),
+  ],
+  publishers: [
+    new PublisherGitHub(githubPublisherConfig("gorth-launcher", packageJSON.version)),
   ],
   plugins: [
     new VitePlugin({

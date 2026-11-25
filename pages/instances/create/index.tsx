@@ -1,17 +1,20 @@
-import { ScrollArea, ScrollBar } from "@gorth-io/primitive/default/scroll-area";
+import {
+  ScrollArea,
+  ScrollBar,
+} from "@gorth-com/primitive/default/scroll-area";
 import { useId, useState } from "react";
-import { useForm, useStore } from "@gorth-io/primitive/cores/tanstack/form";
-import { Plus, RefreshCw, Import } from "@gorth-io/primitive/cores/lucide";
-import { Button } from "@gorth-io/primitive/custom/button";
-import { RadioGroup, RadioGroupItem } from "@gorth-io/primitive/custom/radio";
-import { Input } from "@gorth-io/primitive/default/input";
+import { useForm, useStore } from "@gorth-com/primitive/cores/tanstack/form";
+import { Plus, RefreshCw, Import } from "@gorth-com/primitive/cores/lucide";
+import { Button } from "@gorth-com/primitive/custom/button";
+import { RadioGroup, RadioGroupItem } from "@gorth-com/primitive/custom/radio";
+import { Input } from "@gorth-com/primitive/default/input";
 import {
   Field,
   FieldError,
   FieldGroup,
   FieldLabel,
-} from "@gorth-io/primitive/default/field";
-import { z } from "@gorth-io/structure/cores/zod";
+} from "@gorth-com/primitive/default/field";
+import { z } from "@gorth-com/structure/cores/zod";
 import {
   Card,
   CardContent,
@@ -19,8 +22,8 @@ import {
   CardDescription,
   CardHeader,
   CardFooter,
-} from "@gorth-io/primitive/default/card";
-import { Separator } from "@gorth-io/primitive/default/separator";
+} from "@gorth-com/primitive/default/card";
+import { Separator } from "@gorth-com/primitive/default/separator";
 import {
   InstanceWorkspace,
   type InstanceWorkspaceProps,

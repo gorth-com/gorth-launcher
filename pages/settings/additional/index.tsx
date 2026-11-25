@@ -1,20 +1,20 @@
 import { Fragment, type Dispatch, type SetStateAction } from "react";
-import { useForm } from "@gorth-io/primitive/cores/tanstack/form";
-import { useMutation } from "@gorth-io/primitive/cores/tanstack/query";
+import { useForm } from "@gorth-com/primitive/cores/tanstack/form";
+import { useMutation } from "@gorth-com/primitive/cores/tanstack/query";
 import {
   Card,
   CardTitle,
   CardDescription,
-} from "@gorth-io/primitive/default/card";
-import { Separator } from "@gorth-io/primitive/default/separator";
-import { RadioGroup, RadioGroupItem } from "@gorth-io/primitive/custom/radio";
-import { Input } from "@gorth-io/primitive/default/input";
-import { Button } from "@gorth-io/primitive/custom/button";
+} from "@gorth-com/primitive/default/card";
+import { Separator } from "@gorth-com/primitive/default/separator";
+import { RadioGroup, RadioGroupItem } from "@gorth-com/primitive/custom/radio";
+import { Input } from "@gorth-com/primitive/default/input";
+import { Button } from "@gorth-com/primitive/custom/button";
 import {
   FolderOpen,
   Search,
   ArrowUpRight,
-} from "@gorth-io/primitive/cores/lucide";
+} from "@gorth-com/primitive/cores/lucide";
 import { InstanceSelect } from "@/components/element/instance-select";
 import { toast } from "@/providers/toaster";
 import type { Settings, Page } from "@/utils/interface";

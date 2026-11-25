@@ -1,21 +1,33 @@
 import { nativeTheme, session, type BrowserWindow } from "electron";
 import { allowedContentWebsite } from "@/lib/content/website";
+import { prepareNetworkPartition } from "@/main/services/proxy";
 
+let prepared = false;
+let preparation: Promise<void> | undefined;
+export function prepareContentWebsiteSession() {
+  return (preparation ??= (async () => {
+    await prepareNetworkPartition("content-websites");
+    const isolated = session.fromPartition("content-websites");
+    isolated.setPermissionRequestHandler((_contents, _permission, callback) =>
+      callback(false),
+    );
+    isolated.setPermissionCheckHandler(() => false);
+    // Downloads are managed by the launcher, with hashes and instance validation.
+    const blockDownload = (event: Electron.Event) => event.preventDefault();
+    isolated.on("will-download", blockDownload);
+    prepared = true;
+  })().catch((error) => {
+    preparation = undefined;
+    throw error;
+  }));
+}
 export function installWebview(window: BrowserWindow) {
-  const partition = "content-websites";
-  const isolated = session.fromPartition(partition);
-  isolated.setPermissionRequestHandler((_contents, _permission, callback) =>
-    callback(false),
-  );
-  isolated.setPermissionCheckHandler(() => false);
-  // Downloads are managed by the launcher, with hashes and instance validation.
-  const blockDownload = (event: Electron.Event) => event.preventDefault();
-  isolated.on("will-download", blockDownload);
-  window.once("closed", () =>
-    isolated.removeListener("will-download", blockDownload),
-  );
   window.webContents.on("will-attach-webview", (event, preferences, params) => {
-    if (!allowedContentWebsite(params.src) || params.partition !== partition) {
+    if (
+      !prepared ||
+      !allowedContentWebsite(params.src) ||
+      params.partition !== "content-websites"
+    ) {
       event.preventDefault();
       return;
     }

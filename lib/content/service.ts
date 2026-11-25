@@ -1,10 +1,18 @@
-import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import path from "node:path";
+import { identifyInstalledMods } from "./installed-metadata";
 import { getLauncherFolders, gameFolder } from "@/utils/launcher-folders";
-import { mkdtemp, rm } from "node:fs/promises";
-import type { createLibraryStore } from "@/services/library-store";
+import { copyFile, mkdtemp, rm, stat } from "node:fs/promises";
+import type { rawCreateLibraryStore } from "@/models/instance";
 import { gameIsBusy, synchronizeGameLibrary } from "@/lib/game/service";
 import { download } from "@/lib/game/files";
+import {
+  modpackOverview,
+  modpackChangelog,
+  modpackQuery,
+} from "./modpack-overview";
+import { allowedContentWebsite } from "./website";
+import { prepareContentWebsiteSession } from "@/main/windows/webview";
 import {
   beginContent,
   cancelContent,
@@ -29,6 +37,8 @@ import {
   querySchema,
   versionsSchema,
   optionalModsSchema,
+  packVersionSchema,
+  packUpdateSchema,
 } from "./schema";
 import {
   contentInventory,
@@ -39,12 +49,14 @@ import {
 } from "./install";
 import {
   mergeModpackUpdate,
+  readModpackReceipt,
+  verifyModpackArchive,
   setModpackSource,
   unpackPack as unpackPackArchive,
 } from "./packs";
 import { downloadWebsiteFile } from "@/main/services/content-download";
 import { installWorld } from "./world";
-import type { ContentResult } from "./interface";
+import type { ContentResult, ContentInventory } from "./interface";
 
 const unpackPack: typeof unpackPackArchive = (
   archive,
@@ -64,7 +76,7 @@ const unpackPack: typeof unpackPackArchive = (
   );
 
 export function registerContentIpc(
-  library: Awaited<ReturnType<typeof createLibraryStore>>,
+  library: Awaited<ReturnType<typeof rawCreateLibraryStore>>,
 ) {
   const trusted = (event: Electron.IpcMainInvokeEvent) => {
     const window = BrowserWindow.fromWebContents(event.sender);
@@ -77,7 +89,7 @@ export function registerContentIpc(
     return window;
   };
   const root = () => getLauncherFolders(app.getPath("userData")).root;
-  const run = async <T,>(
+  const run = async <T>(
     action: () => Promise<T>,
   ): Promise<ContentResult<T>> => {
     try {
@@ -105,6 +117,10 @@ export function registerContentIpc(
   ipcMain.handle("content:cancel", (event) => {
     trusted(event);
     cancelContent();
+  });
+  ipcMain.handle("content:prepare-preview", (event) => {
+    trusted(event);
+    return run(async () => { await prepareContentWebsiteSession(); return null; });
   });
   ipcMain.handle("content:select-optional", (event, raw) => {
     trusted(event);
@@ -137,6 +153,136 @@ export function registerContentIpc(
       const input = inventorySchema.parse(raw);
       library.getInstance(input.instanceId);
       return contentInventory(root(), input.instanceId);
+    });
+  });
+  ipcMain.handle("content:pack-overview", (event, raw) => {
+    trusted(event);
+    return run(() => {
+      const { instanceId } = inventorySchema.parse(raw);
+      return modpackOverview(
+        root(),
+        library.getInstance(instanceId),
+        AbortSignal.timeout(45000),
+      );
+    });
+  });
+  ipcMain.handle("content:pack-changelog", (event, raw) => {
+    trusted(event);
+    return run(() => {
+      const { instanceId, versionId } = packVersionSchema.parse(raw);
+      return modpackChangelog(
+        root(),
+        library.getInstance(instanceId),
+        versionId,
+        AbortSignal.timeout(45000),
+      );
+    });
+  });
+  ipcMain.handle("content:pack-website", (event, raw) => {
+    trusted(event);
+    return run(async () => {
+      const { instanceId } = inventorySchema.parse(raw);
+      const overview = await modpackOverview(
+        root(),
+        library.getInstance(instanceId),
+        AbortSignal.timeout(45000),
+      );
+      if (!overview?.website || !allowedContentWebsite(overview.website))
+        throw new Error("Không có website hợp lệ cho modpack.");
+      await shell.openExternal(overview.website);
+      return null;
+    });
+  });
+  ipcMain.handle("content:pack-update", (event, raw) => {
+    const window = trusted(event);
+    return run(async () => {
+      const input = packUpdateSchema.parse(raw);
+      const instance = library.getInstance(input.instanceId);
+      let localArchive: string | undefined;
+      if (input.fromFile) {
+        const chosen = await dialog.showOpenDialog(window, {
+          title: "Chọn archive của phiên bản modpack đã chọn",
+          properties: ["openFile"],
+          filters: [{ name: "Modpack", extensions: ["mrpack", "zip"] }],
+        });
+        if (chosen.canceled || !chosen.filePaths[0]) return { cancelled: true };
+        localArchive = chosen.filePaths[0];
+      }
+      await operation(async (staging, signal) => {
+        const instanceRoot = path.join(
+          gameFolder(root(), "instances"),
+          instance.id,
+        );
+        const receipt = await readModpackReceipt(instanceRoot);
+        if (!receipt?.source)
+          throw new Error("Modpack không có nguồn cập nhật online.");
+        const source = receipt.source;
+        const query = modpackQuery(instance, source.provider);
+        const versions = await contentVersions(query, source.projectId, signal);
+        if (!versions.some((version) => version.id === input.versionId))
+          throw new Error(
+            "Phiên bản không thuộc danh sách release tương thích.",
+          );
+        const file = await resolveContentFile(
+          query,
+          source.projectId,
+          input.versionId,
+          signal,
+        );
+        const archive = path.join(staging, "pack-update.zip");
+        updateContent("Đang tải bản cập nhật modpack…");
+        if (localArchive) {
+          if ((await stat(localArchive)).size > 1024 ** 3)
+            throw new Error("Archive modpack vượt 1 GB.");
+          await copyFile(localArchive, archive);
+          await verifyModpackArchive(archive, file.artifact);
+        } else await download(file.artifact, archive, signal);
+        signal.throwIfAborted();
+        const updateRoot = path.join(staging, "update");
+        const runtime = await unpackPack(
+          archive,
+          updateRoot,
+          signal,
+          updateContent,
+          downloadWebsiteFile,
+          (items, optionalSignal) => requestOptionalMods(items, optionalSignal),
+        );
+        if (
+          runtime.version !== instance.version ||
+          runtime.loader !== instance.loader ||
+          (runtime.loaderVersion ?? null) !== (instance.loaderVersion ?? null)
+        )
+          throw new Error(
+            "Bản modpack mới đổi Minecraft/loader; hãy cài thành instance mới.",
+          );
+        const payload = path.join(updateRoot, "payload");
+        await setModpackSource(payload, {
+          ...source,
+          versionId: input.versionId,
+        });
+        await mergeModpackUpdate(instanceRoot, payload);
+      });
+      return { cancelled: false };
+    });
+  });
+  const identifying = new Map<string, Promise<ContentInventory>>();
+  ipcMain.handle("content:metadata", (event, raw) => {
+    trusted(event);
+    return run(async () => {
+      const { instanceId } = inventorySchema.parse(raw);
+      library.getInstance(instanceId);
+      if (!identifying.has(instanceId)) {
+        const operation = contentInventory(root(), instanceId)
+          .then((inventory) =>
+            identifyInstalledMods(
+              path.join(root(), "instances", instanceId),
+              inventory,
+            ),
+          )
+          .finally(() => identifying.delete(instanceId));
+        identifying.set(instanceId, operation);
+      }
+      return identifying.get(instanceId)!;
     });
   });
   ipcMain.handle("content:updates", (event, raw) => {

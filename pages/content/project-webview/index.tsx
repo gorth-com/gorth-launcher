@@ -4,9 +4,9 @@ import {
   ArrowLeft,
   PanelRight,
   RotateCw,
-} from "@gorth-io/primitive/cores/lucide";
-import { Button } from "@gorth-io/primitive/custom/button";
-import { Input } from "@gorth-io/primitive/default/input";
+} from "@gorth-com/primitive/cores/lucide";
+import { Button } from "@gorth-com/primitive/custom/button";
+import { Input } from "@gorth-com/primitive/default/input";
 import { allowedContentWebsite } from "@/lib/content/website";
 import { isAbortedNavigation } from "@/lib/webview/errors";
 
@@ -28,9 +28,32 @@ export function ProjectWebview({
   const view = useRef<Electron.WebviewTag>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [prepared, setPrepared] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   useFeedbackToast(
     !allowedContentWebsite(url) ? "Địa chỉ dự án không hợp lệ." : error,
   );
+  useEffect(() => {
+    let active = true;
+    if (!allowedContentWebsite(url)) return;
+    window.electronAPI.content
+      .preparePreview()
+      .then((result) => {
+        if (!active) return;
+        if (!result.ok)
+          throw new Error(result.error ?? "Không chuẩn bị được session.");
+        setPrepared(true);
+      })
+      .catch(() => {
+        if (active) {
+          setError("Không chuẩn bị được proxy cho trang dự án.");
+          setLoading(false);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [url, attempt]);
   useEffect(() => {
     const element = view.current;
     if (!element) return;
@@ -76,7 +99,7 @@ export function ProjectWebview({
       element.removeEventListener("did-navigate", navigate);
       element.removeEventListener("did-navigate-in-page", navigate);
     };
-  }, [url]);
+  }, [url, prepared]);
   if (!allowedContentWebsite(url)) return null;
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">
@@ -96,7 +119,9 @@ export function ProjectWebview({
           size="icon"
           variant="ghost"
           aria-label="Tải lại trang dự án"
-          onClick={() => view.current?.reload()}
+          onClick={() =>
+            prepared ? view.current?.reload() : setAttempt((value) => value + 1)
+          }
         >
           <RotateCw size={16} />
         </Button>
@@ -128,14 +153,15 @@ export function ProjectWebview({
         )}
       </div>
 
-      {createElement("webview", {
-        ref: view,
-        src: url,
-        partition: "content-websites",
-        className: "min-h-0 w-full flex-1",
-        style: { display: hidden ? "none" : "flex" },
-        "aria-label": "Trang dự án",
-      })}
+      {prepared &&
+        createElement("webview", {
+          ref: view,
+          src: url,
+          partition: "content-websites",
+          className: "min-h-0 w-full flex-1",
+          style: { display: hidden ? "none" : "flex" },
+          "aria-label": "Trang dự án",
+        })}
     </div>
   );
 }

@@ -1,5 +1,5 @@
-import { Spinner } from "@gorth-io/primitive/pattern/spinner";
-import { Button } from "@gorth-io/primitive/custom/button";
+import { Spinner } from "@gorth-com/primitive/pattern/spinner";
+import { Button } from "@gorth-com/primitive/custom/button";
 
 export function LoadingScreen({ error }: { error?: string }) {
   return (

@@ -1,17 +1,17 @@
-import { Clock, Download } from "@gorth-io/primitive/cores/lucide";
+import { Clock, Download } from "@gorth-com/primitive/cores/lucide";
 import {
   Avatar,
   AvatarImage,
   AvatarFallback,
-} from "@gorth-io/primitive/custom/avatar";
-import { Badge } from "@gorth-io/primitive/custom/badge";
-import { Button } from "@gorth-io/primitive/custom/button";
+} from "@gorth-com/primitive/custom/avatar";
+import { Badge } from "@gorth-com/primitive/custom/badge";
+import { Button } from "@gorth-com/primitive/custom/button";
 import {
   Card,
   CardContent,
   CardTitle,
   CardDescription,
-} from "@gorth-io/primitive/default/card";
+} from "@gorth-com/primitive/default/card";
 import { formatDate, formatInitials, formatNumber } from "@/utils/formatter";
 import type { ContentProject, ContentQuery } from "@/lib/content/interface";
 import type { ReactNode } from "react";
@@ -21,6 +21,7 @@ interface ContentProjectCardProps {
   query?: ContentQuery;
   actions?: ReactNode;
   metadata?: ReactNode;
+  footerActions?: ReactNode;
   layout: "list" | "grid";
   busy: boolean;
   onOpen?: () => void;
@@ -36,6 +37,7 @@ export function ContentProjectCard({
   onInstall,
   actions,
   metadata,
+  footerActions,
 }: ContentProjectCardProps) {
   const vertical = layout === "grid";
   const categories = project.categories ?? [];
@@ -106,40 +108,43 @@ export function ContentProjectCard({
               )}
             </div>
           </div>
-          <div className="mt-auto flex flex-wrap items-center gap-2">
-            {metadata ?? (
-              <>
-                {categories.slice(0, vertical ? 1 : 2).map((category) => (
-                  <Badge key={category} variant="secondary">
-                    {category}
-                  </Badge>
-                ))}
-                {categories.length > (vertical ? 1 : 2) && (
-                  <Badge variant="secondary">
-                    +{categories.length - (vertical ? 1 : 2)}
-                  </Badge>
-                )}
-                <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
-                  <Download className="size-3.5" />
-                  {formatNumber(project.downloads)}
-                </span>
-                {date && Number.isFinite(Date.parse(date)) && (
-                  <span
-                    title={project.publishedAt ? "Published" : "Updated"}
-                    className="inline-flex items-center gap-2 text-xs text-muted-foreground"
-                  >
-                    <Clock className="size-3.5" />
-                    {formatDate(new Date(date))}
+          <div className="mt-auto flex items-end justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-2">
+              {metadata ?? (
+                <>
+                  {categories.slice(0, vertical ? 1 : 2).map((category) => (
+                    <Badge key={category} variant="secondary">
+                      {category}
+                    </Badge>
+                  ))}
+                  {categories.length > (vertical ? 1 : 2) && (
+                    <Badge variant="secondary">
+                      +{categories.length - (vertical ? 1 : 2)}
+                    </Badge>
+                  )}
+                  <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+                    <Download className="size-3.5" />
+                    {formatNumber(project.downloads)}
                   </span>
-                )}
-                {query?.loader && (
-                  <Badge variant="secondary">{query.loader}</Badge>
-                )}
-                {query?.version && (
-                  <Badge variant="secondary">{query.version}</Badge>
-                )}
-              </>
-            )}
+                  {date && Number.isFinite(Date.parse(date)) && (
+                    <span
+                      title={project.publishedAt ? "Published" : "Updated"}
+                      className="inline-flex items-center gap-2 text-xs text-muted-foreground"
+                    >
+                      <Clock className="size-3.5" />
+                      {formatDate(new Date(date))}
+                    </span>
+                  )}
+                  {query?.loader && (
+                    <Badge variant="secondary">{query.loader}</Badge>
+                  )}
+                  {query?.version && (
+                    <Badge variant="secondary">{query.version}</Badge>
+                  )}
+                </>
+              )}
+            </div>
+            {footerActions}
           </div>
         </div>
       </CardContent>

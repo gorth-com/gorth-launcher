@@ -1,6 +1,6 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { Settings } from "@gorth-io/primitive/cores/lucide";
+import { Settings } from "@gorth-com/primitive/cores/lucide";
 import { expect, it } from "vitest";
 import { PageHeading, HeadingIcon } from "@/components/heading";
 

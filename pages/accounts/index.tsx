@@ -1,13 +1,13 @@
 import { confirmAction } from "@/lib/confirmation";
 import { PageHeading } from "@/components/heading";
-import { UserRound as PageIcon } from "@gorth-io/primitive/cores/lucide";
+import { UserRound as PageIcon } from "@gorth-com/primitive/cores/lucide";
 import { useFeedbackToast } from "@/hooks/use-feedback-toast";
 import { PageShell } from "@/layouts/page-shell";
 import { PageBanner } from "@/components/element/page-banner";
 import { NavIdentity } from "@/components/dashboard/nav-identity";
-import { Badge } from "@gorth-io/primitive/custom/badge";
+import { Badge } from "@gorth-com/primitive/custom/badge";
 import accountsBackground from "@/public/dawn/accounts.png";
-import { useForm } from "@gorth-io/primitive/cores/tanstack/form";
+import { useForm } from "@gorth-com/primitive/cores/tanstack/form";
 import {
   Check,
   User,
@@ -17,16 +17,16 @@ import {
   LogOut,
   RefreshCw,
   Trash2,
-} from "@gorth-io/primitive/cores/lucide";
-import { Button } from "@gorth-io/primitive/custom/button";
-import { Input } from "@gorth-io/primitive/default/input";
+} from "@gorth-com/primitive/cores/lucide";
+import { Button } from "@gorth-com/primitive/custom/button";
+import { Input } from "@gorth-com/primitive/default/input";
 import {
   Card,
   CardHeader,
   CardTitle,
   CardDescription,
   CardContent,
-} from "@gorth-io/primitive/default/card";
+} from "@gorth-com/primitive/default/card";
 import type { useAuth } from "@/hooks/use-auth";
 
 export function AccountsPage({ auth, busy, run }: ReturnType<typeof useAuth>) {

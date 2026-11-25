@@ -1,5 +1,5 @@
 import { loaderCatalog } from "@/utils/constant";
-import { z } from "@gorth-io/structure/cores/zod";
+import { z } from "@gorth-com/structure/cores/zod";
 import { supportedVanillaVersion } from "@/lib/game/catalog";
 export const contentId = z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/);
 export const optionalModsSchema = z.object({
@@ -60,6 +60,12 @@ export const versionsSchema = z.object({
 });
 export const inventorySchema = z.object({
   instanceId: z.string().regex(/^[a-zA-Z0-9-]{1,80}$/),
+});
+export const packVersionSchema = inventorySchema.extend({
+  versionId: contentId,
+});
+export const packUpdateSchema = packVersionSchema.extend({
+  fromFile: z.boolean().optional(),
 });
 export const manageSchema = inventorySchema.extend({
   action: z.enum(["enable", "disable", "remove", "update"]),

@@ -11,7 +11,7 @@ import {
 } from "@/lib/library/game-preferences";
 import { defaultInstanceSettings } from "@/lib/library/instance-settings";
 import { settingsSchema } from "@/lib/library/settings-schema";
-import { createLibraryStore } from "@/services/library-store";
+import { rawCreateLibraryStore } from "@/models/instance";
 import { formatPlayTime } from "@/utils/formatter";
 it("validates Java options and MiB memory without passing obsolete PermGen flags", () => {
   const value = javaPreferencesSchema.parse({
@@ -112,9 +112,9 @@ it("persists Java/Minecraft defaults and preserves per-instance settings", async
   const directory = await mkdtemp(
     path.join(tmpdir(), "gorth-game-preferences-"),
   );
-  let store: Awaited<ReturnType<typeof createLibraryStore>> | undefined;
+  let store: Awaited<ReturnType<typeof rawCreateLibraryStore>> | undefined;
   try {
-    store = await createLibraryStore(directory, () => false);
+    store = await rawCreateLibraryStore(directory, () => false);
     await store.command({
       action: "create",
       name: "Fixture",
@@ -146,7 +146,7 @@ it("persists Java/Minecraft defaults and preserves per-instance settings", async
       },
     });
     store.close();
-    store = await createLibraryStore(directory, () => false);
+    store = await rawCreateLibraryStore(directory, () => false);
     expect(store.snapshot().settings).toMatchObject({
       java: { memoryMaxMiB: 6144, skipSetupPrompt: true },
       minecraft: { consoleOnLaunch: true, recordGameTime: false },

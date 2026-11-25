@@ -1,9 +1,7 @@
 import path from "node:path";
-import { app, BrowserWindow } from "electron";
-import {
-  showGameConsole,
-  hideGameConsole,
-} from "@/main/services/game-presentation";
+import { app, BrowserWindow, ipcMain } from "electron";
+import { showGameConsole } from "@/main/services/game-presentation";
+import { getRpcRendererUrl } from "@/main/rpc/sender";
 const directory = process.argv.at(-1)!;
 if (
   !path.isAbsolute(directory) ||
@@ -25,12 +23,25 @@ app.once("quit", () => {
 void (async () => {
   try {
     await app.whenReady();
-    await showGameConsole("fixture-instance");
-    const window = BrowserWindow.getAllWindows()[0];
+    const window = new BrowserWindow({
+      show: false,
+      webPreferences: {
+        preload: path.join(directory, "main/preload.cjs"),
+        sandbox: true,
+        contextIsolation: true,
+        nodeIntegration: false,
+      },
+    });
+    await window.loadURL(getRpcRendererUrl());
+    const request = async (id: string) => {
+      const delivered = new Promise<string>((resolve) =>
+        ipcMain.once("fixture:console", (_event, value) => resolve(value)),
+      );
+      await showGameConsole(id, window);
+      return delivered;
+    };
+    result.instance = await request("fixture-instance");
     result.visible = window.isVisible();
-    result.instance = new URL(window.webContents.getURL()).searchParams.get(
-      "game-console",
-    );
     // Electron exposes this inspection method at runtime, but not in its public types.
     const preferences = (
       window.webContents as typeof window.webContents & {
@@ -41,11 +52,11 @@ void (async () => {
       preferences.contextIsolation &&
       preferences.sandbox &&
       !preferences.nodeIntegration;
-    await showGameConsole("fixture-instance");
+    await request("second-instance");
     result.reused = BrowserWindow.getAllWindows().length === 1;
-    hideGameConsole("fixture-instance");
+    window.hide();
     result.hidden = !window.isVisible();
-    await showGameConsole("fixture-instance");
+    await request("fixture-instance");
     result.restored = window.isVisible();
     window.destroy();
   } catch (error) {

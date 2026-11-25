@@ -8,7 +8,7 @@ import {
   stopDesktopServer,
 } from "@/services/desktop-server";
 import { registerAuthCallback } from "@/services/auth-callback";
-import { upsertUserProfile, getUserProfile } from "@/services/user-profile";
+import { rawUpsertUserProfile, rawGetUserProfile } from "@/models/user-profile";
 import { createDesktopDevServer } from "@/lib/server/vite";
 import { appUrl } from "@/utils/environment";
 
@@ -26,7 +26,7 @@ async function awaitTest() {
   let identityId: string | null = "native-user";
   let stage = "startup";
   try {
-    upsertUserProfile({
+    rawUpsertUserProfile({
       id: "native-user",
       name: "Native Test",
       emailVerified: true,
@@ -78,7 +78,7 @@ async function awaitTest() {
       ),
       null,
     );
-    assert.equal(getUserProfile("native-user")?.name, "Native Test");
+    assert.equal(rawGetUserProfile("native-user")?.name, "Native Test");
     stage = "development server";
     stopDesktopServer();
     // Forge uses Vite on the public port; Nitro uses only an OS IPC endpoint in main.

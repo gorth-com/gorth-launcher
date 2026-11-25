@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
-import { useQuery } from "@gorth-io/primitive/cores/tanstack/query";
+import { useQuery } from "@gorth-com/primitive/cores/tanstack/query";
 import {
   RouterProvider,
   useRouterState,
-} from "@gorth-io/primitive/cores/tanstack/router";
-import type { ColumnDef } from "@gorth-io/primitive/cores/tanstack/table";
+} from "@gorth-com/primitive/cores/tanstack/router";
+import type { ColumnDef } from "@gorth-com/primitive/cores/tanstack/table";
 import { createLauncherRouter } from "@/lib/navigation";
 import { DataTable, dataTableFeatures } from "@/components/custom/data-table";
 import { Ranger } from "@/components/custom/ranger";
-import { Button } from "@gorth-io/primitive/custom/button";
+import { Button } from "@gorth-com/primitive/custom/button";
 import { QueryProvider } from "@/providers/query";
 import { useTRPC } from "@/lib/rpc/client";
 import { useLauncherNavigation } from "@/hooks/use-launcher-navigation";

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { Camera, FolderOpen, Trash2 } from "@gorth-io/primitive/cores/lucide";
-import { Card, CardContent } from "@gorth-io/primitive/default/card";
-import { Input } from "@gorth-io/primitive/default/input";
-import { Button } from "@gorth-io/primitive/custom/button";
+import { Camera, FolderOpen, Trash2 } from "@gorth-com/primitive/cores/lucide";
+import { Card, CardContent } from "@gorth-com/primitive/default/card";
+import { Input } from "@gorth-com/primitive/default/input";
+import { Button } from "@gorth-com/primitive/custom/button";
 import { useFeedbackToast } from "@/hooks/use-feedback-toast";
 import { formatDateTime } from "@/utils/formatter";
 import type { InstanceFileEntry } from "@/lib/instance/interface";

@@ -1,5 +1,5 @@
 import { getRpcRendererUrl, isRpcRendererUrl } from "@/main/rpc/sender";
-import { upsertUserProfile } from "@/services/user-profile";
+import { rawUpsertUserProfile } from "@/models/user-profile";
 import { BrowserWindow, ipcMain } from "electron";
 import {
   openAuthView,
@@ -231,7 +231,7 @@ async function execute(
     if (c.action === "launcher.unlock") {
       if (gorthSnapshot().configured) await restoreGorthSession(signal);
       const user = gorthSnapshot().user;
-      if (user) upsertUserProfile(user);
+      if (user) rawUpsertUserProfile(user);
       await syncNativeGameProfile(signal);
       return { ok: true, snapshot: snapshot() };
     }
@@ -288,7 +288,7 @@ async function execute(
         await loginGorth(signal);
         signal.throwIfAborted();
         const user = gorthSnapshot().user;
-        if (user) upsertUserProfile(user);
+        if (user) rawUpsertUserProfile(user);
         await syncNativeGameProfile(signal);
         completed = true;
         break;
@@ -306,7 +306,7 @@ async function execute(
           );
         await restoreGorthSession(signal);
         const user = gorthSnapshot().user;
-        if (user) upsertUserProfile(user);
+        if (user) rawUpsertUserProfile(user);
         await syncNativeGameProfile(signal);
         break;
       }

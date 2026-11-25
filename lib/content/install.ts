@@ -284,6 +284,7 @@ export async function contentInventory(
   const game = contentPath(instance, "game");
   const receipt = await readReceipt(instance);
   const worlds: string[] = [];
+  const pack = await readModpackReceipt(instance);
   try {
     const entries = await readdir(path.join(game, "saves"), {
       withFileTypes: true,
@@ -320,6 +321,18 @@ export async function contentInventory(
           (item.worldName ?? "") === (location.worldName ?? ""),
       );
       const checksum = await digest(path.join(location.root, filename), "sha1");
+      const relative = location.directory + "/" + base;
+      const origin = pack?.origins?.[relative];
+      const packProvider = pack?.source?.provider;
+      const knownOrigin =
+        origin?.sha1 === checksum &&
+        ["curseforge", "modrinth"].includes(origin.provider)
+          ? origin
+          : pack?.files[relative] === checksum &&
+              packProvider &&
+              ["curseforge", "modrinth"].includes(packProvider)
+            ? { provider: packProvider }
+            : undefined;
       if (managed && !managed.sha1) {
         managed.sha1 = checksum;
         managed.directory =
@@ -341,6 +354,8 @@ export async function contentInventory(
         projectId: managed?.projectId ?? null,
         versionId: managed?.versionId ?? null,
         filename: base,
+        checksum,
+        origin: knownOrigin,
         directory: location.directory,
         ...(location.worldName ? { worldName: location.worldName } : {}),
         enabled,
@@ -350,7 +365,6 @@ export async function contentInventory(
     }
   }
   if (migratedReceipt) await writeReceipt(instance, receipt);
-  const pack = await readModpackReceipt(instance);
   if (pack?.source) {
     let modified = false;
     for (const [relative, checksum] of Object.entries(pack.files)) {

@@ -1,4 +1,4 @@
-import { z } from "@gorth-io/structure/cores/zod";
+import { z } from "@gorth-com/structure/cores/zod";
 import type { Settings, InstanceSettings } from "@/utils/interface";
 
 const argument = z

@@ -1,14 +1,9 @@
-import { createAuthClient } from "better-auth/client";
-import { electronClient } from "@better-auth/electron/client";
-import { createAuthPolicy } from "@gorth-io/structure/modules/auth/client";
+import { authClient, authScheme, createDesktopAuthClient, gorthConfigured } from "@/lib/auth/client/index";
+import { createAuthPolicy } from "@gorth-com/structure/modules/auth/client";
 import { app, BrowserWindow, protocol } from "electron";
-import { authUrl, oauthClientId } from "@/utils/environment";
 import { prepareAuthProtocol } from "@/main/services/auth-protocol";
-import {
-  getLoginBrowser,
-  getLoginSignInURL,
-  type LoginBrowser,
-} from "@/lib/auth/login-browser";
+import { createSdkPkceFence } from "@/lib/auth/sdk-pkce";
+import { getLoginBrowser, type LoginBrowser } from "@/lib/auth/login-browser";
 import {
   nativeStorage,
   nativeVaultExists,
@@ -17,87 +12,28 @@ import {
 } from "@/lib/auth/storage";
 import type { NativeIdentity } from "@/lib/auth/native-types";
 
+export { authScheme, gorthConfigured };
+
 const authPolicy = createAuthPolicy();
 
-export const authScheme = "com.gorth.launcher";
-export function gorthConfigured() {
-  if (!authUrl || oauthClientId !== "gorth-launcher") return false;
-  try {
-    const url = new URL(authUrl);
-    return (
-      url.pathname === "/" &&
-      !url.username &&
-      !url.password &&
-      !url.search &&
-      !url.hash &&
-      (url.protocol === "https:" ||
-        (url.protocol === "http:" &&
-          ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)))
-    );
-  } catch {
-    return false;
-  }
-}
-let client: ReturnType<typeof createClient> | undefined;
 let identity: NativeIdentity | null = null;
 let verifiedAt = 0;
 let unlocked = false;
 let pending: {
   signal: AbortSignal;
   exchanging: boolean;
+  fence?: ReturnType<typeof createSdkPkceFence>;
   complete: () => void;
   fail: () => void;
 } | null = null;
 let revision = 0;
 let opening: Promise<void> | undefined;
-// SDK 1.7.7 advertises kElectron in its declarations but omits the runtime
-// export. Its shared PKCE map is cleared only to fence cancelled requests.
-const sdkPkceKey = Symbol.for("better-auth:electron");
 let installed = false;
 const listeners = new Set<() => void>();
 function notify() {
   for (const listener of listeners) listener();
 }
 
-function createClient(browser: LoginBrowser = "default") {
-  if (!gorthConfigured())
-    throw new Error("Desktop auth configuration is incomplete.");
-  const origin = new URL(authUrl);
-  if (
-    origin.pathname !== "/" ||
-    origin.username ||
-    origin.password ||
-    origin.search ||
-    origin.hash ||
-    (origin.protocol !== "https:" &&
-      !(
-        origin.protocol === "http:" &&
-        ["localhost", "127.0.0.1", "[::1]"].includes(origin.hostname)
-      ))
-  )
-    throw new Error("Invalid desktop auth origin.");
-  return createAuthClient({
-    baseURL: origin.origin,
-    basePath: "/auth",
-    fetchOptions: { timeout: 10_000, retry: 0, customFetchImpl: desktopFetch },
-    plugins: [
-      electronClient({
-        clientID: oauthClientId,
-        signInURL: getLoginSignInURL(origin.origin, browser),
-        protocol: { scheme: authScheme },
-        callbackPath: "/auth/callback",
-        storage: nativeStorage,
-        storagePrefix: "gorth-native",
-        cookiePrefix: "gorth",
-        userImageProxy: { enabled: false },
-        disableCache: true,
-      }),
-    ],
-  });
-}
-export function getGorthClient() {
-  return (client ??= createClient());
-}
 export function onGorthChanged(listener: () => void) {
   listeners.add(listener);
   return () => {
@@ -126,12 +62,12 @@ export function getGorthUserId() {
     : null;
 }
 export async function restoreGorthSession(signal?: AbortSignal) {
-  requireSecureStorage();
+  await requireSecureStorage();
   // Validate the file before the SDK's storage adapter (which catches errors).
   nativeStorage.getItem("gorth-native.cookie");
   unlocked = true;
   const version = revision;
-  const result = await getGorthClient().getSession({
+  const result = await authClient.getSession({
     query: { disableCookieCache: true },
     fetchOptions: { signal },
   });
@@ -166,8 +102,8 @@ export async function signOutGorth() {
   verifiedAt = 0;
   notify(); // Block local API access before the remote sign-out.
   try {
-    requireSecureStorage();
-    const result = await getGorthClient().signOut();
+    await requireSecureStorage();
+    const result = await authClient.signOut();
     if (result.error)
       throw new Error(
         "Signed out locally. Remote app-session deletion could not be confirmed.",
@@ -196,18 +132,22 @@ export async function receiveGorthDeepLink(url: string) {
     parsed.hash.length > 4096
   )
     return false;
+  // Ignore cancelled/unknown callbacks without failing a newer login.
+  if (!request.fence?.accepts(parsed.hash.slice(7))) return false;
   request.exchanging = true;
   try {
-    const result = await getGorthClient().authenticate({
+    const result = await authClient.authenticate({
       token: parsed.hash.slice(7),
       fetchOptions: { signal: request.signal },
     });
+    if (pending !== request || request.signal.aborted) return false;
     if (result.error) throw new Error("Desktop sign-in was rejected.");
     try {
       await restoreGorthSession(request.signal);
       if (!getGorthUserId())
         throw new Error("App session verification failed.");
     } catch (error) {
+      if (pending !== request || request.signal.aborted) return false;
       identity = null;
       verifiedAt = 0;
       notify();
@@ -234,7 +174,7 @@ export function installGorthAuth() {
   if (!gorthConfigured()) return;
   // Preserve the app's existing CSP and single-instance ownership. SDK default
   // IPC bridges have no sender checks, so use the app's narrower trusted bridge.
-  getGorthClient().setupMain({
+  authClient.setupMain({
     scheme: false,
     csp: false,
     bridges: false,
@@ -250,8 +190,7 @@ export function installGorthAuth() {
   });
 }
 export async function loginGorth(signal: AbortSignal) {
-  requireSecureStorage();
-  if (opening) await opening;
+  await requireSecureStorage();
   if (signal.aborted) throw new Error("Sign-in cancelled.");
   if (pending) throw new Error("An account operation is already running.");
   revision++;
@@ -269,44 +208,44 @@ export async function loginGorth(signal: AbortSignal) {
       settled = true;
       clearTimeout(timer);
       signal.removeEventListener("abort", abort);
-      pending = null;
-      // Clear the official SDK's outstanding PKCE requests after completion,
-      // timeout or cancellation; no custom OAuth state/verifier implementation.
-      const cache = (
-        globalThis as typeof globalThis & { [sdkPkceKey]?: Map<string, string> }
-      )[sdkPkceKey];
-      cache?.clear();
+      if (pending === request) pending = null;
+      request.fence?.clear();
       if (error) {
         revision++;
         controller.abort();
         reject(error);
       } else resolve();
     };
-    pending = {
+    const request: NonNullable<typeof pending> = {
       signal: attemptSignal,
       exchanging: false,
       complete: () => finish(),
       fail: () => finish(new Error("Sign-in failed.")),
     };
+    pending = request;
     signal.addEventListener("abort", abort, { once: true });
+    const previousOpening = opening;
     async function start() {
       try {
+        // Keep SDK request creation serial, but install cancellation/deadline
+        // before waiting for a previous shell.openExternal() to finish.
+        await previousOpening;
+        if (attemptSignal.aborted || settled) return;
         await prepareAuthProtocol(authScheme, receiveGorthDeepLink);
         if (attemptSignal.aborted || settled) return;
         // Both clients use the official SDK's shared pending PKCE state. Only
         // signInURL changes; authenticate/session storage stay on the main client.
         const requester =
           getLoginBrowser() === "gorth"
-            ? createClient("gorth")
-            : getGorthClient();
-        await requester.requestAuth();
-        if (signal.aborted || settled) {
-          const cache = (
-            globalThis as typeof globalThis & {
-              [sdkPkceKey]?: Map<string, string>;
-            }
-          )[sdkPkceKey];
-          cache?.clear();
+            ? createDesktopAuthClient("gorth")
+            : authClient;
+        request.fence = createSdkPkceFence();
+        try {
+          await requester.requestAuth();
+        } finally {
+          // requestAuth may create a key asynchronously after cancellation.
+          // This runs before the next serialized opener can create its key.
+          if (settled) request.fence.clear();
         }
       } catch {
         finish(
@@ -320,4 +259,3 @@ export async function loginGorth(signal: AbortSignal) {
   });
   signal.throwIfAborted();
 }
-import { desktopFetch } from "@/lib/http/transport";

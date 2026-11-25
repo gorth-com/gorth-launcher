@@ -238,6 +238,11 @@ export interface PlaySession {
   exitCode: number | null;
   crashed: boolean;
 }
+export interface RuntimeComponent {
+  id: string;
+  name: string;
+  version: string;
+}
 export interface GameSnapshot {
   directory: string;
   jobs: GameStatus[];

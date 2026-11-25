@@ -36,7 +36,7 @@ vi.mock("@/lib/auth/gorth-game", () => ({
   fetchNativeGameProfile: async () => native.game,
   issueNativeGameSession: (signal: AbortSignal) => native.issue(signal),
 }));
-vi.mock("@/services/user-profile", () => ({ upsertUserProfile: vi.fn() }));
+vi.mock("@/models/user-profile", () => ({ rawUpsertUserProfile: vi.fn() }));
 const native = vi.hoisted(() => ({
   user: null as null | {
     id: string;

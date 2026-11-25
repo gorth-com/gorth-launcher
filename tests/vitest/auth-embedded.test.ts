@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import { build } from "esbuild";
+import { build } from "vite";
 import { expect, it } from "vitest";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
@@ -28,16 +28,38 @@ it("round-trips the official Better Auth SDK in an isolated real Electron window
   try {
     const profile = path.join(directory, "profile");
     await mkdir(profile);
-    const fixture = path.join(directory, "main.cjs");
+    const fixture = path.join(directory, "main.mjs");
     await build({
-      absWorkingDir: root,
-      entryPoints: ["tests/auth-embedded-native.ts"],
-      tsconfig: path.join(root, "tsconfig.json"),
-      bundle: true,
-      platform: "node",
-      format: "cjs",
-      external: ["electron"],
-      outfile: fixture,
+      root,
+      configFile: false,
+      envDir: false,
+      publicDir: false,
+      logLevel: "error",
+      cacheDir: path.join(directory, "cache"),
+      resolve: {
+        alias: [
+          { find: "@/main/services/auth-protocol", replacement: "\0fixture-protocol" },
+          { find: "@", replacement: root },
+        ],
+      },
+      plugins: [{
+        name: "isolated-auth-protocol",
+        // Exercise real SDK crypto/storage/exchange; OS registration has its
+        // own tests and must never change the user's protocol association.
+        load: (id) => id === "\0fixture-protocol"
+          ? "export async function prepareAuthProtocol() {}"
+          : undefined,
+      }],
+      ssr: { noExternal: true },
+      build: {
+        ssr: path.join(root, "tests/auth-embedded-native.ts"),
+        outDir: directory,
+        emptyOutDir: false,
+        rolldownOptions: {
+          external: ["electron"],
+          output: { entryFileNames: "main.mjs" },
+        },
+      },
       define: { "import.meta.env": "undefined" },
     });
     const env = { ...process.env };
@@ -45,7 +67,7 @@ it("round-trips the official Better Auth SDK in an isolated real Electron window
     delete env.NODE_OPTIONS;
     for (const key of Object.keys(env))
       if (key.startsWith("VITE_") || key.startsWith("SSO_")) delete env[key];
-    const { stdout } = await run(executable, [fixture, profile], {
+    const { stdout } = await run(executable, [fixture, profile, "--use-mock-keychain"], {
       cwd: root,
       timeout: 105_000,
       killSignal: "SIGTERM",
@@ -58,7 +80,7 @@ it("round-trips the official Better Auth SDK in an isolated real Electron window
       },
     });
     expect(stdout).toContain(
-      "Native auth: official PKCE transfer, secure storage, restore, app-only logout and isolated renderer passed.",
+      "Native auth: SDK PKCE, stale callback, cancellation, browser choices, secure storage, restore and logout passed.",
     );
   } finally {
     // Only the disposable fixture profile, after its Electron process exits.

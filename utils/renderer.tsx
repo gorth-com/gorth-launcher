@@ -5,13 +5,13 @@ import {
   Rocket,
   Star,
   Flame,
-} from "@gorth-io/primitive/cores/lucide";
+} from "@gorth-com/primitive/cores/lucide";
 import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-} from "@gorth-io/primitive/custom/avatar";
-import { cn } from "@gorth-io/primitive/cores/cn";
+} from "@gorth-com/primitive/custom/avatar";
+import { cn } from "@gorth-com/primitive/cores/cn";
 export const instanceIcons = {
   box: Box,
   gamepad: Gamepad2,

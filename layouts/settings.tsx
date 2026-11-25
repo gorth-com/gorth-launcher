@@ -1,5 +1,5 @@
 import { useState, type CSSProperties, type ReactNode } from "react";
-import { SidebarProvider } from "@gorth-io/primitive/custom/sidebar";
+import { SidebarProvider } from "@gorth-com/primitive/custom/sidebar";
 import { Dashboard } from "@/layouts/dashboard";
 import { Titlebar } from "@/layouts/title-bar";
 import {

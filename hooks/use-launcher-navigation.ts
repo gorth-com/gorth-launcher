@@ -1,7 +1,7 @@
 import {
   useRouter,
   useRouterState,
-} from "@gorth-io/primitive/cores/tanstack/router";
+} from "@gorth-com/primitive/cores/tanstack/router";
 import { useCallback } from "react";
 import type { Page } from "@/utils/interface";
 

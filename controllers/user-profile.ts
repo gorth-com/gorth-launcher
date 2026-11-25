@@ -1,7 +1,7 @@
 import type { H3Event } from "nitro/h3";
 import { desktopContext } from "@/lib/server/context";
 
-export function getUserProfile(event: H3Event) {
+export function actGetUserProfile(event: H3Event) {
   const desktop = desktopContext(event);
   const identityId = desktop.getIdentityId();
   if (!identityId)

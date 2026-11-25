@@ -101,6 +101,7 @@ jobs:
       contents: write
     env:
       GH_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
       RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
       PUBLISH: ${{ inputs.publish == true }}
@@ -119,5 +120,12 @@ jobs:
           pattern: desktop-*
           path: release-assets
           merge-multiple: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+      - name: Install locked publisher dependencies
+        env:
+          DEPENDENCIES_TOKEN: ${{ secrets.DESKTOP_DEPENDENCIES_TOKEN }}
+        run: deno run -A .github/scripts/build.js install
       - name: Verify complete release and upload to a draft
-        run: deno run -A --no-config --no-lock .github/scripts/publish.js
+        run: deno run -A .github/scripts/publish.js

@@ -2,31 +2,30 @@ import { confirmAction } from "@/lib/confirmation";
 import { useFeedbackToast } from "@/hooks/use-feedback-toast";
 import { useEffect, useRef, useState } from "react";
 import { PageHeading } from "@/components/heading";
-import { LogViewer } from "@/components/element/log-viewer";
+import { InstanceLogs } from "@/components/element/instance-logs";
 import { InstanceScreenshots } from "@/components/element/instance-screenshots";
-import { Database } from "@gorth-io/primitive/cores/lucide";
+import { Database } from "@gorth-com/primitive/cores/lucide";
 import { InstanceSelect } from "@/components/element/instance-select";
 import {
   Archive,
   Camera,
   Download,
-  FileText,
   Import,
   RefreshCw,
   RotateCcw,
   Save,
   Server,
   Trash2,
-} from "@gorth-io/primitive/cores/lucide";
-import { Button } from "@gorth-io/primitive/custom/button";
+} from "@gorth-com/primitive/cores/lucide";
+import { Button } from "@gorth-com/primitive/custom/button";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "@gorth-io/primitive/default/card";
-import { Input } from "@gorth-io/primitive/default/input";
-import { Textarea } from "@gorth-io/primitive/default/textarea";
+} from "@gorth-com/primitive/default/card";
+import { Input } from "@gorth-com/primitive/default/input";
+import { Textarea } from "@gorth-com/primitive/default/textarea";
 import type { Instance } from "@/utils/interface";
 import { formatDateTime, formatInstanceFileSize } from "@/utils/formatter";
 import type {
@@ -51,7 +50,6 @@ export function InstanceDataPage({
     [data, setData] = useState<InstanceDataSnapshot | null>(null),
     [error, setError] = useState(""),
     [working, setWorking] = useState(false),
-    [log, setLog] = useState(""),
     [serverName, setServerName] = useState(""),
     [serverAddress, setServerAddress] = useState("");
   useFeedbackToast(error);
@@ -94,7 +92,6 @@ export function InstanceDataPage({
       const result = await window.electronAPI.instanceData.command(command);
       if (result.ok && result.data) {
         setData(result.data.snapshot);
-        if (result.data.content !== undefined) setLog(result.data.content);
         setError("");
       } else setError(result.error ?? "Thao tác thất bại.");
     } catch {
@@ -126,6 +123,19 @@ export function InstanceDataPage({
     }
   };
   const disabled = busy || working;
+  if (section === "logs")
+    return data ? (
+      <InstanceLogs
+        instanceId={id}
+        logs={data.logs}
+        busy={busy || working}
+        onSnapshot={setData}
+        onReload={() => void load()}
+        fill
+      />
+    ) : (
+      <p role="status">Đang đọc danh sách log…</p>
+    );
   return (
     <div className="flex flex-col gap-6">
       {!fixedInstanceId && (
@@ -458,37 +468,16 @@ export function InstanceDataPage({
                 </CardContent>
               </Card>
             )}
-            {(!section || section === "logs") && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText />
-                    Minecraft logs
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-3">
-                  <div className="max-h-48 flex flex-col gap-1 overflow-auto">
-                    {data.logs.map((item) => (
-                      <Button
-                        key={`${item.kind}-${item.name}`}
-                        className="h-9 w-full justify-start"
-                        variant="ghost"
-                        onClick={() =>
-                          void run({
-                            action: "log.read",
-                            instanceId: id,
-                            kind: item.kind,
-                            name: item.name,
-                          })
-                        }
-                      >
-                        {item.kind === "crash" ? "Crash" : "Log"} · {item.name}
-                      </Button>
-                    ))}
-                  </div>
-                  {log && <LogViewer content={log} className="max-h-80" />}
-                </CardContent>
-              </Card>
+            {!section && (
+              <div className="min-w-0 xl:col-span-2">
+                <InstanceLogs
+                  instanceId={id}
+                  logs={data.logs}
+                  busy={busy || working}
+                  onSnapshot={setData}
+                  onReload={() => void load()}
+                />
+              </div>
             )}
           </div>
         </>

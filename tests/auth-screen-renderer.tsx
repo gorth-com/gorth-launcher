@@ -1,6 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { useState } from "react";
-import { RouterProvider } from "@gorth-io/primitive/cores/tanstack/router";
+import { RouterProvider } from "@gorth-com/primitive/cores/tanstack/router";
 import { createLauncherRouter } from "@/lib/navigation";
 import { NavigationBar } from "@/layouts/navigation-bar";
 import { useLauncherNavigation } from "@/hooks/use-launcher-navigation";

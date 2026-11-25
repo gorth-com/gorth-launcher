@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "@gorth-io/primitive/globals.css";
+@import "@gorth-com/primitive/globals.css";
 @import "@fontsource-variable/inter";
 @import "./internals.css";
 

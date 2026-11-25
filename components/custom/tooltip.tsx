@@ -1,13 +1,13 @@
 "use client";
 
 import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
-import { cn } from "@gorth-io/primitive/cores/cn";
+import { cn } from "@gorth-com/primitive/cores/cn";
 import type { ReactNode, Ref } from "react";
 import {
   Tooltip,
   TooltipProvider,
   TooltipTrigger,
-} from "@gorth-io/primitive/default/tooltip";
+} from "@gorth-com/primitive/default/tooltip";
 
 function TooltipContent({
   hideSource = false,

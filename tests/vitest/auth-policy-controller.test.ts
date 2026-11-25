@@ -1,8 +1,19 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+vi.mock("@gorth-com/primitive/cores/tanstack/query", () => ({
+  useQuery: () => ({
+    data: { ok: true, snapshot: fixture.snapshot },
+    isFetched: true,
+  }),
+  useQueryClient: () => ({ cancelQueries: vi.fn(), setQueryData: vi.fn() }),
+}));
+vi.mock("@/utils/application-ready", () => ({
+  waitForApplicationReady: () => fixture.paint(),
+}));
 
 const fixture = vi.hoisted(() => ({
   snapshot: {} as Record<string, unknown>,
   command: vi.fn(),
+  paint: vi.fn(),
   cleanups: [] as Array<() => void>,
   focus: undefined as undefined | (() => void),
 }));
@@ -22,6 +33,7 @@ vi.mock("react", () => ({
 }));
 
 beforeEach(() => {
+  fixture.paint.mockReset().mockResolvedValue(undefined);
   vi.resetModules();
   vi.useFakeTimers();
   vi.setSystemTime(1_000_000);
@@ -58,6 +70,25 @@ beforeEach(() => {
     removeEventListener: () => {
       fixture.focus = undefined;
     },
+  });
+});
+it("waits for the application to paint before automatically unlocking", async () => {
+  fixture.snapshot.locked = true;
+  fixture.snapshot.launcher = null;
+  let painted!: () => void;
+  fixture.paint.mockReturnValue(
+    new Promise<void>((resolve) => {
+      painted = resolve;
+    }),
+  );
+  const { useAuthController } = await import("@/hooks/use-auth-controller");
+  useAuthController();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(fixture.command).not.toHaveBeenCalled();
+  painted();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(fixture.command).toHaveBeenCalledExactlyOnceWith({
+    action: "launcher.unlock",
   });
 });
 

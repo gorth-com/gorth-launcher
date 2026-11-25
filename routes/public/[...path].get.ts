@@ -1,3 +1,3 @@
 import { defineHandler } from "nitro";
-import { getRendererAsset } from "@/controllers/renderer";
-export default defineHandler(getRendererAsset);
+import { actGetRendererAsset } from "@/controllers/renderer";
+export default defineHandler(actGetRendererAsset);

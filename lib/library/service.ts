@@ -1,14 +1,14 @@
 import { app, BrowserWindow, dialog, ipcMain, session } from "electron";
 import path from "node:path";
 import { chmod, readFile, writeFile } from "node:fs/promises";
-import { z } from "@gorth-io/structure/cores/zod";
-import { createLibraryStore } from "@/services/library-store";
+import { z } from "@gorth-com/structure/cores/zod";
+import { rawCreateLibraryStore } from "@/models/instance";
 import { gameIsBusy, synchronizeGameLibrary } from "@/lib/game/service";
 import type { LibraryResult } from "@/utils/interface";
 import { contentIsBusy } from "@/lib/content/state";
 
 export async function registerLibraryIpc() {
-  const store = await createLibraryStore(app.getPath("userData"), gameIsBusy);
+  const store = await rawCreateLibraryStore(app.getPath("userData"), gameIsBusy);
   const trusted = (event: Electron.IpcMainInvokeEvent) => {
     if (
       !BrowserWindow.fromWebContents(event.sender) ||

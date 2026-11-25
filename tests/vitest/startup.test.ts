@@ -5,7 +5,7 @@ import type { LibrarySnapshot } from "@/utils/interface";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { createLibraryStore } from "@/services/library-store";
+import { rawCreateLibraryStore } from "@/models/instance";
 import { createLauncherRouter } from "@/lib/navigation";
 
 const snapshot: LibrarySnapshot = {
@@ -17,15 +17,15 @@ const snapshot: LibrarySnapshot = {
 };
 it("persists navigation independently of settings and initializes the next router from SQLite", async () => {
   const directory = await mkdtemp(path.join(tmpdir(), "gorth-startup-"));
-  let store: Awaited<ReturnType<typeof createLibraryStore>> | undefined;
+  let store: Awaited<ReturnType<typeof rawCreateLibraryStore>> | undefined;
   try {
-    store = await createLibraryStore(directory, () => false);
+    store = await rawCreateLibraryStore(directory, () => false);
     await store.command({
       action: "navigation.save",
       location: "/settings/runtime",
     });
     store.close();
-    store = await createLibraryStore(directory, () => false);
+    store = await rawCreateLibraryStore(directory, () => false);
     const restored = startupLocation(store.snapshot());
     const router = createLauncherRouter(() => null, restored);
     expect(router.history.location.pathname).toBe("/settings/runtime");

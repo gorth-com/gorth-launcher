@@ -55,11 +55,12 @@ export type InstanceDataCommand =
     }
   | { action: "server.delete"; instanceId: string; index: number }
   | {
-      action: "log.read";
+      action: "log.read" | "log.delete" | "log.export";
       instanceId: string;
       kind: "log" | "crash";
       name: string;
-    };
+    }
+  | { action: "log.delete-all"; instanceId: string };
 
 export interface InstanceDataResult<T> {
   ok: boolean;

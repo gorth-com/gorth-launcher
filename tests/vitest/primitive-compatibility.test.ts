@@ -79,7 +79,7 @@ it("keeps every app-owned Primitive runtime import free of Next dependencies, in
   const publicImports = new Set<string>();
   for (const filename of files) {
     for (const value of imports(filename, await readFile(filename, "utf8"))) {
-      if (value.startsWith("@gorth-io/primitive/") && !value.endsWith(".css"))
+      if (value.startsWith("@gorth-com/primitive/") && !value.endsWith(".css"))
         publicImports.add(value);
     }
   }
@@ -108,7 +108,7 @@ it("keeps every app-owned Primitive runtime import free of Next dependencies, in
           entry,
           visited,
         );
-      } else if (dependency.startsWith("@gorth-io/primitive/")) {
+      } else if (dependency.startsWith("@gorth-com/primitive/")) {
         await inspect(require.resolve(dependency), entry, visited);
       }
     }

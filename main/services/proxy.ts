@@ -9,14 +9,16 @@ import {
   webContents,
   type Session,
 } from "electron";
-import { z } from "@gorth-io/structure/cores/zod";
+import { z } from "@gorth-com/structure/cores/zod";
 import {
   defaultProxySettings,
-  electronProxyConfig,
-  proxySettingsSchema,
   proxyUpdateSchema,
   type ProxyView,
 } from "@/lib/network/proxy";
+import {
+  electronProxyConfig,
+  proxySettingsSchema,
+} from "@gorth-com/structure/modules/desktop";
 import { installDesktopFetch } from "@/lib/http/transport";
 import { createNetworkFetch } from "@/main/services/network-fetch";
 import { getRpcRendererUrl, isRpcRendererUrl } from "@/main/rpc/sender";
@@ -25,6 +27,11 @@ const storedSchema = z.object({
   settings: proxySettingsSchema,
   encryptedCredentials: z.string().max(32768).optional(),
 });
+let preparePartition: ((partition: string) => Promise<void>) | undefined;
+export async function prepareNetworkPartition(partition: string) {
+  if (!preparePartition) throw new Error("Desktop network proxy is not ready.");
+  await preparePartition(partition);
+}
 export async function initializeNetworkProxy(partitions: string[] = []) {
   const file = path.join(app.getPath("userData"), "network-proxy.json");
   let stored: z.infer<typeof storedSchema> = { settings: defaultProxySettings };
@@ -40,6 +47,9 @@ export async function initializeNetworkProxy(partitions: string[] = []) {
   const attach = (target: Session) => {
     sessions.add(target);
     return target.setProxy(electronProxyConfig(stored.settings));
+  };
+  preparePartition = async (partition) => {
+    await attach(session.fromPartition(partition));
   };
   app.on("session-created", (target) => {
     void attach(target).catch(() => {
@@ -60,7 +70,7 @@ export async function initializeNetworkProxy(partitions: string[] = []) {
   await attach(network);
   installDesktopFetch(createNetworkFetch(network));
 
-  app.on("login", (event, _contents, _request, info, callback) => {
+  app.on("login", async (event, _contents, _request, info, callback) => {
     if (!info.isProxy || stored.settings.mode === "system") return;
     event.preventDefault();
     const settings = stored.settings;
@@ -79,9 +89,11 @@ export async function initializeNetworkProxy(partitions: string[] = []) {
         .object({ username: z.string(), password: z.string() })
         .parse(
           JSON.parse(
-            safeStorage.decryptString(
-              Buffer.from(stored.encryptedCredentials, "base64"),
-            ),
+            (
+              await safeStorage.decryptStringAsync(
+                Buffer.from(stored.encryptedCredentials, "base64"),
+              )
+            ).result,
           ),
         );
       callback(credentials.username, credentials.password);
@@ -108,16 +120,18 @@ export async function initializeNetworkProxy(partitions: string[] = []) {
           : undefined;
       if (update.credentials) {
         if (
-          !safeStorage.isEncryptionAvailable() ||
+          !(await safeStorage.isAsyncEncryptionAvailable()) ||
           (process.platform === "linux" &&
             safeStorage.getSelectedStorageBackend() === "basic_text")
         )
           throw new Error(
             "A secure system keychain is required to save proxy credentials.",
           );
-        encryptedCredentials = safeStorage
-          .encryptString(JSON.stringify(update.credentials))
-          .toString("base64");
+        encryptedCredentials = (
+          await safeStorage.encryptStringAsync(
+            JSON.stringify(update.credentials),
+          )
+        ).toString("base64");
       }
       if (update.settings.mode !== "http") encryptedCredentials = undefined;
       stored = { settings: update.settings, encryptedCredentials };

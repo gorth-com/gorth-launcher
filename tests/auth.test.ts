@@ -119,11 +119,12 @@ it("uses official SDK PKCE transfer, restores the SSO identity, switches account
     await native.restoreGorthSession();
     expect(native.gorthSnapshot().user?.id).toBe(user.externalUserId);
   }
-  const cookie = native.getGorthClient().getCookie();
+  const { authClient } = await import("@/lib/auth/client/index");
+  const cookie = authClient.getCookie();
   expect(cookie).toContain("session_token");
   await native.signOutGorth();
   expect(native.gorthSnapshot().user).toBeNull();
-  expect(native.getGorthClient().getCookie()).toBe("");
+  expect(authClient.getCookie()).toBe("");
   expect(paths.filter((path) => path.includes("sign-out"))).toEqual([
     "/auth/sign-out",
   ]);

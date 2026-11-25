@@ -4,11 +4,11 @@ import {
   Card,
   CardTitle,
   CardDescription,
-} from "@gorth-io/primitive/default/card";
+} from "@gorth-com/primitive/default/card";
 import {
   RadioGroup,
   RadioGroupItem,
-} from "@gorth-io/primitive/default/radio-group";
+} from "@gorth-com/primitive/default/radio-group";
 import { useAuth } from "@/hooks/use-auth";
 
 export function LoginBrowserSettings() {

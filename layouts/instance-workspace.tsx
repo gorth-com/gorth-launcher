@@ -1,6 +1,9 @@
-import { ScrollArea, ScrollBar } from "@gorth-io/primitive/default/scroll-area";
+import {
+  ScrollArea,
+  ScrollBar,
+} from "@gorth-com/primitive/default/scroll-area";
 import { useState, type CSSProperties, type ReactNode } from "react";
-import type { LucideIcon } from "@gorth-io/primitive/cores/lucide";
+import type { LucideIcon } from "@gorth-com/primitive/cores/lucide";
 import {
   ArrowLeft,
   LogIn,
@@ -10,7 +13,7 @@ import {
   Rocket,
   Star,
   User,
-} from "@gorth-io/primitive/cores/lucide";
+} from "@gorth-com/primitive/cores/lucide";
 import {
   SidebarProvider,
   Sidebar,
@@ -22,7 +25,7 @@ import {
   SidebarGroup,
   SidebarFooter,
   SidebarSeparator,
-} from "@gorth-io/primitive/custom/sidebar";
+} from "@gorth-com/primitive/custom/sidebar";
 import { Titlebar } from "@/layouts/title-bar";
 import {
   NavigationBar,
@@ -55,11 +58,13 @@ export function InstanceWorkspace({
   section,
   onSectionChange,
   children,
+  fillContent = false,
 }: InstanceWorkspaceProps & {
   sections: readonly WorkspaceSection[];
   section: string;
   onSectionChange: (section: string) => void;
   children: ReactNode;
+  fillContent?: boolean;
 }) {
   const [open, setOpen] = useState(true);
   const auth = useAuth();
@@ -177,14 +182,23 @@ export function InstanceWorkspace({
             />
           </SidebarFooter>
         </Sidebar>
-        <ScrollArea
-          role="main"
-          render={<main aria-label="Instance workspace" />}
-          className="h-full min-h-0 min-w-0 flex-1"
-        >
-          <Wrapper>{children}</Wrapper>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+        {fillContent ? (
+          <main
+            aria-label="Instance workspace"
+            className="flex min-h-0 min-w-0 flex-1 overflow-hidden"
+          >
+            <Wrapper fill>{children}</Wrapper>
+          </main>
+        ) : (
+          <ScrollArea
+            role="main"
+            render={<main aria-label="Instance workspace" />}
+            className="h-full min-h-0 min-w-0 flex-1"
+          >
+            <Wrapper>{children}</Wrapper>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        )}
       </SidebarProvider>
       <AuthScreen compact={compact} onReturn={() => {}} />
     </div>

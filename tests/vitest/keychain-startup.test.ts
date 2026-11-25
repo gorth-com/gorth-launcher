@@ -1,50 +1,61 @@
-import { beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
-import { initializeSecureStorage } from "@/lib/auth/storage";
+import { requireSecureStorage, nativeStorage } from "@/lib/auth/storage";
 
 const storage = vi.hoisted(() => ({
   isEncryptionAvailable: vi.fn(() => true),
+  isAsyncEncryptionAvailable: vi.fn(async () => true),
   getSelectedStorageBackend: vi.fn(() => "gnome_libsecret"),
-  encryptString: vi.fn(() => Buffer.from("encrypted")),
+  encryptStringAsync: vi.fn(),
 }));
 vi.mock("electron", () => ({ safeStorage: storage }));
-
+const platform = Object.getOwnPropertyDescriptor(process, "platform")!;
+function setPlatform(value: string) {
+  Object.defineProperty(process, "platform", { configurable: true, value });
+}
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
   storage.isEncryptionAvailable.mockReturnValue(true);
+  storage.isAsyncEncryptionAvailable.mockResolvedValue(true);
+  storage.getSelectedStorageBackend.mockReturnValue("gnome_libsecret");
+});
+afterEach(() => {
+  Object.defineProperty(process, "platform", platform);
 });
 
-it("accesses the native encryption key without reading or writing a saved session", () => {
-  initializeSecureStorage();
-  expect(storage.encryptString).toHaveBeenCalledExactlyOnceWith(
-    "gorth-keychain-startup",
+it("uses the SDK's existing macOS provider without opening an additional async encryptor", async () => {
+  setPlatform("darwin");
+  await requireSecureStorage();
+  await requireSecureStorage();
+  expect(storage.isEncryptionAvailable).toHaveBeenCalledTimes(2);
+  expect(storage.isAsyncEncryptionAvailable).not.toHaveBeenCalled();
+  expect(storage.encryptStringAsync).not.toHaveBeenCalled();
+});
+it("fails closed when the SDK provider is unavailable without touching a saved session", async () => {
+  setPlatform("darwin");
+  storage.isEncryptionAvailable.mockReturnValue(false);
+  await expect(requireSecureStorage()).rejects.toThrow("keychain");
+  expect(() => nativeStorage.getItem("gorth-native.cookie")).toThrow(
+    "keychain",
   );
 });
-
-it("refuses unavailable secure storage without a plaintext fallback", () => {
-  storage.isEncryptionAvailable.mockReturnValue(false);
-  expect(initializeSecureStorage).toThrow("keychain");
-  expect(storage.encryptString).not.toHaveBeenCalled();
+it("preserves async checks and blocks plaintext Linux storage", async () => {
+  setPlatform("linux");
+  storage.getSelectedStorageBackend.mockReturnValue("basic_text");
+  await expect(requireSecureStorage()).rejects.toThrow("keychain");
+  expect(storage.isAsyncEncryptionAvailable).toHaveBeenCalledOnce();
+  expect(storage.isEncryptionAvailable).not.toHaveBeenCalled();
+  expect(() => nativeStorage.setItem("gorth-native.cookie", "value")).toThrow(
+    "keychain",
+  );
 });
-
-it("propagates denied key access without overwriting credentials", () => {
-  storage.encryptString.mockImplementationOnce(() => {
-    throw new Error("Keychain access denied");
-  });
-  expect(initializeSecureStorage).toThrow("Keychain access denied");
-});
-
-it("initializes only in the owning instance after app readiness and before creating a window", () => {
+it("does not probe or encrypt a dummy value in the startup entry", () => {
   const source = readFileSync(
     new URL("../../app/main.ts", import.meta.url),
     "utf8",
   );
-  const ready = source.indexOf(".whenReady()");
-  const owner = source.indexOf("if (!ownsDataDirectory) return;", ready);
-  const initialize = source.indexOf("initializeSecureStorage();", owner);
-  const window = source.indexOf("createWindow(", initialize);
-  expect(ready).toBeGreaterThan(-1);
-  expect(owner).toBeGreaterThan(ready);
-  expect(initialize).toBeGreaterThan(owner);
-  expect(window).toBeGreaterThan(initialize);
+  expect(source).not.toContain("initializeSecureStorage");
+  expect(source).not.toContain("encryptStringAsync");
+  expect(source).not.toContain("gorth-keychain-startup");
+  expect(source).not.toContain('initializeNetworkProxy(["content-websites"])');
 });

@@ -12,7 +12,7 @@ import {
   ServicesSettings,
   ToolsSettings,
 } from "./additional";
-import { Separator } from "@gorth-io/primitive/default/separator";
+import { Separator } from "@gorth-com/primitive/default/separator";
 import { launcherSettingsSections } from "@/utils/constant";
 import { type LauncherSettingsSection } from "@/utils/constant";
 import { AppUpdateCard } from "@/components/element/app-update-card";
@@ -22,11 +22,11 @@ import {
   Card,
   CardTitle,
   CardDescription,
-} from "@gorth-io/primitive/default/card";
+} from "@gorth-com/primitive/default/card";
 import {
   RadioGroup,
   RadioGroupItem,
-} from "@gorth-io/primitive/default/radio-group";
+} from "@gorth-com/primitive/default/radio-group";
 import { LauncherFooter } from "@/components/element/launcher-footer";
 import { type Dispatch, type SetStateAction } from "react";
 import { ToastSettings } from "@/components/element/toast-settings";
@@ -34,10 +34,10 @@ import { SidebarSettings } from "@/components/element/sidebar-settings";
 import { LoginBrowserSettings } from "@/components/element/login-browser-settings";
 import { AccountCard } from "@/components/element/account-card";
 import { ProfilePreferences } from "@/components/element/profile-preferences";
-import { Box, Monitor, Moon, Sun } from "@gorth-io/primitive/cores/lucide";
-import { Button } from "@gorth-io/primitive/custom/button";
-import { Input } from "@gorth-io/primitive/default/input";
-import { Switch } from "@gorth-io/primitive/default/switch";
+import { Box, Monitor, Moon, Sun } from "@gorth-com/primitive/cores/lucide";
+import { Button } from "@gorth-com/primitive/custom/button";
+import { Input } from "@gorth-com/primitive/default/input";
+import { Switch } from "@gorth-com/primitive/default/switch";
 import { type Settings, type PlaySession } from "@/utils/interface";
 import { LaunchHistory } from "./history";
 

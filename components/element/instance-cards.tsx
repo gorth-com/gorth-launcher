@@ -1,11 +1,11 @@
-import { Clock, Play, Settings } from "@gorth-io/primitive/cores/lucide";
-import { Badge } from "@gorth-io/primitive/custom/badge";
-import { Button } from "@gorth-io/primitive/default/button";
+import { Clock, Play, Settings } from "@gorth-com/primitive/cores/lucide";
+import { Badge } from "@gorth-com/primitive/custom/badge";
+import { Button } from "@gorth-com/primitive/default/button";
 import {
   Card,
   CardTitle,
   CardDescription,
-} from "@gorth-io/primitive/default/card";
+} from "@gorth-com/primitive/default/card";
 import type { Instance } from "@/utils/interface";
 import { InstanceIcon } from "@/utils/renderer";
 export interface InstanceCardsProps {

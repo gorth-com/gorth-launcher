@@ -13,7 +13,7 @@ import {
   minecraftPreferences,
   presetArguments,
 } from "@/lib/library/game-preferences";
-import { createLibraryStore } from "@/services/library-store";
+import { rawCreateLibraryStore } from "@/models/instance";
 import { launchArguments } from "@/lib/game/install";
 import { launchProcess } from "@/lib/game/launch-process";
 import type { Settings, Version } from "@/utils/interface";
@@ -314,9 +314,9 @@ it("persists all five tabs through the real SQLite library store", async () => {
   const directory = await mkdtemp(
     path.join(tmpdir(), "gorth-instance-overrides-"),
   );
-  let store: Awaited<ReturnType<typeof createLibraryStore>> | undefined;
+  let store: Awaited<ReturnType<typeof rawCreateLibraryStore>> | undefined;
   try {
-    store = await createLibraryStore(directory, () => false);
+    store = await rawCreateLibraryStore(directory, () => false);
     await store.command({
       action: "create",
       name: "Fixture",
@@ -348,7 +348,7 @@ it("persists all five tabs through the real SQLite library store", async () => {
     settings.nativeLibraries = { glfw: false, openAl: false, openGl: false };
     await store.command({ action: "instance.settings", id, settings });
     store.close();
-    store = await createLibraryStore(directory, () => false);
+    store = await rawCreateLibraryStore(directory, () => false);
     expect(store.snapshot().instanceSettings[id]).toEqual(settings);
     expect(store.snapshot().instanceSettings[id].javaPaths).toBeUndefined();
   } finally {

@@ -1,21 +1,21 @@
-import { useForm } from "@gorth-io/primitive/cores/tanstack/form";
+import { useForm } from "@gorth-com/primitive/cores/tanstack/form";
 import {
   useQuery,
   useMutation,
   useQueryClient,
-} from "@gorth-io/primitive/cores/tanstack/query";
+} from "@gorth-com/primitive/cores/tanstack/query";
 import { useEffect } from "react";
 import {
   Card,
   CardTitle,
   CardDescription,
-} from "@gorth-io/primitive/default/card";
-import { Separator } from "@gorth-io/primitive/default/separator";
-import { Input } from "@gorth-io/primitive/default/input";
-import { PasswordInput } from "@gorth-io/primitive/custom/input-password";
-import { Switch } from "@gorth-io/primitive/default/switch";
-import { RadioGroup, RadioGroupItem } from "@gorth-io/primitive/custom/radio";
-import { Button } from "@gorth-io/primitive/custom/button";
+} from "@gorth-com/primitive/default/card";
+import { Separator } from "@gorth-com/primitive/default/separator";
+import { Input } from "@gorth-com/primitive/default/input";
+import { PasswordInput } from "@gorth-com/primitive/custom/input-password";
+import { Switch } from "@gorth-com/primitive/default/switch";
+import { RadioGroup, RadioGroupItem } from "@gorth-com/primitive/custom/radio";
+import { Button } from "@gorth-com/primitive/custom/button";
 import { toast } from "@/providers/toaster";
 import { confirmAction } from "@/lib/confirmation";
 import { defaultProxySettings, proxyUpdateSchema } from "@/lib/network/proxy";

@@ -9,7 +9,7 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { createDesktopHandler } from "@/lib/server/handler";
 import { registerAuthCallback } from "@/services/auth-callback";
-import { upsertUserProfile, getUserProfile } from "@/services/user-profile";
+import { rawUpsertUserProfile, rawGetUserProfile } from "@/models/user-profile";
 
 test("SQLite profiles use SSO identity, refresh mutable fields, retain creation time and never store tokens", () => {
   const filename = path.join(
@@ -21,7 +21,7 @@ test("SQLite profiles use SSO identity, refresh mutable fields, retain creation 
     "CREATE TABLE existing_data (value TEXT); INSERT INTO existing_data VALUES ('preserved')",
   );
   db.close();
-  upsertUserProfile(
+  rawUpsertUserProfile(
     {
       id: "subject-1",
       name: "Before",
@@ -30,7 +30,7 @@ test("SQLite profiles use SSO identity, refresh mutable fields, retain creation 
     },
     filename,
   );
-  const before = getUserProfile("subject-1", filename)!;
+  const before = rawGetUserProfile("subject-1", filename)!;
   const identity = {
     id: "subject-1",
     name: "After",
@@ -40,8 +40,8 @@ test("SQLite profiles use SSO identity, refresh mutable fields, retain creation 
     emailVerified: true,
     tokens: { accessToken: "PRIVATE-TOKEN" },
   };
-  upsertUserProfile(identity, filename);
-  const after = getUserProfile("subject-1", filename)!;
+  rawUpsertUserProfile(identity, filename);
+  const after = rawGetUserProfile("subject-1", filename)!;
   assert.equal(after.name, "After");
   assert.equal(after.email, "after@example.test");
   assert.equal(after.username, "changed");
@@ -49,11 +49,11 @@ test("SQLite profiles use SSO identity, refresh mutable fields, retain creation 
   assert.equal(after.createdAt, before.createdAt);
   assert(after.syncedAt >= before.syncedAt);
   assert(!JSON.stringify(after).includes("PRIVATE-TOKEN"));
-  upsertUserProfile(
+  rawUpsertUserProfile(
     { id: "subject-2", name: "Other", email: "after@example.test" },
     filename,
   );
-  assert.equal(getUserProfile("subject-2", filename)?.ssoUserId, "subject-2");
+  assert.equal(rawGetUserProfile("subject-2", filename)?.ssoUserId, "subject-2");
   const check = new DatabaseSync(filename);
   assert.equal(
     check.prepare("SELECT COUNT(*) AS total FROM user_profile").get()?.total,

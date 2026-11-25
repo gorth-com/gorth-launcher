@@ -2,7 +2,6 @@ import path from "node:path";
 import { registerFolderIpc } from "@/main/services/folders";
 import { registerSettingsIpc } from "@/main/ipc/settings";
 import { initializeNetworkProxy } from "@/main/services/proxy";
-import { initializeSecureStorage } from "@/lib/auth/storage";
 import { registerUpdateIpc } from "@/main/services/updates";
 import { installGorthAuth } from "@/lib/auth/gorth";
 import { installDevelopmentLifecycle } from "@/main/services/development-lifecycle";
@@ -70,15 +69,7 @@ app
   .whenReady()
   .then(async () => {
     if (!ownsDataDirectory) return;
-    try {
-      initializeSecureStorage();
-    } catch {
-      dialog.showErrorBox(
-        "Không thể truy cập kho khóa",
-        "Ứng dụng vẫn mở, nhưng phiên đã lưu chưa được mở khóa. Hãy cấp quyền Keychain rồi thử đăng nhập hoặc mở khóa phiên lại. Dữ liệu tài khoản được giữ nguyên.",
-      );
-    }
-    await initializeNetworkProxy(["content-websites"]);
+    await initializeNetworkProxy();
     if (process.platform === "darwin") {
       try {
         await app.dock?.setIcon(getRuntimeAppIconPath());

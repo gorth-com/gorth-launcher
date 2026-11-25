@@ -13,7 +13,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { createLibraryStore } from "@/services/library-store";
+import { rawCreateLibraryStore } from "@/models/instance";
 import { defaultInstanceSettings } from "@/lib/library/instance-settings";
 
 test("upgrade version-one database preserves existing instances and atomically imports a prepared pack", async () => {
@@ -23,7 +23,7 @@ test("upgrade version-one database preserves existing instances and atomically i
     "CREATE TABLE instances(id TEXT PRIMARY KEY,name TEXT NOT NULL,version TEXT NOT NULL,loader TEXT NOT NULL,created_at INTEGER NOT NULL); CREATE TABLE settings(key TEXT PRIMARY KEY,value TEXT NOT NULL); INSERT INTO instances VALUES('existing','World','1.20.1','Vanilla',1); PRAGMA user_version=1;",
   );
   old.close();
-  const store = await createLibraryStore(root, () => false);
+  const store = await rawCreateLibraryStore(root, () => false);
   try {
     assert.equal(store.snapshot().instances[0].name, "World");
     assert.equal(store.snapshot().instances[0].loaderVersion, null);
@@ -75,7 +75,7 @@ test("upgrade version-one database preserves existing instances and atomically i
 
 test("loader pins survive SQLite restart, copy, trash and restore; unsupported pairs are rejected", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "gorth-library-test-"));
-  let store = await createLibraryStore(root, () => false);
+  let store = await rawCreateLibraryStore(root, () => false);
   try {
     const preset = {
       action: "create",
@@ -104,7 +104,7 @@ test("loader pins survive SQLite restart, copy, trash and restore; unsupported p
     await store.command({ action: "copy", id: original.id, name: "Copy" });
     await store.command({ action: "delete", id: original.id });
     store.close();
-    store = await createLibraryStore(root, () => false);
+    store = await rawCreateLibraryStore(root, () => false);
     assert.equal(store.snapshot().trash[0].loaderVersion, "47.4.10");
     await store.command({ action: "restore", id: original.id });
     assert(
@@ -128,7 +128,7 @@ test("loader pins survive SQLite restart, copy, trash and restore; unsupported p
 
 test("SQLite migration is idempotent, settings and rename persist across restart", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "gorth-library-test-"));
-  let store = await createLibraryStore(root, () => false);
+  let store = await rawCreateLibraryStore(root, () => false);
   try {
     const legacy = {
       id: "legacy",
@@ -148,7 +148,7 @@ test("SQLite migration is idempotent, settings and rename persist across restart
       settings: { memory: 6, javaPath: "", showTitlebarLogo: false },
     });
     store.close();
-    store = await createLibraryStore(root, () => false);
+    store = await rawCreateLibraryStore(root, () => false);
     await store.command({
       action: "migrate",
       instances: [legacy],
@@ -175,7 +175,7 @@ test("SQLite migration is idempotent, settings and rename persist across restart
 test("copy is independent, delete moves worlds to trash, restore survives restart", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "gorth-library-test-"));
   let busy = false;
-  let store = await createLibraryStore(root, () => busy);
+  let store = await rawCreateLibraryStore(root, () => busy);
   try {
     await store.command({
       action: "create",
@@ -230,7 +230,7 @@ test("copy is independent, delete moves worlds to trash, restore survives restar
       code: "ENOENT",
     });
     store.close();
-    store = await createLibraryStore(root, () => false);
+    store = await rawCreateLibraryStore(root, () => false);
     await store.command({ action: "restore", id: original.id });
     assert.equal(
       await readFile(path.join(world, "level.dat"), "utf8"),
@@ -265,7 +265,7 @@ test("copy is independent, delete moves worlds to trash, restore survives restar
 
 test("startup rolls back interrupted trash move without losing a world", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "gorth-library-test-"));
-  let store = await createLibraryStore(root, () => false);
+  let store = await rawCreateLibraryStore(root, () => false);
   try {
     await store.command({
       action: "create",
@@ -285,7 +285,7 @@ test("startup rolls back interrupted trash move without losing a world", async (
     );
     db.close();
     await rename(live, path.join(root, "minecraft", ".trash", item.id));
-    store = await createLibraryStore(root, () => false);
+    store = await rawCreateLibraryStore(root, () => false);
     assert.equal(
       await readFile(path.join(live, "world.dat"), "utf8"),
       "recover-me",
@@ -301,7 +301,7 @@ test("advanced lifecycle stores icon/group, changes runtime, recovers saves and 
   const root = await mkdtemp(
     path.join(os.tmpdir(), "gorth-library-lifecycle-"),
   );
-  const store = await createLibraryStore(root, () => false);
+  const store = await rawCreateLibraryStore(root, () => false);
   try {
     await store.command({
       action: "create",

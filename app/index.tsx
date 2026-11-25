@@ -14,10 +14,11 @@ import { useEffect, useRef, useState } from "react";
 import { Dashboard } from "@/layouts/dashboard";
 import { SettingsLayout } from "@/layouts/settings";
 
-import { Button } from "@gorth-io/primitive/custom/button";
+import { Button } from "@gorth-com/primitive/custom/button";
 import { useLibrary } from "@/hooks/use-library";
 import { LoadingScreen } from "@/components/element/loading-screen";
-import { SidebarProvider } from "@gorth-io/primitive/custom/sidebar";
+import { notifyApplicationReady } from "@/utils/application-ready";
+import { SidebarProvider } from "@gorth-com/primitive/custom/sidebar";
 import {
   AccountsPage,
   DownloadsPage,
@@ -83,12 +84,7 @@ export default function Application() {
     if (target)
       setPage(target.page, { section: target.section, replace: true });
   }, [library.ready, page, selection.selectedInstanceId, setPage]);
-  const consoleInstanceId = new URLSearchParams(window.location.search).get(
-    "game-console",
-  );
-  useJavaSetup(library.ready && !consoleInstanceId, settings, () =>
-    setPage("settings/runtime"),
-  );
+  useJavaSetup(library.ready, settings, () => setPage("settings/runtime"));
   const [theme, setTheme] = useState<Theme>(readTheme);
   const [info, setInfo] = useState<LauncherInfo | null>(null);
   const [infoReady, setInfoReady] = useState(false);
@@ -100,8 +96,16 @@ export default function Application() {
   };
   const openConsole = (id: string) => {
     selection.onInstanceChange(id);
-    setPage("console");
+    setPage(`instances/edit/${id}`, { section: "console" });
   };
+  useEffect(
+    () =>
+      window.electronAPI.game.onOpenConsole((id) => {
+        selection.onInstanceChange(id);
+        setPage(`instances/edit/${id}`, { section: "console" });
+      }),
+    [selection.onInstanceChange, setPage],
+  );
   const [notice, setNotice] = useState("");
   useFeedbackToast(notice);
   useFeedbackToast(gaming.error);
@@ -180,24 +184,20 @@ export default function Application() {
         (job: { instanceId: string | undefined }) => job.instanceId === id,
       )?.phase ?? "idle"
     ];
-  if (!library.ready || !authentication.ready || !gaming.ready || !infoReady) {
+  const interfaceReady =
+    library.ready && authentication.ready && gaming.ready && infoReady;
+  useEffect(() => {
+    if (!interfaceReady) return;
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(notifyApplicationReady);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [interfaceReady]);
+  if (!interfaceReady) {
     return <LoadingScreen error={!library.ready ? library.error : undefined} />;
   }
 
   const compact = library.settings.tabLayout === "compact";
-  if (consoleInstanceId)
-    return (
-      <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
-        <main className="min-h-0 flex-1 overflow-auto p-6">
-          <ConsolePage
-            {...gaming}
-            instances={instances}
-            initialInstanceId={consoleInstanceId}
-            fixedInstance
-          />
-        </main>
-      </div>
-    );
   const navigationProps: NavigationBarProps = {
     sidebarOpen,
     onToggleSidebar:
@@ -378,13 +378,17 @@ export default function Application() {
             unreadCount={notifications.unread}
           />
           <main
-            className={`min-w-0 flex-1 ${contentDetail ? "overflow-hidden" : "overflow-y-auto"}`}
+            className={`min-w-0 flex-1 ${contentDetail || page === "console" ? "overflow-hidden" : "overflow-y-auto"}`}
           >
-            <Wrapper fullWidth={contentDetail} immersive={contentDetail}>
+            <Wrapper
+              fullWidth={contentDetail}
+              immersive={contentDetail}
+              fill={page === "console"}
+            >
               {!library.ready && <p role="status">{"Đang mở thư viện…"}</p>}
               <fieldset
                 disabled={!library.ready || library.busy}
-                className={`min-w-0 border-0 p-0 ${contentDetail ? "h-full" : ""}`}
+                className={`min-w-0 border-0 p-0 ${contentDetail ? "h-full" : page === "console" ? "flex min-h-0 flex-1 flex-col" : ""}`}
               >
                 {(page === "accounts" || page === "account") && (
                   <AccountsPage {...authentication} />

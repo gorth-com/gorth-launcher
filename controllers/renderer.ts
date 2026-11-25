@@ -3,7 +3,7 @@ import path from "node:path";
 import { serveStatic, type H3Event } from "nitro/h3";
 import { desktopContext } from "@/lib/server/context";
 
-export async function getRendererAsset(event: H3Event) {
+export async function actGetRendererAsset(event: H3Event) {
   const { development, rendererDirectory } = desktopContext(event);
   if (development || !rendererDirectory)
     return new Response("Not Found", { status: 404 });

@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
+import {
+  useQuery,
+  useQueryClient,
+} from "@gorth-com/primitive/cores/tanstack/query";
 import type { GameCommand, GameSnapshot, GameVersion } from "@/utils/interface";
 export function useGame() {
-  const [game, setGame] = useState<GameSnapshot>({
+  const fallback: GameSnapshot = {
     directory: "",
     jobs: [],
     activeId: null,
@@ -9,53 +13,67 @@ export function useGame() {
     downloadingId: null,
     queue: [],
     history: [],
+  };
+  const queryClient = useQueryClient();
+  const key = ["desktop", "game", "snapshot"] as const;
+  const snapshot = useQuery({
+    queryKey: key,
+    queryFn: () => window.electronAPI.game.snapshot(),
+    retry: false,
+    networkMode: "always",
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
-  const [versions, setVersions] = useState<GameVersion[]>([
+  const catalog = useQuery({
+    queryKey: ["desktop", "game", "versions"],
+    queryFn: () => window.electronAPI.game.versions(),
+    retry: false,
+    networkMode: "always",
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+  const game = snapshot.data ?? fallback;
+  const versions: GameVersion[] = catalog.data ?? [
     { id: "1.20.1", type: "release" },
-  ]);
+  ];
+  const setGame = useCallback(
+    (value: GameSnapshot) => {
+      void queryClient.cancelQueries({ queryKey: key });
+      queryClient.setQueryData(key, value);
+    },
+    [queryClient],
+  );
   const [error, setError] = useState("");
-  const [ready, setReady] = useState(false);
+  const ready = snapshot.isFetched;
   useEffect(() => {
     let alive = true;
     const accept = (value: GameSnapshot) => {
       if (alive) setGame(value);
     };
     const stop = window.electronAPI.game.onChanged(accept);
-    window.electronAPI.game
-      .snapshot()
-      .then(accept)
-      .catch(() => {
-        if (alive) setError("Không đọc được trạng thái game.");
-      })
-      .finally(() => {
-        if (alive) setReady(true);
-      });
-    window.electronAPI.game
-      .versions()
-      .then((value) => {
-        if (alive) setVersions(value);
-      })
-      .catch(() => {
-        /* retain supported default when offline */
-      });
     return () => {
       alive = false;
       stop();
     };
-  }, []);
-  const run = useCallback(async (command: GameCommand) => {
-    setError("");
-    try {
-      const result = await window.electronAPI.game.command(command);
-      setGame(result.snapshot);
-      if (!result.ok)
-        setError(result.error ?? "Không xử lý được yêu cầu game.");
-      return result.ok;
-    } catch {
-      setError("Không kết nối được dịch vụ game.");
-      return false;
-    }
-  }, []);
+  }, [setGame]);
+  const run = useCallback(
+    async (command: GameCommand) => {
+      setError("");
+      try {
+        const result = await window.electronAPI.game.command(command);
+        setGame(result.snapshot);
+        if (!result.ok)
+          setError(result.error ?? "Không xử lý được yêu cầu game.");
+        return result.ok;
+      } catch {
+        setError("Không kết nối được dịch vụ game.");
+        return false;
+      }
+    },
+    [setGame],
+  );
   const openDirectory = useCallback(async (id?: string) => {
     setError("");
     try {
@@ -80,14 +98,15 @@ export function useGame() {
   return {
     refresh: async () => {
       try {
-        setVersions(await window.electronAPI.game.versions());
+        const result = await catalog.refetch();
+        if (result.error) throw result.error;
       } catch {
         setError("Không tải được danh sách phiên bản Minecraft.");
       }
     },
     game,
     versions,
-    error,
+    error: error || (snapshot.error ? "Không đọc được trạng thái game." : ""),
     run,
     openDirectory,
     exportLog,

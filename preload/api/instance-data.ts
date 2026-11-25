@@ -13,7 +13,11 @@ export const instanceDataApi = {
   command: (
     command: InstanceDataCommand,
   ): Promise<
-    InstanceDataResult<{ snapshot: InstanceDataSnapshot; content?: string }>
+    InstanceDataResult<{
+      snapshot: InstanceDataSnapshot;
+      content?: string;
+      truncated?: boolean;
+    }>
   > => ipcRenderer.invoke("instance-data:command", command),
   export: (instanceId: string): Promise<InstanceDataResult<string | null>> =>
     ipcRenderer.invoke("instance-data:export", { instanceId }),

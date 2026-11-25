@@ -5,18 +5,18 @@ import {
   Plus,
   Square,
   Settings2,
-} from "@gorth-io/primitive/cores/lucide";
-import { Button } from "@gorth-io/primitive/custom/button";
+} from "@gorth-com/primitive/cores/lucide";
+import { Button } from "@gorth-com/primitive/custom/button";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "@gorth-io/primitive/default/card";
+} from "@gorth-com/primitive/default/card";
 import {
   NativeSelect,
   NativeSelectOption,
-} from "@gorth-io/primitive/default/native-select";
+} from "@gorth-com/primitive/default/native-select";
 import { PageShell } from "@/layouts/page-shell";
 import { PageBanner } from "@/components/element/page-banner";
 import { InstanceIcon } from "@/utils/renderer";

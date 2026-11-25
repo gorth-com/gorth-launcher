@@ -12,7 +12,7 @@ import {
   readFile,
 } from "node:fs/promises";
 import { eq, asc, like } from "drizzle-orm";
-import { z } from "@gorth-io/structure/cores/zod";
+import { z } from "@gorth-com/structure/cores/zod";
 import { validStartupLocation } from "@/lib/startup";
 import { openDatabase } from "@/database/client";
 import { instanceTable, settingTable } from "@/database/schema";
@@ -109,7 +109,7 @@ async function regularTree(target: string) {
       await regularTree(path.join(target, entry));
 }
 
-export async function createLibraryStore(
+export async function rawCreateLibraryStore(
   dataPath: string,
   isBusy: () => boolean,
 ) {

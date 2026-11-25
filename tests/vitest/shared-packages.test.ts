@@ -22,20 +22,20 @@ async function sources(directory: string): Promise<string[]> {
 describe("published Gorth package integration", () => {
   it("resolves public runtime exports without application re-export wrappers", () => {
     for (const name of [
-      "@gorth-io/primitive/custom/button",
-      "@gorth-io/primitive/custom/sidebar",
-      "@gorth-io/primitive/custom/toast",
-      "@gorth-io/primitive/custom/dropdown",
-      "@gorth-io/primitive/default/input",
-      "@gorth-io/primitive/default/tooltip",
-      "@gorth-io/primitive/cores/cn",
-      "@gorth-io/primitive/cores/tanstack/query",
-      "@gorth-io/primitive/globals.css",
-      "@gorth-io/principle/cores/jose",
-      "@gorth-io/structure/cores/axios",
-      "@gorth-io/structure/cores/zod",
-      "@gorth-io/structure/modules/auth/client",
-      "@gorth-io/structure/modules/desktop",
+      "@gorth-com/primitive/custom/button",
+      "@gorth-com/primitive/custom/sidebar",
+      "@gorth-com/primitive/custom/toast",
+      "@gorth-com/primitive/custom/dropdown",
+      "@gorth-com/primitive/default/input",
+      "@gorth-com/primitive/default/tooltip",
+      "@gorth-com/primitive/cores/cn",
+      "@gorth-com/primitive/cores/tanstack/query",
+      "@gorth-com/primitive/globals.css",
+      "@gorth-com/principle/cores/jose",
+      "@gorth-com/structure/cores/axios",
+      "@gorth-com/structure/cores/zod",
+      "@gorth-com/structure/modules/auth/client",
+      "@gorth-com/structure/modules/desktop",
     ])
       expect(existsSync(require.resolve(name)), name).toBe(true);
   });
@@ -46,7 +46,7 @@ describe("published Gorth package integration", () => {
   it("uses the application CSS entry without duplicating the shared theme", async () => {
     const css = await readFile(path.join(root, "styles/globals.css"), "utf8");
     expect(css).toContain('@import "tailwindcss";');
-    expect(css).toContain('@import "@gorth-io/primitive/globals.css";');
+    expect(css).toContain('@import "@gorth-com/primitive/globals.css";');
     expect(css).toContain('@import "./internals.css";');
     expect(css).toContain('@source "../components";');
     expect(css).not.toContain("--background:");
@@ -73,7 +73,7 @@ describe("published Gorth package integration", () => {
           "providers",
           "lib",
           "utils",
-          "services",
+          "models",
           "main",
           "preload",
         ].map((directory) => sources(path.join(root, directory))),
@@ -82,8 +82,8 @@ describe("published Gorth package integration", () => {
       .flat()
       .join("\n");
     expect(text).not.toContain("@/components/ui/");
-    expect(text).not.toContain("@gorth-io/structure/cores/auth");
-    expect(text).not.toContain("@gorth-io/structure/modules/auth/desktop");
+    expect(text).not.toContain("@gorth-com/structure/cores/auth");
+    expect(text).not.toContain("@gorth-com/structure/modules/auth/desktop");
     expect(text).not.toContain('@/utils"');
     expect(text).not.toContain(["@/lib", "utils"].join("/"));
     for (const name of [
@@ -96,14 +96,14 @@ describe("published Gorth package integration", () => {
       "tabs",
       "toast",
     ])
-      expect(text).not.toContain(`@gorth-io/primitive/default/${name}"`);
+      expect(text).not.toContain(`@gorth-com/primitive/default/${name}"`);
   });
   it("keeps only owning packages and required Electron/database/peer dependencies", async () => {
     const manifest = JSON.parse(
       await readFile(path.join(root, "package.json"), "utf8"),
     );
     for (const name of ["primitive", "principle", "structure"])
-      expect(manifest.dependencies[`@gorth-io/${name}`]).toContain(
+      expect(manifest.dependencies[`@gorth-com/${name}`]).toContain(
         "github:gorth-io/",
       );
     for (const name of [

@@ -1,133 +1,152 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useQuery,
+  useQueryClient,
+} from "@gorth-com/primitive/cores/tanstack/query";
 import { resetCallerAuthentication } from "@/lib/auth/client";
-import type { AuthCommand, AuthSnapshot } from "@/utils/interface";
+import type { AuthCommand, AuthSnapshot, AuthResult } from "@/utils/interface";
+import { waitForApplicationReady } from "@/utils/application-ready";
+
+const snapshotKey = ["desktop", "auth", "snapshot"] as const;
 
 export function useAuthController() {
-  const [auth, setAuth] = useState<AuthSnapshot | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [ready, setReady] = useState(false);
+  const queryClient = useQueryClient();
   const [error, setError] = useState("");
+  const [running, setRunning] = useState(false);
   const operation = useRef(false);
-  const startup = useRef<ReturnType<
-    typeof window.electronAPI.auth.snapshot
-  > | null>(null);
+  const restored = useRef(false);
+  const snapshot = useQuery({
+    queryKey: snapshotKey,
+    queryFn: () => window.electronAPI.auth.snapshot(),
+    retry: false,
+    gcTime: 0,
+    networkMode: "always",
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchIntervalInBackground: true,
+    // Polling reads local state only; it never unlocks or refreshes credentials.
+    refetchInterval: () => (operation.current ? false : 30_000),
+  });
+  const auth = snapshot.data?.snapshot ?? null;
+  const ready = snapshot.isFetched;
+  const accept = useCallback(
+    (result: AuthResult) => {
+      // A command/event is newer than any snapshot already in flight.
+      void queryClient.cancelQueries({ queryKey: snapshotKey });
+      queryClient.setQueryData(snapshotKey, result);
+    },
+    [queryClient],
+  );
   useEffect(() => {
-    let active = true;
-    const accept = (value: AuthSnapshot) => {
-      if (active) setAuth(value);
-    };
-    const unsubscribe = window.electronAPI.auth.onChanged(accept);
-    const update = async (initial = false) => {
-      try {
-        // Restore once per mounted application, including StrictMode effect replay.
-        // Polling stays read-only; failed unlocks require an explicit retry.
-        if (initial && !startup.current) {
-          operation.current = true;
-          startup.current = window.electronAPI.auth
-            .snapshot()
-            .then((result) =>
-              result.ok && result.snapshot.locked && !result.snapshot.pending
-                ? window.electronAPI.auth.command({ action: "launcher.unlock" })
-                : result,
-            )
-            .finally(() => {
-              operation.current = false;
-            });
-        }
-        const result = await (initial
-          ? startup.current!
-          : window.electronAPI.auth.snapshot());
-        accept(result.snapshot);
-        if (active && !result.ok)
-          setError(result.error ?? "Không đọc được tài khoản.");
-      } catch {
-        if (active) setError("Không kết nối được dịch vụ tài khoản.");
-      } finally {
-        if (active && initial) setReady(true);
-      }
-    };
-    void update(true);
-    // Recompute expiry display without exposing or refreshing tokens in the renderer.
-    const timer = setInterval(() => {
-      void update();
-    }, 30_000);
+    const unsubscribe = window.electronAPI.auth.onChanged(
+      (value: AuthSnapshot) => accept({ ok: true, snapshot: value }),
+    );
     return () => {
-      active = false;
-      clearInterval(timer);
       unsubscribe();
     };
-  }, []);
-  const run = useCallback(async (command: AuthCommand) => {
-    const cancelling = command.action === "cancel";
-    if (!cancelling) {
-      if (operation.current) return false;
-      operation.current = true;
-      setBusy(true);
-    }
-    setError("");
-    if (command.action !== "launcher.refresh" && command.action !== "cancel")
-      resetCallerAuthentication();
-    try {
-      const result = await window.electronAPI.auth.command(command);
-      setAuth(result.snapshot);
-      if (!result.ok) setError(result.error ?? "Không thể cập nhật tài khoản.");
-      return result.ok;
-    } catch {
-      setError("Không kết nối được dịch vụ tài khoản.");
-      return false;
-    } finally {
-      if (!cancelling) {
+  }, [accept]);
+  useEffect(() => {
+    if (!snapshot.isFetched || restored.current) return;
+    restored.current = true;
+    const initial = snapshot.data;
+    if (
+      !initial ||
+      !initial.ok ||
+      !initial.snapshot.locked ||
+      initial.snapshot.pending
+    )
+      return;
+    operation.current = true;
+    setRunning(true);
+    void (async () => {
+      try {
+        await waitForApplicationReady();
+        const result = await window.electronAPI.auth.command({
+          action: "launcher.unlock",
+        });
+        accept(result);
+        if (!result.ok) setError(result.error ?? "");
+      } catch {
+        setError("Không kết nối được dịch vụ tài khoản.");
+      } finally {
         operation.current = false;
-        setBusy(false);
+        setRunning(false);
       }
-    }
-  }, []);
+    })();
+  }, [snapshot.isFetched, accept]);
+  const run = useCallback(
+    async (command: AuthCommand) => {
+      const cancelling = command.action === "cancel";
+      if (!cancelling) {
+        if (operation.current) return false;
+        operation.current = true;
+        setRunning(true);
+      }
+      setError("");
+      if (command.action !== "launcher.refresh" && command.action !== "cancel")
+        resetCallerAuthentication();
+      try {
+        const result = await window.electronAPI.auth.command(command);
+        accept(result);
+        if (!result.ok)
+          setError(result.error ?? "Không thể cập nhật tài khoản.");
+        return result.ok;
+      } catch {
+        setError("Không kết nối được dịch vụ tài khoản.");
+        return false;
+      } finally {
+        if (!cancelling) {
+          operation.current = false;
+          setRunning(false);
+        }
+      }
+    },
+    [accept],
+  );
   const current = useRef(auth);
   useEffect(() => {
     current.current = auth;
   }, [auth]);
   useEffect(() => {
     const refreshIfNeeded = () => {
-      const snapshot = current.current;
+      const value = current.current;
+      const user = value?.launcher;
       if (
-        !snapshot?.launcher ||
-        !snapshot.launcher.canRefresh ||
-        snapshot.locked ||
-        snapshot.pending ||
+        !user?.canRefresh ||
+        value?.locked ||
+        value?.pending ||
         operation.current
       )
         return;
       if (
-        Date.now() - (snapshot.launcher.verifiedAt ?? 0) >= 90_000 ||
-        snapshot.launcher.expiresAt - Date.now() <= 30_000
+        Date.now() - (user.verifiedAt ?? 0) >= 90_000 ||
+        user.expiresAt - Date.now() <= 30_000
       )
         void run({ action: "launcher.refresh" });
     };
-    // Revalidate the native app session before the 120-second freshness cutoff.
+    // Credential freshness remains an explicit native-auth policy.
     const timer = setInterval(refreshIfNeeded, 30_000);
-    const onFocus = refreshIfNeeded;
-    window.addEventListener("focus", onFocus);
+    window.addEventListener("focus", refreshIfNeeded);
     return () => {
       clearInterval(timer);
-      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("focus", refreshIfNeeded);
     };
   }, [run]);
   const account = auth?.launcher ?? null;
   const refresh = useCallback(async () => {
     if (!(await run({ action: "launcher.refresh" }))) return null;
-    try {
-      const result = await window.electronAPI.auth.snapshot();
-      setAuth(result.snapshot);
-      return result.snapshot.launcher;
-    } catch {
-      setError("Không đọc được phiên Gorth sau khi làm mới.");
-      return null;
-    }
-  }, [run]);
+    return (
+      queryClient.getQueryData<AuthResult>(snapshotKey)?.snapshot.launcher ??
+      null
+    );
+  }, [run, queryClient]);
   return {
     auth,
-    busy,
-    error,
+    error:
+      error ||
+      snapshot.data?.error ||
+      (snapshot.error ? "Không kết nối được dịch vụ tài khoản." : ""),
+    busy: running,
     run,
     ready,
     account,

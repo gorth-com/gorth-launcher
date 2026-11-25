@@ -6,7 +6,7 @@ import { ToasterProvider } from "@/providers/toaster";
 import { LoginBrowserSettings } from "@/components/element/login-browser-settings";
 import { LoadingScreen } from "@/components/element/loading-screen";
 import { useFeedbackToast } from "@/hooks/use-feedback-toast";
-import { Button } from "@gorth-io/primitive/custom/button";
+import { Button } from "@gorth-com/primitive/custom/button";
 import "@/styles/globals.css";
 
 Object.assign(window, {

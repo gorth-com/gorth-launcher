@@ -1,4 +1,4 @@
-import { Info } from "@gorth-io/primitive/cores/lucide";
+import { Info } from "@gorth-com/primitive/cores/lucide";
 import { PageHeading } from "@/components/heading";
 import { AppUpdateCard } from "@/components/element/app-update-card";
 import { LauncherFooter } from "@/components/element/launcher-footer";
@@ -8,7 +8,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@gorth-io/primitive/default/card";
+} from "@gorth-com/primitive/default/card";
 import type { LauncherInfo } from "@/preload/interface";
 
 export function HelpPage({ info }: { info: LauncherInfo | null }) {

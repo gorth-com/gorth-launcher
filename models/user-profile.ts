@@ -24,7 +24,7 @@ const defaultFilename = () =>
   path.join(app.getPath("userData"), "gorth-launcher.db");
 
 // Only verified OIDC/userinfo identities reach this service; no renderer-supplied identity.
-export function upsertUserProfile(
+export function rawUpsertUserProfile(
   identity: UserProfileIdentity,
   filename = defaultFilename(),
 ) {
@@ -48,7 +48,7 @@ export function upsertUserProfile(
     client.close();
   }
 }
-export function getUserProfile(
+export function rawGetUserProfile(
   ssoUserId: string,
   filename = defaultFilename(),
 ) {

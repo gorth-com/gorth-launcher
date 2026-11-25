@@ -1,9 +1,9 @@
-import { CardTitle, CardDescription } from "@gorth-io/primitive/default/card";
-import { Switch } from "@gorth-io/primitive/default/switch";
+import { CardTitle, CardDescription } from "@gorth-com/primitive/default/card";
+import { Switch } from "@gorth-com/primitive/default/switch";
 import {
   RadioGroup,
   RadioGroupItem,
-} from "@gorth-io/primitive/default/radio-group";
+} from "@gorth-com/primitive/default/radio-group";
 
 interface SidebarSettingsProps {
   enabled: boolean;

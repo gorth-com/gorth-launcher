@@ -3,16 +3,16 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
-} from "@gorth-io/primitive/cores/tanstack/query";
+} from "@gorth-com/primitive/cores/tanstack/query";
 import {
   Card,
   CardTitle,
   CardDescription,
-} from "@gorth-io/primitive/default/card";
-import { Input } from "@gorth-io/primitive/default/input";
-import { Separator } from "@gorth-io/primitive/default/separator";
-import { Button } from "@gorth-io/primitive/custom/button";
-import { FolderOpen } from "@gorth-io/primitive/cores/lucide";
+} from "@gorth-com/primitive/default/card";
+import { Input } from "@gorth-com/primitive/default/input";
+import { Separator } from "@gorth-com/primitive/default/separator";
+import { Button } from "@gorth-com/primitive/custom/button";
+import { FolderOpen } from "@gorth-com/primitive/cores/lucide";
 import { toast } from "@/providers/toaster";
 
 export function FoldersCard() {

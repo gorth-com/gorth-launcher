@@ -63,6 +63,8 @@ switch (command) {
       "task",
       "test",
       "tests/vitest/release-artifacts.test.ts",
+      "tests/vitest/github-publisher.test.ts",
+      "tests/vitest/auth-timeout.test.ts",
       "tests/vitest/environment.test.ts",
     ]);
     break;

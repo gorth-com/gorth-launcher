@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { Button } from "@gorth-io/primitive/custom/button";
+import { Button } from "@gorth-com/primitive/custom/button";
 interface AuthGuardProps {
   children: ReactNode;
   fallback?: ReactNode;

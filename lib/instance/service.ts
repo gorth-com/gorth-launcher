@@ -20,10 +20,9 @@ import {
   stat,
   writeFile,
 } from "node:fs/promises";
-import { gunzip } from "node:zlib";
-import { promisify } from "node:util";
-import { z } from "@gorth-io/structure/cores/zod";
-import type { createLibraryStore } from "@/services/library-store";
+import { readLogPreview } from "./logs";
+import { z } from "@gorth-com/structure/cores/zod";
+import type { rawCreateLibraryStore } from "@/models/instance";
 import { gameIsBusy, synchronizeGameLibrary } from "@/lib/game/service";
 import { contentIsBusy } from "@/lib/content/state";
 import { supportedLoader } from "@/lib/game/catalog";
@@ -107,11 +106,12 @@ const command = z.discriminatedUnion("action", [
     index: z.number().int().min(0).max(10000),
   }),
   z.object({
-    action: z.literal("log.read"),
+    action: z.enum(["log.read", "log.delete", "log.export"]),
     instanceId: id,
     kind: z.enum(["log", "crash"]),
     name: leaf,
   }),
+  z.object({ action: z.literal("log.delete-all"), instanceId: id }),
 ]);
 async function exists(file: string) {
   try {
@@ -139,7 +139,7 @@ async function folderSize(root: string): Promise<number> {
 }
 
 export function registerInstanceDataIpc(
-  library: Awaited<ReturnType<typeof createLibraryStore>>,
+  library: Awaited<ReturnType<typeof rawCreateLibraryStore>>,
 ) {
   const root = () => getLauncherFolders(app.getPath("userData")).instances;
   const trusted = (event: Electron.IpcMainInvokeEvent) => {
@@ -173,9 +173,10 @@ export function registerInstanceDataIpc(
     for (const entry of await readdir(directory, { withFileTypes: true })) {
       if (
         !entry.isFile() ||
-        !extensions.some((extension) =>
-          entry.name.toLowerCase().endsWith(extension),
-        )
+        (extensions.length > 0 &&
+          !extensions.some((extension) =>
+            entry.name.toLowerCase().endsWith(extension),
+          ))
       )
         continue;
       const info = await stat(path.join(directory, entry.name));
@@ -228,9 +229,10 @@ export function registerInstanceDataIpc(
       })),
       notes,
       logs: [
-        ...(
-          await listFiles(path.join(gameRoot, "logs"), [".log", ".log.gz"])
-        ).map((item) => ({ ...item, kind: "log" as const })),
+        ...(await listFiles(path.join(gameRoot, "logs"), [])).map((item) => ({
+          ...item,
+          kind: "log" as const,
+        })),
         ...(
           await listFiles(path.join(gameRoot, "crash-reports"), [
             ".txt",
@@ -261,27 +263,59 @@ export function registerInstanceDataIpc(
     return run(() => snapshot(id.parse(raw?.instanceId)));
   });
   ipcMain.handle("instance-data:command", (event, raw: unknown) => {
-    trusted(event);
+    const window = trusted(event);
     return run(async () => {
       const input = command.parse(raw) as InstanceDataCommand,
         gameRoot = game(input.instanceId),
         instanceRoot = path.join(root(), input.instanceId);
-      if (input.action === "log.read") {
-        const file = path.join(
+      if (input.action === "log.delete-all") {
+        ensureIdle();
+        const current = await snapshot(input.instanceId);
+        for (const item of current.logs) {
+          const folder = path.join(
             gameRoot,
-            input.kind === "log" ? "logs" : "crash-reports",
-            input.name,
-          ),
-          info = await stat(file);
-        if (info.size > 16 * 1024 ** 2)
-          throw new Error("Log vượt giới hạn 16 MB.");
-        const rawLog = await readFile(file),
-          content = input.name.endsWith(".gz")
-            ? (await promisify(gunzip)(rawLog))
-                .subarray(-2 * 1024 ** 2)
-                .toString("utf8")
-            : rawLog.subarray(-2 * 1024 ** 2).toString("utf8");
-        return { content, snapshot: await snapshot(input.instanceId) };
+            item.kind === "log" ? "logs" : "crash-reports",
+          );
+          await safeDirectory(folder);
+          const file = path.join(folder, item.name);
+          const info = await lstat(file);
+          if (!info.isFile() || info.isSymbolicLink())
+            throw new Error("Log không an toàn.");
+          await shell.trashItem(file);
+        }
+        return { snapshot: await snapshot(input.instanceId) };
+      }
+      if (
+        input.action === "log.read" ||
+        input.action === "log.delete" ||
+        input.action === "log.export"
+      ) {
+        const folder = path.join(
+          gameRoot,
+          input.kind === "log" ? "logs" : "crash-reports",
+        );
+        await safeDirectory(folder);
+        const file = path.join(folder, input.name);
+        const info = await lstat(file);
+        if (!info.isFile() || info.isSymbolicLink())
+          throw new Error("Log không an toàn.");
+        if (input.action === "log.delete") {
+          ensureIdle();
+          await shell.trashItem(file);
+          return { snapshot: await snapshot(input.instanceId) };
+        }
+        if (input.action === "log.export") {
+          const selected = await dialog.showSaveDialog(window, {
+            defaultPath: input.name,
+          });
+          if (!selected.canceled && selected.filePath)
+            await cp(file, selected.filePath);
+          return { snapshot: await snapshot(input.instanceId) };
+        }
+        return {
+          ...(await readLogPreview(file)),
+          snapshot: await snapshot(input.instanceId),
+        };
       }
       if (input.action === "screenshot.preview") {
         if (!/\.(png|jpe?g|webp)$/i.test(input.name))

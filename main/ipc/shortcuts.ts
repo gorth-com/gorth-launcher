@@ -7,7 +7,7 @@ import {
   type MenuItemConstructorOptions,
   type WebContents,
 } from "electron";
-import { z } from "@gorth-io/structure/cores/zod";
+import { z } from "@gorth-com/structure/cores/zod";
 import {
   normalizeAccelerator,
   shortcutIdentity,
@@ -15,9 +15,9 @@ import {
   type Shortcut,
 } from "@/lib/shortcuts";
 import {
-  readShortcutOverrides,
-  writeShortcutOverrides,
-} from "@/services/shortcuts";
+  rawReadShortcutOverrides,
+  rawWriteShortcutOverrides,
+} from "@/models/setting";
 
 let overrides: Record<string, string> = {};
 export function listShortcuts(): Shortcut[] {
@@ -113,7 +113,7 @@ export function registerShortcutsIpc(
   });
   let saved: Record<string, string> = {};
   try {
-    saved = z.record(z.string(), z.string()).parse(readShortcutOverrides());
+    saved = z.record(z.string(), z.string()).parse(rawReadShortcutOverrides());
   } catch (error) {
     console.warn("Unable to load saved shortcuts; using defaults.", error);
   }
@@ -164,7 +164,7 @@ export function registerShortcutsIpc(
       process.platform === "darwin",
     );
     const next = { ...overrides, [key]: accelerator };
-    writeShortcutOverrides(next);
+    rawWriteShortcutOverrides(next);
     overrides = next;
     refreshMenu();
     return listShortcuts();
@@ -184,7 +184,7 @@ export function registerShortcutsIpc(
       );
       delete next[key];
     }
-    writeShortcutOverrides(id === undefined ? {} : next);
+    rawWriteShortcutOverrides(id === undefined ? {} : next);
     overrides = id === undefined ? {} : next;
     refreshMenu();
     return listShortcuts();

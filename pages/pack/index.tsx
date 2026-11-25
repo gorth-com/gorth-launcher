@@ -4,7 +4,7 @@ import {
   TabsList,
   TabsTrigger,
   TabsContent,
-} from "@gorth-io/primitive/custom/tabs";
+} from "@gorth-com/primitive/custom/tabs";
 import { ContentPage } from "@/pages/content";
 
 const packTabs = [

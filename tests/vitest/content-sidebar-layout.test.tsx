@@ -1,4 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import {
+  QueryClient,
+  QueryClientProvider,
+} from "@gorth-com/primitive/cores/tanstack/query";
 import { expect, it, vi } from "vitest";
 import { navigation } from "@/utils/constant";
 
@@ -7,17 +11,19 @@ import { ContentPage } from "@/pages/content";
 
 function render(catalogMode: boolean) {
   return renderToStaticMarkup(
-    <ContentPage
-      instances={[]}
-      gameBusy={false}
-      onLibrary={vi.fn()}
-      hideWebview={false}
-      onDetailChange={vi.fn()}
-      fixedKind={catalogMode ? "mod" : "modpack"}
-      catalogMode={catalogMode}
-      catalogTabs={<span>Catalog tabs</span>}
-      initialProvider="curseforge"
-    />,
+    <QueryClientProvider client={new QueryClient()}>
+      <ContentPage
+        instances={[]}
+        gameBusy={false}
+        onLibrary={vi.fn()}
+        hideWebview={false}
+        onDetailChange={vi.fn()}
+        fixedKind={catalogMode ? "mod" : "modpack"}
+        catalogMode={catalogMode}
+        catalogTabs={<span>Catalog tabs</span>}
+        initialProvider="curseforge"
+      />
+    </QueryClientProvider>,
   );
 }
 

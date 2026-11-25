@@ -1,8 +1,8 @@
 import { loaderCatalog } from "@/utils/constant";
-import { useForm } from "@gorth-io/primitive/cores/tanstack/form";
-import { Plus } from "@gorth-io/primitive/cores/lucide";
-import { Button } from "@gorth-io/primitive/custom/button";
-import { Input } from "@gorth-io/primitive/default/input";
+import { useForm } from "@gorth-com/primitive/cores/tanstack/form";
+import { Plus } from "@gorth-com/primitive/cores/lucide";
+import { Button } from "@gorth-com/primitive/custom/button";
+import { Input } from "@gorth-com/primitive/default/input";
 import { supportedLoader } from "@/lib/game/catalog";
 
 interface CreateInstanceFormProps {

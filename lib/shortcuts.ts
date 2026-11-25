@@ -2,13 +2,13 @@ import { reservedShortcuts } from "@/utils/constant";
 import {
   createShortcutValidator,
   type Shortcut,
-} from "@gorth-io/structure/modules/desktop";
+} from "@gorth-com/structure/modules/desktop";
 export {
   normalizeAccelerator,
   shortcutIdentity,
   type Shortcut,
   type ShortcutDefinition,
-} from "@gorth-io/structure/modules/desktop";
+} from "@gorth-com/structure/modules/desktop";
 
 // App/OS menu policy stays local; shared core normalizes and checks collisions.
 

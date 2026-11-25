@@ -1,8 +1,8 @@
-import { Bookmark, PanelLeftClose } from "@gorth-io/primitive/cores/lucide";
+import { Bookmark, PanelLeftClose } from "@gorth-com/primitive/cores/lucide";
 
-import { Button } from "@gorth-io/primitive/custom/button";
-import { ScrollArea } from "@gorth-io/primitive/default/scroll-area";
-import { Separator } from "@gorth-io/primitive/default/separator";
+import { Button } from "@gorth-com/primitive/custom/button";
+import { ScrollArea } from "@gorth-com/primitive/default/scroll-area";
+import { Separator } from "@gorth-com/primitive/default/separator";
 
 interface BrowserBookmark {
   id: string;
